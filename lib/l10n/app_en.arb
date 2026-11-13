@@ -1,0 +1,13 @@
+{
+  "@@locale": "en",
+  "appTitle": "Bread & Cake Management",
+  "production": "Production",
+  "sales": "Sales & POS",
+  "inventory": "Inventory",
+  "cashManagement": "Cash",
+  "people": "People & HR",
+  "rentals": "Rentals",
+  "reports": "Reports",
+  "settings": "Settings",
+  "moduleSetupMessage": "This module is part of the implementation roadmap and is not available yet."
+}

@@ -1,0 +1,13 @@
+{
+  "@@locale": "om",
+  "appTitle": "Bulchiinsa Buddeenaa fi Keekii",
+  "production": "Oomisha",
+  "sales": "Gurgurtaa fi POS",
+  "inventory": "Kuusaa",
+  "cashManagement": "Maallaqa",
+  "people": "Hojjettoota",
+  "rentals": "Kiraa",
+  "reports": "Gabaasa",
+  "settings": "Qindaa'ina",
+  "moduleSetupMessage": "Moojuuliin kun karoora hojii keessa jira; ammaaf hin argamu."
+}

@@ -1,0 +1,13 @@
+{
+  "@@locale": "am",
+  "appTitle": "የዳቦና ኬክ አስተዳደር",
+  "production": "ምርት",
+  "sales": "ሽያጭና POS",
+  "inventory": "ክምችት",
+  "cashManagement": "ገንዘብ",
+  "people": "ሰው ኃይል",
+  "rentals": "ኪራይ",
+  "reports": "ሪፖርቶች",
+  "settings": "ቅንብሮች",
+  "moduleSetupMessage": "ይህ ሞጁል በእቅድ ላይ ነው፤ ገና አይገኝም።"
+}
