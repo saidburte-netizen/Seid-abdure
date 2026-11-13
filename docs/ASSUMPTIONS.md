@@ -9,6 +9,9 @@
   source control.
 - Admin web publishing and mobile signing require owner-managed credentials and
   are not configured in this repository.
+- Auth is invite-only. Initial branch memberships and role assignments are
+  provisioned through trusted administration; self-service organization setup
+  is not available.
 - This repository was initially empty. A complete ERP across all listed modules
   requires incremental implementation and review; the current scaffold is not a
   production-ready operational system.

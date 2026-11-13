@@ -19,7 +19,9 @@ flutter pub get
 flutter gen-l10n
 flutter analyze
 flutter test
-flutter run -d chrome
+flutter run -d chrome \
+  --dart-define=SUPABASE_URL=https://your-project.supabase.co \
+  --dart-define=SUPABASE_ANON_KEY=your-public-anon-key
 ```
 
 Start the local Supabase stack and apply migrations when database migrations
@@ -45,6 +47,13 @@ Do not commit Supabase keys, GitHub tokens, signing keys, or service-role
 credentials. Configure deployment credentials as GitHub Actions secrets and
 runtime configuration through the platform's environment configuration. A
 service-role key must never be embedded in the Flutter client.
+
+Authentication is invite-only: create users through Supabase Auth and provide
+their credentials securely. The database creates a profile when an Auth user
+is added. An administrator must assign an active branch membership and role;
+module routes require the corresponding role permission. The Flutter client
+uses only the public anon key and database row-level security remains the
+enforcement boundary.
 
 ## Current functionality
 

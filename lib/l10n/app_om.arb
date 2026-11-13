@@ -9,5 +9,15 @@
   "rentals": "Kiraa",
   "reports": "Gabaasa",
   "settings": "Qindaa'ina",
-  "moduleSetupMessage": "Moojuuliin kun karoora hojii keessa jira; ammaaf hin argamu."
+  "moduleSetupMessage": "Moojuuliin kun karoora hojii keessa jira; ammaaf hin argamu.",
+  "configurationRequired": "Appii kana Supabase waliin wal qunnamsiisuuf SUPABASE_URL fi SUPABASE_ANON_KEY qindeessaa.",
+  "signIn": "Seeni",
+  "signOut": "Ba'i",
+  "email": "Imeelii",
+  "password": "Jecha darbii",
+  "requiredField": "Dirreen kun barbaachisaadha.",
+  "membershipRequired": "Herregni keessan qophaa'eera, garuu miseensummaan damee hojii irra jiru hin kennamne. Bulchaa keessan qunnamaa.",
+  "accessDenied": "Gaheen keessan moojuulii kana seenuuf hayyama hin kennu.",
+  "accessLoadFailed": "Hayyama herrega keessanii fe'uun hin danda'amne.",
+  "retry": "Irra deebi'ii yaali"
 }

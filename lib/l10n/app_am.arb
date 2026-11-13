@@ -9,5 +9,15 @@
   "rentals": "ኪራይ",
   "reports": "ሪፖርቶች",
   "settings": "ቅንብሮች",
-  "moduleSetupMessage": "ይህ ሞጁል በእቅድ ላይ ነው፤ ገና አይገኝም።"
+  "moduleSetupMessage": "ይህ ሞጁል በእቅድ ላይ ነው፤ ገና አይገኝም።",
+  "configurationRequired": "ይህን መተግበሪያ ከSupabase ጋር ለማገናኘት SUPABASE_URL እና SUPABASE_ANON_KEY ያዘጋጁ።",
+  "signIn": "ግባ",
+  "signOut": "ውጣ",
+  "email": "ኢሜይል",
+  "password": "የይለፍ ቃል",
+  "requiredField": "ይህ መስክ ያስፈልጋል።",
+  "membershipRequired": "መለያዎ ዝግጁ ነው፣ ግን ንቁ የቅርንጫፍ አባልነት አልተመደበም። አስተዳዳሪዎን ያነጋግሩ።",
+  "accessDenied": "የእርስዎ ሚና ወደዚህ ሞጁል መግባት አይፈቅድም።",
+  "accessLoadFailed": "የመለያዎን ፈቃዶች መጫን አልተቻለም።",
+  "retry": "እንደገና ሞክር"
 }

@@ -7,7 +7,7 @@ outstanding.
 1. [x] Configure GitHub Actions for Flutter and Supabase tools.
 2. [x] Record scope, assumptions, and staged delivery plan.
 3. [x] Create the Flutter app shell, theme, routing, and localization.
-4. [ ] Add Supabase Auth, profile onboarding, and role-based route guards.
+4. [x] Add Supabase Auth, profile onboarding, and role-based route guards.
 5. [ ] Create organization, branches, profiles, roles, permissions, and RLS.
 6. [ ] Create products, recipes, and production batches.
 7. [ ] Implement stock ledger, purchasing, suppliers, and stock controls.
@@ -28,6 +28,6 @@ outstanding.
 22. [ ] Validate schema references, RLS coverage, workflows, and user journeys.
 23. [ ] Complete setup/deployment documentation and final audit.
 
-Current completion: **3/23**. Jobs remaining: **20**. The first scaffold
+Current completion: **4/23**. Jobs remaining: **19**. The first scaffold
 intentionally labels unimplemented module routes rather than implying those
 operations are already functional.

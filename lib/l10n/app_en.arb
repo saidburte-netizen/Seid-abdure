@@ -9,5 +9,15 @@
   "rentals": "Rentals",
   "reports": "Reports",
   "settings": "Settings",
-  "moduleSetupMessage": "This module is part of the implementation roadmap and is not available yet."
+  "moduleSetupMessage": "This module is part of the implementation roadmap and is not available yet.",
+  "configurationRequired": "Set SUPABASE_URL and SUPABASE_ANON_KEY to connect this app to Supabase.",
+  "signIn": "Sign in",
+  "signOut": "Sign out",
+  "email": "Email",
+  "password": "Password",
+  "requiredField": "This field is required.",
+  "membershipRequired": "Your account is ready, but no active branch membership is assigned. Contact your administrator.",
+  "accessDenied": "Your role does not grant access to this module.",
+  "accessLoadFailed": "Could not load your account access.",
+  "retry": "Retry"
 }
