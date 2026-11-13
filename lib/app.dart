@@ -3,7 +3,21 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_controller.dart';
+import 'brand/brand.dart';
 import 'l10n/app_localizations.dart';
+import 'screens/cash_screen.dart';
+import 'screens/dashboard_screen.dart';
+import 'screens/inventory_screen.dart';
+import 'screens/payroll_screen.dart';
+import 'screens/people_screen.dart';
+import 'screens/pos_screen.dart';
+import 'screens/production_screen.dart';
+import 'screens/sales_screen.dart';
+import 'screens/settings_screen.dart';
+import 'screens/notifications_screen.dart';
+import 'screens/payables_screen.dart';
+import 'screens/rentals_screen.dart';
+import 'screens/reports_screen.dart';
 import 'theme/app_theme.dart';
 
 class BakeryApp extends StatelessWidget {
@@ -31,11 +45,15 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   static const _modulePermissions = {
     'production': 'production.read',
     'sales': 'sales.read',
+    'pos': 'sales.write',
     'inventory': 'inventory.read',
     'cash': 'cash.read',
     'people': 'people.read',
+    'payroll': 'payroll.read',
     'rentals': 'rentals.read',
+    'payables': 'payables.read',
     'reports': 'reports.read',
+    'notifications': 'notifications.read',
     'settings': 'settings.manage',
   };
 
@@ -45,6 +63,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
     _auth = widget.client == null ? null : AuthController(widget.client!);
     _router = GoRouter(
       refreshListenable: _auth,
+      initialLocation: '/',
       redirect: (context, state) {
         final location = state.matchedLocation;
         if (_auth == null) return location == '/' ? null : '/';
@@ -67,8 +86,9 @@ class _BakeryRouterState extends State<_BakeryRouter> {
             }
             final moduleName = state.pathParameters['name'];
             if (moduleName != null) {
+              if (moduleName == 'notifications') return null;
               final permission = _modulePermissions[moduleName];
-              if (permission == null || !_auth.canAccess(permission)) {
+              if (permission == null || !_auth.can(permission)) {
                 return '/access-denied';
               }
             }
@@ -80,30 +100,37 @@ class _BakeryRouterState extends State<_BakeryRouter> {
           path: '/',
           builder: (context, state) => _auth == null
               ? const ConfigurationScreen()
-              : DashboardScreen(
-                  onSignOut: () => widget.client!.auth.signOut(),
-                ),
+              : const DashboardScreen(),
           routes: [
             GoRoute(
               path: 'module/:name',
-              builder: (context, state) => ModuleScreen(
-                name: state.pathParameters['name']!,
+              builder: (context, state) => _moduleScreen(
+                state.pathParameters['name'] ?? '',
               ),
             ),
           ],
         ),
+        GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
+        GoRoute(path: '/sales', builder: (context, state) => const SalesScreen()),
+        GoRoute(path: '/production', builder: (context, state) => const ProductionScreen()),
+        GoRoute(path: '/inventory', builder: (context, state) => const InventoryScreen()),
+        GoRoute(path: '/cash', builder: (context, state) => const CashScreen()),
+        GoRoute(path: '/people', builder: (context, state) => const PeopleScreen()),
+        GoRoute(path: '/payroll', builder: (context, state) => const PayrollScreen()),
+        GoRoute(path: '/rentals', builder: (context, state) => const RentalsScreen()),
+        GoRoute(path: '/payables', builder: (context, state) => const PayablesScreen()),
+        GoRoute(path: '/reports', builder: (context, state) => const ReportsScreen()),
+        GoRoute(path: '/notifications', builder: (context, state) => const NotificationsScreen()),
+        GoRoute(path: '/settings', builder: (context, state) => const SettingsScreen()),
         GoRoute(
           path: '/sign-in',
           builder: (context, state) => SignInScreen(client: widget.client!),
         ),
-        GoRoute(
-          path: '/loading',
-          builder: (context, state) => const LoadingScreen(),
-        ),
+        GoRoute(path: '/loading', builder: (context, state) => const LoadingScreen()),
         GoRoute(
           path: '/onboarding',
           builder: (context, state) => MembershipRequiredScreen(
-            onSignOut: () => widget.client!.auth.signOut(),
+            controller: _auth!,
           ),
         ),
         GoRoute(
@@ -122,6 +149,22 @@ class _BakeryRouterState extends State<_BakeryRouter> {
     );
   }
 
+  Widget _moduleScreen(String name) => switch (name) {
+        'production' => const ProductionScreen(),
+        'sales' => const SalesScreen(),
+        'pos' => const PosScreen(),
+        'inventory' => const InventoryScreen(),
+        'cash' => const CashScreen(),
+        'people' => const PeopleScreen(),
+        'payroll' => const PayrollScreen(),
+        'rentals' => const RentalsScreen(),
+        'payables' => const PayablesScreen(),
+        'reports' => const ReportsScreen(),
+        'notifications' => const NotificationsScreen(),
+        'settings' => const SettingsScreen(),
+        _ => const AccessDeniedScreen(),
+      };
+
   @override
   void dispose() {
     _router.dispose();
@@ -130,14 +173,81 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   }
 
   @override
-  Widget build(BuildContext context) => MaterialApp.router(
-        onGenerateTitle: (context) => AppLocalizations.of(context).appTitle,
-        theme: AppTheme.light,
-        darkTheme: AppTheme.dark,
-        themeMode: ThemeMode.system,
+  Widget build(BuildContext context) {
+    if (_auth == null) {
+      return MaterialApp(
+        title: Brand.appName,
+        theme: AppTheme.light(),
+        darkTheme: AppTheme.dark(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        routerConfig: _router,
+        home: const ConfigurationScreen(),
+      );
+    }
+    return SessionScope(
+      controller: _auth,
+      child: ListenableBuilder(
+        listenable: _auth,
+        builder: (context, _) => MaterialApp.router(
+          title: Brand.appName,
+          onGenerateTitle: (context) => Brand.appName,
+          theme: AppTheme.light(),
+          darkTheme: AppTheme.dark(),
+          themeMode: _auth.themeMode,
+          locale: _auth.locale,
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          routerConfig: _router,
+          debugShowCheckedModeBanner: false,
+        ),
+      ),
+    );
+  }
+}
+
+class BrandMark extends StatelessWidget {
+  const BrandMark({this.size = 120, this.showName = true, this.light = false, super.key});
+
+  final double size;
+  final bool showName;
+  final bool light;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(
+            Brand.logoAsset,
+            width: size,
+            height: size,
+            fit: BoxFit.contain,
+            semanticLabel: Brand.appName,
+          ),
+          if (showName) ...[
+            const SizedBox(height: 10),
+            Text(
+              Brand.appName,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                    color: light
+                        ? Theme.of(context).colorScheme.onPrimary
+                        : Theme.of(context).colorScheme.onSurface,
+                    fontWeight: FontWeight.w800,
+                  ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              Brand.slogan,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: light
+                        ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8)
+                        : Theme.of(context).colorScheme.onSurfaceVariant,
+                    fontStyle: FontStyle.italic,
+                  ),
+            ),
+          ],
+        ],
       );
 }
 
@@ -147,9 +257,29 @@ class ConfigurationScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Scaffold(
         body: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Text(AppLocalizations.of(context).configurationRequired),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const BrandMark(size: 180),
+                  const SizedBox(height: 24),
+                  Text(
+                    AppLocalizations.of(context).configurationRequired,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    'Build with --dart-define=SUPABASE_URL=... '
+                    '--dart-define=SUPABASE_ANON_KEY=...',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -169,6 +299,7 @@ class _SignInScreenState extends State<SignInScreen> {
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _submitting = false;
+  bool _obscure = true;
   String? _errorMessage;
 
   @override
@@ -191,6 +322,8 @@ class _SignInScreenState extends State<SignInScreen> {
       );
     } on AuthException catch (exception) {
       if (mounted) setState(() => _errorMessage = exception.message);
+    } catch (error) {
+      if (mounted) setState(() => _errorMessage = error.toString());
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -199,51 +332,88 @@ class _SignInScreenState extends State<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      appBar: AppBar(title: Text(strings.signIn)),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 420),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextFormField(
-                    controller: _email,
-                    decoration: InputDecoration(labelText: strings.email),
-                    keyboardType: TextInputType.emailAddress,
-                    validator: (value) => value == null || value.trim().isEmpty
-                        ? strings.requiredField
-                        : null,
-                  ),
-                  const SizedBox(height: 12),
-                  TextFormField(
-                    controller: _password,
-                    decoration: InputDecoration(labelText: strings.password),
-                    obscureText: true,
-                    validator: (value) => value == null || value.isEmpty
-                        ? strings.requiredField
-                        : null,
-                    onFieldSubmitted: (_) => _signIn(),
-                  ),
-                  if (_errorMessage != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _errorMessage!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [scheme.primary, scheme.surface],
+            stops: const [0, 0.72],
+          ),
+        ),
+        child: SafeArea(
+          child: Center(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
+                child: Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const BrandMark(size: 148),
+                          const SizedBox(height: 24),
+                          TextFormField(
+                            controller: _email,
+                            decoration: InputDecoration(labelText: strings.email),
+                            keyboardType: TextInputType.emailAddress,
+                            autofillHints: const [AutofillHints.email],
+                            validator: (value) => value == null || value.trim().isEmpty
+                                ? strings.requiredField
+                                : null,
+                          ),
+                          const SizedBox(height: 12),
+                          TextFormField(
+                            controller: _password,
+                            decoration: InputDecoration(
+                              labelText: strings.password,
+                              suffixIcon: IconButton(
+                                onPressed: () => setState(() => _obscure = !_obscure),
+                                icon: Icon(
+                                  _obscure ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                ),
+                              ),
+                            ),
+                            obscureText: _obscure,
+                            autofillHints: const [AutofillHints.password],
+                            validator: (value) => value == null || value.isEmpty
+                                ? strings.requiredField
+                                : null,
+                            onFieldSubmitted: (_) => _signIn(),
+                          ),
+                          if (_errorMessage != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              _errorMessage!,
+                              style: TextStyle(color: scheme.error),
+                            ),
+                          ],
+                          const SizedBox(height: 20),
+                          SizedBox(
+                            width: double.infinity,
+                            child: FilledButton.icon(
+                              onPressed: _submitting ? null : _signIn,
+                              icon: _submitting
+                                  ? const SizedBox(
+                                      width: 18,
+                                      height: 18,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    )
+                                  : const Icon(Icons.login),
+                              label: Text(_submitting ? 'Signing in…' : strings.signIn),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                  ],
-                  const SizedBox(height: 20),
-                  FilledButton(
-                    onPressed: _submitting ? null : _signIn,
-                    child: Text(strings.signIn),
                   ),
-                ],
+                ),
               ),
             ),
           ),
@@ -257,30 +427,95 @@ class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) =>
-      const Scaffold(body: Center(child: CircularProgressIndicator()));
+  Widget build(BuildContext context) => Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandMark(size: 160),
+              const SizedBox(height: 24),
+              const CircularProgressIndicator(),
+            ],
+          ),
+        ),
+      );
 }
 
-class MembershipRequiredScreen extends StatelessWidget {
-  const MembershipRequiredScreen({required this.onSignOut, super.key});
+class MembershipRequiredScreen extends StatefulWidget {
+  const MembershipRequiredScreen({required this.controller, super.key});
 
-  final Future<void> Function() onSignOut;
+  final AuthController controller;
+
+  @override
+  State<MembershipRequiredScreen> createState() => _MembershipRequiredScreenState();
+}
+
+class _MembershipRequiredScreenState extends State<MembershipRequiredScreen> {
+  bool _claiming = false;
+  String? _error;
+
+  Future<void> _claim() async {
+    setState(() {
+      _claiming = true;
+      _error = null;
+    });
+    try {
+      await widget.controller.bootstrapOwner();
+    } catch (error) {
+      if (mounted) setState(() => _error = error.toString());
+    } finally {
+      if (mounted) setState(() => _claiming = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
+          title: const Text(Brand.appName),
           actions: [
             IconButton(
               tooltip: AppLocalizations.of(context).signOut,
-              onPressed: onSignOut,
+              onPressed: widget.controller.signOut,
               icon: const Icon(Icons.logout),
             ),
           ],
         ),
         body: Center(
-          child: Padding(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(24),
-            child: Text(AppLocalizations.of(context).membershipRequired),
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const BrandMark(size: 150),
+                  const SizedBox(height: 20),
+                  Text(
+                    AppLocalizations.of(context).membershipRequired,
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  const Text(
+                    'If this is the first account for the business, claim ownership '
+                    'to create the organization and its first branch.',
+                    textAlign: TextAlign.center,
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _error!,
+                      style: TextStyle(color: Theme.of(context).colorScheme.error),
+                    ),
+                  ],
+                  const SizedBox(height: 20),
+                  FilledButton.icon(
+                    onPressed: _claiming ? null : _claim,
+                    icon: const Icon(Icons.verified_user_outlined),
+                    label: Text(_claiming ? 'Claiming…' : 'Claim owner account'),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       );
@@ -291,10 +526,30 @@ class AccessDeniedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
+        appBar: AppBar(title: const Text(Brand.appName)),
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Text(AppLocalizations.of(context).accessDenied),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.lock_outline,
+                  size: 64,
+                  color: Theme.of(context).colorScheme.secondary,
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  AppLocalizations.of(context).accessDenied,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 16),
+                FilledButton(
+                  onPressed: () => context.go('/'),
+                  child: const Text('Back to dashboard'),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -317,125 +572,30 @@ class AuthErrorScreen extends StatelessWidget {
         body: Center(
           child: Padding(
             padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  '${AppLocalizations.of(context).accessLoadFailed}\n$message',
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: onRetry,
-                  child: Text(AppLocalizations.of(context).retry),
-                ),
-                TextButton(
-                  onPressed: onSignOut,
-                  child: Text(AppLocalizations.of(context).signOut),
-                ),
-              ],
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const BrandMark(size: 120),
+                  const SizedBox(height: 20),
+                  Text(
+                    '${AppLocalizations.of(context).accessLoadFailed}\n$message',
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: onRetry,
+                    child: Text(AppLocalizations.of(context).retry),
+                  ),
+                  TextButton(
+                    onPressed: onSignOut,
+                    child: Text(AppLocalizations.of(context).signOut),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       );
 }
-
-class DashboardScreen extends StatelessWidget {
-  const DashboardScreen({required this.onSignOut, super.key});
-
-  final Future<void> Function() onSignOut;
-
-  static const _modules = [
-    ('production', Icons.bakery_dining),
-    ('sales', Icons.point_of_sale),
-    ('inventory', Icons.inventory_2),
-    ('cash', Icons.account_balance_wallet),
-    ('people', Icons.groups),
-    ('rentals', Icons.apartment),
-    ('reports', Icons.bar_chart),
-    ('settings', Icons.settings),
-  ];
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    final width = MediaQuery.sizeOf(context).width;
-    final columns = width >= 1000 ? 4 : width >= 600 ? 3 : 2;
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(strings.appTitle),
-        actions: [
-          IconButton(
-            tooltip: strings.signOut,
-            onPressed: onSignOut,
-            icon: const Icon(Icons.logout),
-          ),
-        ],
-      ),
-      body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 1200),
-          child: GridView.count(
-            padding: const EdgeInsets.all(20),
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: 1.35,
-            children: [
-              for (final (name, icon) in _modules)
-                Card(
-                  clipBehavior: Clip.antiAlias,
-                  child: InkWell(
-                    onTap: () => context.go('/module/$name'),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          icon,
-                          size: 38,
-                          color: Theme.of(context).colorScheme.primary,
-                        ),
-                        const SizedBox(height: 10),
-                        Text(_moduleTitle(strings, name)),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class ModuleScreen extends StatelessWidget {
-  const ModuleScreen({required this.name, super.key});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    return Scaffold(
-      appBar: AppBar(title: Text(_moduleTitle(strings, name))),
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(strings.moduleSetupMessage),
-        ),
-      ),
-    );
-  }
-}
-
-String _moduleTitle(AppLocalizations strings, String name) => switch (name) {
-      'production' => strings.production,
-      'sales' => strings.sales,
-      'inventory' => strings.inventory,
-      'cash' => strings.cashManagement,
-      'people' => strings.people,
-      'rentals' => strings.rentals,
-      'reports' => strings.reports,
-      'settings' => strings.settings,
-      _ => strings.appTitle,
-    };

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
+import '../brand/brand.dart';
 import '../data/formatting.dart';
 import '../data/offline_queue.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
-import '../theme/app_theme.dart';
 import 'common.dart';
 
 class ModuleScaffold extends StatelessWidget {
@@ -29,23 +29,29 @@ class ModuleScaffold extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return Scaffold(
+      drawer: _PortalDrawer(session: session),
       appBar: AppBar(
-        leading: showHome
-            ? IconButton(
-                tooltip: 'Home',
-                icon: const Icon(Icons.home_outlined),
-                onPressed: () => context.go('/'),
-              )
-            : null,
-        title: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Flexible(
-              child: Text(title, overflow: TextOverflow.ellipsis),
-            ),
-            const SizedBox(width: 12),
-            _BranchSelector(session: session),
-          ],
+        leading: Builder(
+          builder: (context) => IconButton(
+            tooltip: 'Menu',
+            icon: const Icon(Icons.menu),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+        ),
+        title: InkWell(
+          onTap: () => context.go('/'),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Image.asset(Brand.logoAsset, width: 34, height: 34),
+              const SizedBox(width: 10),
+              Flexible(
+                child: Text(title, overflow: TextOverflow.ellipsis),
+              ),
+              const SizedBox(width: 12),
+              _BranchSelector(session: session),
+            ],
+          ),
         ),
         actions: [
           ...actions,
@@ -57,6 +63,100 @@ class ModuleScaffold extends StatelessWidget {
       ),
       body: body,
       floatingActionButton: floatingActionButton,
+    );
+  }
+}
+
+class _PortalDrawer extends StatelessWidget {
+  const _PortalDrawer({required this.session});
+
+  final AuthController session;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    final items = <(String, String, IconData, String?)>[
+      ('/', 'Dashboard', Icons.dashboard_outlined, null),
+      ('/pos', 'New sale', Icons.point_of_sale_outlined, 'sales.write'),
+      ('/sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.read'),
+      ('/production', 'Production', Icons.bakery_dining_outlined, 'production.read'),
+      ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.read'),
+      ('/cash', 'Cash & expenses', Icons.account_balance_wallet_outlined, 'cash.read'),
+      ('/people', 'People & HR', Icons.groups_outlined, 'people.read'),
+      ('/payroll', 'Payroll', Icons.payments_outlined, 'payroll.read'),
+      ('/rentals', 'Rentals', Icons.apartment_outlined, 'rentals.read'),
+      ('/payables', 'Payables', Icons.request_quote_outlined, 'payables.read'),
+      ('/reports', 'Reports', Icons.bar_chart_outlined, 'reports.read'),
+      ('/notifications', 'Notifications', Icons.notifications_outlined, null),
+      ('/settings', 'Settings', Icons.settings_outlined, 'settings.manage'),
+    ];
+    return Drawer(
+      child: ListView(
+        padding: EdgeInsets.zero,
+        children: [
+          DrawerHeader(
+            decoration: BoxDecoration(color: scheme.primary),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    Image.asset(Brand.logoAsset, width: 58, height: 58),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            Brand.appName,
+                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: scheme.onPrimary,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                          ),
+                          Text(
+                            Brand.slogan,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  color: scheme.onPrimary.withValues(alpha: 0.8),
+                                  fontStyle: FontStyle.italic,
+                                ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const Spacer(),
+                Text(
+                  session.selectedBranch?.branchName ?? 'No branch selected',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color: scheme.onPrimary,
+                      ),
+                ),
+              ],
+            ),
+          ),
+          for (final item in items)
+            if (item.$4 == null || session.can(item.$4!))
+              ListTile(
+                leading: Icon(item.$3),
+                title: Text(item.$2),
+                onTap: () {
+                  Navigator.of(context).pop();
+                  context.go(item.$1);
+                },
+              ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.logout),
+            title: const Text('Sign out'),
+            onTap: () {
+              Navigator.of(context).pop();
+              session.signOut();
+            },
+          ),
+        ],
+      ),
     );
   }
 }
@@ -259,7 +359,7 @@ class _AccountMenu extends StatelessWidget {
           case 'profile':
             await _editProfile(context);
           case 'settings':
-            context.go('/module/settings');
+            context.go('/settings');
           case 'light':
             await session.setThemeMode(ThemeMode.light);
           case 'dark':
@@ -281,11 +381,14 @@ class _AccountMenu extends StatelessWidget {
           enabled: false,
           child: ListTile(
             leading: CircleAvatar(
-              backgroundColor: AppTheme.wheatGold,
+              backgroundColor: Theme.of(context).colorScheme.secondary,
               child: Text(
                 (name == null || name.isEmpty)
                     ? '?'
                     : name.characters.first.toUpperCase(),
+                style: TextStyle(
+                  color: Theme.of(context).colorScheme.onSecondary,
+                ),
               ),
             ),
             title: Text(name == null || name.isEmpty ? 'My account' : name),
