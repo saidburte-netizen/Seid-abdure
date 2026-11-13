@@ -113,7 +113,8 @@ class _CrudTabState extends State<CrudTab> {
   bool get _canWrite {
     if (widget.alwaysReadOnly) return false;
     final session = SessionScope.of(context);
-    return widget.writePermission == null || session.can(widget.writePermission!);
+    return widget.writePermission == null ||
+        session.can(widget.writePermission!);
   }
 
   Future<_CrudSnapshot> _load() async {
@@ -239,7 +240,10 @@ class _CrudTabState extends State<CrudTab> {
             ),
             if (widget.spec.description != null)
               Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 18,
+                  vertical: 4,
+                ),
                 child: Text(
                   widget.spec.description!,
                   style: Theme.of(context).textTheme.bodySmall,
@@ -249,14 +253,16 @@ class _CrudTabState extends State<CrudTab> {
               child: rows.isEmpty
                   ? EmptyView(
                       icon: Icons.table_rows_outlined,
-                      message: widget.emptyMessage ??
+                      message:
+                          widget.emptyMessage ??
                           'No ${widget.spec.title.toLowerCase()} found.',
                       action: _canWrite && widget.spec.canCreate
                           ? FilledButton(
                               onPressed: () =>
                                   _openForm(context, snapshot, null),
                               child: Text(
-                                  'Create ${widget.spec.singular.toLowerCase()}'),
+                                'Create ${widget.spec.singular.toLowerCase()}',
+                              ),
                             )
                           : null,
                     )
@@ -292,9 +298,7 @@ class _CrudTabState extends State<CrudTab> {
           columns: [
             for (final key in columns)
               DataColumn(
-                label: Text(
-                  widget.spec.field(key)?.label ?? prettyLabel(key),
-                ),
+                label: Text(widget.spec.field(key)?.label ?? prettyLabel(key)),
               ),
             const DataColumn(label: Text('Actions')),
           ],
@@ -303,12 +307,14 @@ class _CrudTabState extends State<CrudTab> {
               DataRow(
                 cells: [
                   for (final key in columns)
-                    DataCell(_valueWidget(
-                      context,
-                      widget.spec.field(key),
-                      row[key],
-                      snapshot.lookups,
-                    )),
+                    DataCell(
+                      _valueWidget(
+                        context,
+                        widget.spec.field(key),
+                        row[key],
+                        snapshot.lookups,
+                      ),
+                    ),
                   DataCell(_actionsWidget(context, snapshot, row)),
                 ],
               ),
@@ -322,67 +328,68 @@ class _CrudTabState extends State<CrudTab> {
     BuildContext context,
     _CrudSnapshot snapshot,
     List<Map<String, dynamic>> rows,
-  ) =>
-      ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-        itemCount: rows.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final row = rows[index];
-          final titleKey = widget.spec.effectiveListColumns.isEmpty
-              ? widget.spec.fields.first.key
-              : widget.spec.effectiveListColumns.first;
-          return Card(
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+  ) => ListView.separated(
+    padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+    itemCount: rows.length,
+    separatorBuilder: (_, __) => const SizedBox(height: 8),
+    itemBuilder: (context, index) {
+      final row = rows[index];
+      final titleKey = widget.spec.effectiveListColumns.isEmpty
+          ? widget.spec.fields.first.key
+          : widget.spec.effectiveListColumns.first;
+      return Card(
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
                 children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _display(widget.spec.field(titleKey), row[titleKey],
-                              snapshot.lookups),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
+                  Expanded(
+                    child: Text(
+                      _display(
+                        widget.spec.field(titleKey),
+                        row[titleKey],
+                        snapshot.lookups,
                       ),
-                      _actionsWidget(context, snapshot, row),
-                    ],
-                  ),
-                  for (final key
-                      in widget.spec.effectiveListColumns.skip(1).take(4))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 120,
-                            child: Text(
-                              widget.spec.field(key)?.label ??
-                                  prettyLabel(key),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          Expanded(
-                            child: _valueWidget(
-                              context,
-                              widget.spec.field(key),
-                              row[key],
-                              snapshot.lookups,
-                            ),
-                          ),
-                        ],
-                      ),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
+                  ),
+                  _actionsWidget(context, snapshot, row),
                 ],
               ),
-            ),
-          );
-        },
+              for (final key
+                  in widget.spec.effectiveListColumns.skip(1).take(4))
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(
+                        width: 120,
+                        child: Text(
+                          widget.spec.field(key)?.label ?? prettyLabel(key),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                      Expanded(
+                        child: _valueWidget(
+                          context,
+                          widget.spec.field(key),
+                          row[key],
+                          snapshot.lookups,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
       );
+    },
+  );
 
   Widget _valueWidget(
     BuildContext context,
@@ -524,8 +531,10 @@ class _CrudTabState extends State<CrudTab> {
           PopupMenuItem(
             value: 'delete',
             child: ListTile(
-              leading: Icon(Icons.delete_outline,
-                  color: Theme.of(context).colorScheme.error),
+              leading: Icon(
+                Icons.delete_outline,
+                color: Theme.of(context).colorScheme.error,
+              ),
               title: Text(
                 'Delete',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
@@ -536,10 +545,7 @@ class _CrudTabState extends State<CrudTab> {
     );
   }
 
-  Future<void> _delete(
-    BuildContext context,
-    Map<String, dynamic> row,
-  ) async {
+  Future<void> _delete(BuildContext context, Map<String, dynamic> row) async {
     final id = row[widget.spec.primaryKey];
     if (id == null) return;
     final confirmed = await confirmAction(
@@ -551,8 +557,11 @@ class _CrudTabState extends State<CrudTab> {
     );
     if (!confirmed || !context.mounted) return;
     try {
-      await _repo.delete(widget.spec.table, id,
-          primaryKey: widget.spec.primaryKey);
+      await _repo.delete(
+        widget.spec.table,
+        id,
+        primaryKey: widget.spec.primaryKey,
+      );
       if (context.mounted) {
         showSnack(context, '${widget.spec.singular} deleted.');
         await _refresh();
@@ -676,8 +685,9 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         );
       } else if (field.type == FieldType.time) {
         final text = raw?.toString() ?? '';
-        _controllers[field.key] =
-            TextEditingController(text: text.length > 5 ? text.substring(0, 5) : text);
+        _controllers[field.key] = TextEditingController(
+          text: text.length > 5 ? text.substring(0, 5) : text,
+        );
       } else {
         _controllers[field.key] = TextEditingController(
           text: raw == null ? '' : raw.toString(),
@@ -714,7 +724,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
               children: [
                 for (final field in widget.spec.fields)
                   SizedBox(
-                    width: field.width ??
+                    width:
+                        field.width ??
                         ((media.width > 720 ? 640 : media.width * 0.9) / 2) - 8,
                     child: _buildField(context, field),
                   ),
@@ -801,8 +812,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             hintText: 'YYYY-MM-DD',
             suffixIcon: const Icon(Icons.calendar_today_outlined),
           ),
-          validator: (value) => field.required &&
-                  (value == null || value.isEmpty)
+          validator: (value) =>
+              field.required && (value == null || value.isEmpty)
               ? 'Required'
               : null,
           onTap: () async {
@@ -857,8 +868,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             labelText: field.label,
             hintText: field.hint,
           ),
-          validator: (value) => field.required &&
-                  (value == null || value.trim().isEmpty)
+          validator: (value) =>
+              field.required && (value == null || value.trim().isEmpty)
               ? 'Required'
               : null,
         );
@@ -868,10 +879,11 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           controller: _controllers[field.key],
           decoration: InputDecoration(
             labelText: field.label,
-            hintText: field.hint ?? (field.type == FieldType.time ? 'HH:MM' : null),
+            hintText:
+                field.hint ?? (field.type == FieldType.time ? 'HH:MM' : null),
           ),
-          validator: (value) => field.required &&
-                  (value == null || value.trim().isEmpty)
+          validator: (value) =>
+              field.required && (value == null || value.trim().isEmpty)
               ? 'Required'
               : null,
         );

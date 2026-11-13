@@ -12,5 +12,6 @@ class Brand {
   static const String invoiceLogoAsset = 'assets/branding/logo.png';
   static const String payslipLogoAsset = 'assets/branding/logo.png';
   static const String reportLogoAsset = 'assets/branding/logo.png';
-  static const String notificationIconAsset = 'assets/branding/notification_icon.png';
+  static const String notificationIconAsset =
+      'assets/branding/notification_icon.png';
 }

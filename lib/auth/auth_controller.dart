@@ -146,13 +146,15 @@ class AuthController extends ChangeNotifier {
           final key = permission['permission_key'] as String?;
           if (key != null) permissions.add(key);
         }
-        loaded.add(BranchAccess(
-          branchId: row['branch_id'] as String,
-          branchName: branch['name'] as String? ?? 'Branch',
-          branchCode: branch['code'] as String? ?? '',
-          roleSlugs: roleSlugs,
-          permissions: permissions,
-        ));
+        loaded.add(
+          BranchAccess(
+            branchId: row['branch_id'] as String,
+            branchName: branch['name'] as String? ?? 'Branch',
+            branchCode: branch['code'] as String? ?? '',
+            roleSlugs: roleSlugs,
+            permissions: permissions,
+          ),
+        );
       }
 
       branches = loaded;
@@ -220,7 +222,8 @@ class AuthController extends ChangeNotifier {
     if (userId == null) return;
     await client
         .from('profiles')
-        .update({'full_name': name.trim()}).eq('id', userId!);
+        .update({'full_name': name.trim()})
+        .eq('id', userId!);
     fullName = name.trim();
     _notify();
   }

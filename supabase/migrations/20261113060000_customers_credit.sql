@@ -191,10 +191,10 @@ begin
 
     select coalesce(sum(return_item.quantity), 0) into already_returned
     from public.sale_return_items return_item
-    join public.sale_returns sale_return
-      on sale_return.id = return_item.return_id
+    join public.sale_returns sr
+      on sr.id = return_item.return_id
     where return_item.sale_item_id = sale_line.id
-      and sale_return.status = 'completed';
+      and sr.status = 'completed';
 
     remaining := sale_line.quantity - already_returned;
     if (line ->> 'quantity')::numeric <= 0
@@ -288,10 +288,10 @@ begin
 
   select coalesce(sum(return_item.quantity), 0) into total_returned
   from public.sale_return_items return_item
-  join public.sale_returns sale_return
-    on sale_return.id = return_item.return_id
-  where sale_return.sale_id = sale.id
-    and sale_return.status = 'completed';
+  join public.sale_returns sr
+    on sr.id = return_item.return_id
+  where sr.sale_id = sale.id
+    and sr.status = 'completed';
 
   select coalesce(sum(quantity), 0) into total_sold
   from public.sale_items where sale_id = sale.id;

@@ -1,11 +1,11 @@
 {
-    "name": "brade_and_cake_house",
-    "short_name": "brade_and_cake_house",
+    "name": "Brade and Cake House",
+    "short_name": "Brade & Cake",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#F4E8D8",
+    "theme_color": "#0B3B17",
+    "description": "Brade and Cake House bakery and shop management system.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

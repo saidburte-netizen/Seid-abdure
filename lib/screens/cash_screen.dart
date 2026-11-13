@@ -42,17 +42,17 @@ class _CashScreenState extends State<CashScreen> {
             Expanded(
               child: TabBarView(
                 children: [
-                  CrudTab(
+                  const CrudTab(
                     spec: _balancesSpec,
                     readPermission: 'cash.read',
                     alwaysReadOnly: true,
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: cashAccountsSpec,
                     readPermission: 'cash.read',
                     writePermission: 'cash.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: _transactionsSpec,
                     readPermission: 'cash.read',
                     alwaysReadOnly: true,
@@ -70,13 +70,15 @@ class _CashScreenState extends State<CashScreen> {
                         CrudRowAction(
                           label: 'Approve',
                           icon: Icons.check_circle_outline,
-                          onPressed: (row) => _reviewExpense(session, row, true),
+                          onPressed: (row) =>
+                              _reviewExpense(session, row, true),
                         ),
                         CrudRowAction(
                           label: 'Reject',
                           icon: Icons.cancel_outlined,
                           danger: true,
-                          onPressed: (row) => _reviewExpense(session, row, false),
+                          onPressed: (row) =>
+                              _reviewExpense(session, row, false),
                         ),
                       ];
                     },
@@ -90,40 +92,55 @@ class _CashScreenState extends State<CashScreen> {
                       final remaining =
                           asNum(row['amount']) - asNum(row['paid_amount']);
                       if (remaining > 0 && row['status'] != 'void') {
-                        actions.add(CrudRowAction(
-                          label: 'Pay bill',
-                          icon: Icons.payments_outlined,
-                          onPressed: (row) => _payBill(session, row),
-                        ));
+                        actions.add(
+                          CrudRowAction(
+                            label: 'Pay bill',
+                            icon: Icons.payments_outlined,
+                            onPressed: (row) => _payBill(session, row),
+                          ),
+                        );
                       }
                       if (row['status'] != 'void' &&
                           session.can('cash.approve')) {
-                        actions.add(CrudRowAction(
-                          label: 'Void bill',
-                          icon: Icons.cancel_outlined,
-                          danger: true,
-                          onPressed: (row) async {
-                            final reason = await showInputDialog(
-                              context,
-                              title: 'Void bill ${asText(row['bill_number'])}',
-                              submitLabel: 'Void',
-                              fields: const [
-                                InputField('reason', 'Reason', required: true, type: FieldType.multiline),
-                              ],
-                            );
-                            if (reason == null) return;
-                            await session.client.rpc('void_bill', params: {
-                              'target_bill': row['id'],
-                              'reason': reason['reason'],
-                            });
-                            if (context.mounted) showSnack(context, 'Bill voided.');
-                          },
-                        ));
+                        actions.add(
+                          CrudRowAction(
+                            label: 'Void bill',
+                            icon: Icons.cancel_outlined,
+                            danger: true,
+                            onPressed: (row) async {
+                              final reason = await showInputDialog(
+                                context,
+                                title:
+                                    'Void bill ${asText(row['bill_number'])}',
+                                submitLabel: 'Void',
+                                fields: const [
+                                  InputField(
+                                    'reason',
+                                    'Reason',
+                                    required: true,
+                                    type: FieldType.multiline,
+                                  ),
+                                ],
+                              );
+                              if (reason == null) return;
+                              await session.client.rpc(
+                                'void_bill',
+                                params: {
+                                  'target_bill': row['id'],
+                                  'reason': reason['reason'],
+                                },
+                              );
+                              if (context.mounted) {
+                                showSnack(context, 'Bill voided.');
+                              }
+                            },
+                          ),
+                        );
                       }
                       return actions;
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: _billPaymentsSpec,
                     readPermission: 'cash.read',
                     alwaysReadOnly: true,
@@ -183,11 +200,14 @@ class _CashScreenState extends State<CashScreen> {
     );
     if (reason == null) return;
     try {
-      final response = await session.client.rpc('approve_expense', params: {
-        'target_expense': expense['id'],
-        'approve': approve,
-        'review_reason': reason['reason'] ?? '',
-      });
+      final response = await session.client.rpc(
+        'approve_expense',
+        params: {
+          'target_expense': expense['id'],
+          'approve': approve,
+          'review_reason': reason['reason'] ?? '',
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -206,11 +226,14 @@ class _CashScreenState extends State<CashScreen> {
     bool approve,
   ) async {
     try {
-      final response = await session.client.rpc('approve_cash_transfer', params: {
-        'target_transfer': transfer['id'],
-        'approve': approve,
-        'review_reason': '',
-      });
+      final response = await session.client.rpc(
+        'approve_cash_transfer',
+        params: {
+          'target_transfer': transfer['id'],
+          'approve': approve,
+          'review_reason': '',
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -247,13 +270,16 @@ class _CashScreenState extends State<CashScreen> {
     );
     if (payment == null) return;
     try {
-      final response = await session.client.rpc('pay_bill', params: {
-        'target_bill': bill['id'],
-        'target_account': payment['account_id'],
-        'payment_amount': payment['amount'],
-        'payment_method': payment['method'],
-        'payment_reference': payment['reference'],
-      });
+      final response = await session.client.rpc(
+        'pay_bill',
+        params: {
+          'target_bill': bill['id'],
+          'target_account': payment['account_id'],
+          'payment_amount': payment['amount'],
+          'payment_method': payment['method'],
+          'payment_reference': payment['reference'],
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -279,9 +305,13 @@ const _balancesSpec = TableSpec(
   canDelete: false,
   fields: [
     FieldSpec('name', 'Account', list: true),
-    FieldSpec('account_type', 'Type', type: FieldType.select, list: true, options: {
-      'cash': 'Cash', 'bank': 'Bank', 'mobile_money': 'Mobile money',
-    }),
+    FieldSpec(
+      'account_type',
+      'Type',
+      type: FieldType.select,
+      list: true,
+      options: {'cash': 'Cash', 'bank': 'Bank', 'mobile_money': 'Mobile money'},
+    ),
     FieldSpec('balance', 'Balance', type: FieldType.number, list: true),
   ],
 );
@@ -298,10 +328,20 @@ const _transactionsSpec = TableSpec(
   canDelete: false,
   fields: [
     FieldSpec('created_at', 'Date', type: FieldType.date, list: true),
-    FieldSpec('cash_account_id', 'Account', type: FieldType.lookup, lookupTable: 'cash_accounts', list: true),
-    FieldSpec('direction', 'Direction', type: FieldType.select, list: true, options: {
-      'in': 'In', 'out': 'Out',
-    }),
+    FieldSpec(
+      'cash_account_id',
+      'Account',
+      type: FieldType.lookup,
+      lookupTable: 'cash_accounts',
+      list: true,
+    ),
+    FieldSpec(
+      'direction',
+      'Direction',
+      type: FieldType.select,
+      list: true,
+      options: {'in': 'In', 'out': 'Out'},
+    ),
     FieldSpec('category', 'Category', list: true),
     FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
     FieldSpec('method', 'Method', list: true),
@@ -323,7 +363,13 @@ const _billPaymentsSpec = TableSpec(
   fields: [
     FieldSpec('paid_at', 'Paid at', type: FieldType.date, list: true),
     FieldSpec('bill_id', 'Bill', list: true),
-    FieldSpec('cash_account_id', 'Account', type: FieldType.lookup, lookupTable: 'cash_accounts', list: true),
+    FieldSpec(
+      'cash_account_id',
+      'Account',
+      type: FieldType.lookup,
+      lookupTable: 'cash_accounts',
+      list: true,
+    ),
     FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
     FieldSpec('method', 'Method', list: true),
     FieldSpec('reference', 'Reference', list: true),

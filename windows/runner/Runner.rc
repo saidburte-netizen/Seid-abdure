@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "net.bradeandcake" "\0"
-            VALUE "FileDescription", "brade_and_cake_house" "\0"
+            VALUE "FileDescription", "Brade and Cake House" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "brade_and_cake_house" "\0"
+            VALUE "InternalName", "Brade and Cake House" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 net.bradeandcake. All rights reserved." "\0"
             VALUE "OriginalFilename", "brade_and_cake_house.exe" "\0"
-            VALUE "ProductName", "brade_and_cake_house" "\0"
+            VALUE "ProductName", "Brade and Cake House" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

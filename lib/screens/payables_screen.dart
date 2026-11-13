@@ -45,7 +45,9 @@ class _PayablesScreenState extends State<PayablesScreen> {
                     actions: (row) {
                       if (!session.can('payables.write')) return const [];
                       final balance = asNum(row['balance']);
-                      if (balance <= 0 || row['status'] == 'void') return const [];
+                      if (balance <= 0 || row['status'] == 'void') {
+                        return const [];
+                      }
                       return [
                         CrudRowAction(
                           label: 'Pay supplier',
@@ -55,7 +57,7 @@ class _PayablesScreenState extends State<PayablesScreen> {
                       ];
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: _agingSpec,
                     readPermission: 'payables.read',
                     alwaysReadOnly: true,
@@ -107,13 +109,16 @@ class _PayablesScreenState extends State<PayablesScreen> {
     );
     if (payment == null) return;
     try {
-      final response = await session.client.rpc('record_supplier_payment', params: {
-        'target_bill': payable['bill_id'],
-        'target_account': payment['account_id'],
-        'payment_amount': payment['amount'],
-        'payment_method': payment['method'],
-        'payment_reference': payment['reference'],
-      });
+      final response = await session.client.rpc(
+        'record_supplier_payment',
+        params: {
+          'target_bill': payable['bill_id'],
+          'target_account': payment['account_id'],
+          'payment_amount': payment['amount'],
+          'payment_method': payment['method'],
+          'payment_reference': payment['reference'],
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -144,12 +149,15 @@ class _PayablesScreenState extends State<PayablesScreen> {
     );
     if (range == null) return;
     try {
-      final response = await session.client.rpc('supplier_statement', params: {
-        'target_branch': branch.branchId,
-        'target_supplier': supplier['id'],
-        'from_date': dateOnly(range.start),
-        'to_date': dateOnly(range.end),
-      });
+      final response = await session.client.rpc(
+        'supplier_statement',
+        params: {
+          'target_branch': branch.branchId,
+          'target_supplier': supplier['id'],
+          'from_date': dateOnly(range.start),
+          'to_date': dateOnly(range.end),
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -182,7 +190,12 @@ const _payablesSpec = TableSpec(
     FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
     FieldSpec('paid_amount', 'Paid', type: FieldType.number, list: true),
     FieldSpec('balance', 'Balance', type: FieldType.number, list: true),
-    FieldSpec('days_overdue', 'Days overdue', type: FieldType.number, list: true),
+    FieldSpec(
+      'days_overdue',
+      'Days overdue',
+      type: FieldType.number,
+      list: true,
+    ),
     FieldSpec('aging_bucket', 'Aging', list: true),
     FieldSpec('status', 'Status', list: true),
   ],

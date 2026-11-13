@@ -64,7 +64,7 @@ import 'app_localizations_om.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -87,23 +87,23 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
     Locale('am'),
     Locale('en'),
-    Locale('om')
+    Locale('om'),
   ];
 
   /// No description provided for @appTitle.
   ///
   /// In en, this message translates to:
-  /// **'Bread & Cake Management'**
+  /// **'Brade and Cake House'**
   String get appTitle;
 
   /// No description provided for @production.
@@ -154,16 +154,10 @@ abstract class AppLocalizations {
   /// **'Settings'**
   String get settings;
 
-  /// No description provided for @moduleSetupMessage.
-  ///
-  /// In en, this message translates to:
-  /// **'This module is part of the implementation roadmap and is not available yet.'**
-  String get moduleSetupMessage;
-
   /// No description provided for @configurationRequired.
   ///
   /// In en, this message translates to:
-  /// **'Set SUPABASE_URL and SUPABASE_ANON_KEY to connect this app to Supabase.'**
+  /// **'Set SUPABASE_URL and SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY) to connect this app to Supabase.'**
   String get configurationRequired;
 
   /// No description provided for @signIn.
@@ -219,6 +213,372 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Retry'**
   String get retry;
+
+  /// No description provided for @dashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Dashboard'**
+  String get dashboard;
+
+  /// No description provided for @newSale.
+  ///
+  /// In en, this message translates to:
+  /// **'New sale'**
+  String get newSale;
+
+  /// No description provided for @alerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts'**
+  String get alerts;
+
+  /// No description provided for @productionModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Production'**
+  String get productionModule;
+
+  /// No description provided for @salesModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Sales & POS'**
+  String get salesModule;
+
+  /// No description provided for @inventoryModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Inventory'**
+  String get inventoryModule;
+
+  /// No description provided for @cashModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash & expenses'**
+  String get cashModule;
+
+  /// No description provided for @peopleModule.
+  ///
+  /// In en, this message translates to:
+  /// **'People & HR'**
+  String get peopleModule;
+
+  /// No description provided for @payrollModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Payroll'**
+  String get payrollModule;
+
+  /// No description provided for @rentalsModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Rentals'**
+  String get rentalsModule;
+
+  /// No description provided for @payablesModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Payables'**
+  String get payablesModule;
+
+  /// No description provided for @reportsModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Reports'**
+  String get reportsModule;
+
+  /// No description provided for @settingsModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Settings'**
+  String get settingsModule;
+
+  /// No description provided for @notificationsModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Notifications'**
+  String get notificationsModule;
+
+  /// No description provided for @workspace.
+  ///
+  /// In en, this message translates to:
+  /// **'Workspace'**
+  String get workspace;
+
+  /// No description provided for @workspaceSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'All operational areas available to your role.'**
+  String get workspaceSubtitle;
+
+  /// No description provided for @welcome.
+  ///
+  /// In en, this message translates to:
+  /// **'Welcome'**
+  String get welcome;
+
+  /// No description provided for @adminPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Admin portal'**
+  String get adminPortal;
+
+  /// No description provided for @managerPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Manager portal'**
+  String get managerPortal;
+
+  /// No description provided for @teamPortal.
+  ///
+  /// In en, this message translates to:
+  /// **'Team portal'**
+  String get teamPortal;
+
+  /// No description provided for @roleNoReports.
+  ///
+  /// In en, this message translates to:
+  /// **'Your role does not include dashboard reporting. Use the module shortcuts below.'**
+  String get roleNoReports;
+
+  /// No description provided for @todaySales.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s sales'**
+  String get todaySales;
+
+  /// No description provided for @thisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'This month'**
+  String get thisMonth;
+
+  /// No description provided for @cashBalance.
+  ///
+  /// In en, this message translates to:
+  /// **'Cash balance'**
+  String get cashBalance;
+
+  /// No description provided for @receivables.
+  ///
+  /// In en, this message translates to:
+  /// **'Receivables'**
+  String get receivables;
+
+  /// No description provided for @payables.
+  ///
+  /// In en, this message translates to:
+  /// **'Payables'**
+  String get payables;
+
+  /// No description provided for @rentOutstanding.
+  ///
+  /// In en, this message translates to:
+  /// **'Rent outstanding'**
+  String get rentOutstanding;
+
+  /// No description provided for @lowStock.
+  ///
+  /// In en, this message translates to:
+  /// **'Low stock'**
+  String get lowStock;
+
+  /// No description provided for @pendingExpenses.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending expenses'**
+  String get pendingExpenses;
+
+  /// No description provided for @pendingLeave.
+  ///
+  /// In en, this message translates to:
+  /// **'Pending leave'**
+  String get pendingLeave;
+
+  /// No description provided for @batchesToday.
+  ///
+  /// In en, this message translates to:
+  /// **'Today\'s batches'**
+  String get batchesToday;
+
+  /// No description provided for @activeEmployees.
+  ///
+  /// In en, this message translates to:
+  /// **'Active employees'**
+  String get activeEmployees;
+
+  /// No description provided for @revenueThisMonth.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenue this month'**
+  String get revenueThisMonth;
+
+  /// No description provided for @signInSubtitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in to manage sales, stock, cash, people and property.'**
+  String get signInSubtitle;
+
+  /// No description provided for @signingIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Signing in…'**
+  String get signingIn;
+
+  /// No description provided for @claimOwner.
+  ///
+  /// In en, this message translates to:
+  /// **'Claim owner account'**
+  String get claimOwner;
+
+  /// No description provided for @claiming.
+  ///
+  /// In en, this message translates to:
+  /// **'Claiming…'**
+  String get claiming;
+
+  /// No description provided for @claimOwnerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'If this is the first account for the business, claim ownership to create the organization and its first branch.'**
+  String get claimOwnerHelp;
+
+  /// No description provided for @backToDashboard.
+  ///
+  /// In en, this message translates to:
+  /// **'Back to dashboard'**
+  String get backToDashboard;
+
+  /// No description provided for @menu.
+  ///
+  /// In en, this message translates to:
+  /// **'Menu'**
+  String get menu;
+
+  /// No description provided for @language.
+  ///
+  /// In en, this message translates to:
+  /// **'Language'**
+  String get language;
+
+  /// No description provided for @theme.
+  ///
+  /// In en, this message translates to:
+  /// **'Theme'**
+  String get theme;
+
+  /// No description provided for @systemTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'System theme'**
+  String get systemTheme;
+
+  /// No description provided for @lightTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Light theme'**
+  String get lightTheme;
+
+  /// No description provided for @darkTheme.
+  ///
+  /// In en, this message translates to:
+  /// **'Dark theme'**
+  String get darkTheme;
+
+  /// No description provided for @save.
+  ///
+  /// In en, this message translates to:
+  /// **'Save'**
+  String get save;
+
+  /// No description provided for @cancel.
+  ///
+  /// In en, this message translates to:
+  /// **'Cancel'**
+  String get cancel;
+
+  /// No description provided for @close.
+  ///
+  /// In en, this message translates to:
+  /// **'Close'**
+  String get close;
+
+  /// No description provided for @add.
+  ///
+  /// In en, this message translates to:
+  /// **'Add'**
+  String get add;
+
+  /// No description provided for @edit.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit'**
+  String get edit;
+
+  /// No description provided for @delete.
+  ///
+  /// In en, this message translates to:
+  /// **'Delete'**
+  String get delete;
+
+  /// No description provided for @refresh.
+  ///
+  /// In en, this message translates to:
+  /// **'Refresh'**
+  String get refresh;
+
+  /// No description provided for @search.
+  ///
+  /// In en, this message translates to:
+  /// **'Search'**
+  String get search;
+
+  /// No description provided for @export.
+  ///
+  /// In en, this message translates to:
+  /// **'Export'**
+  String get export;
+
+  /// No description provided for @myAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'My account'**
+  String get myAccount;
+
+  /// No description provided for @accountPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Account and preferences'**
+  String get accountPreferences;
+
+  /// No description provided for @editDisplayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Edit display name'**
+  String get editDisplayName;
+
+  /// No description provided for @displayName.
+  ///
+  /// In en, this message translates to:
+  /// **'Display name'**
+  String get displayName;
+
+  /// No description provided for @fullName.
+  ///
+  /// In en, this message translates to:
+  /// **'Full name'**
+  String get fullName;
+
+  /// No description provided for @english.
+  ///
+  /// In en, this message translates to:
+  /// **'English'**
+  String get english;
+
+  /// No description provided for @noBranchSelected.
+  ///
+  /// In en, this message translates to:
+  /// **'No branch selected'**
+  String get noBranchSelected;
 }
 
 class _AppLocalizationsDelegate
@@ -250,8 +610,9 @@ AppLocalizations lookupAppLocalizations(Locale locale) {
   }
 
   throw FlutterError(
-      'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
-      'an issue with the localizations generation tool. Please file an issue '
-      'on GitHub with a reproducible sample app and the gen-l10n configuration '
-      'that was used.');
+    'AppLocalizations.delegate failed to load unsupported locale "$locale". This is likely '
+    'an issue with the localizations generation tool. Please file an issue '
+    'on GitHub with a reproducible sample app and the gen-l10n configuration '
+    'that was used.',
+  );
 }

@@ -53,78 +53,80 @@ class _PaymentDialogState extends State<PaymentDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.title),
-        content: SizedBox(
-          width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: _accountId,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Account'),
-                items: [
-                  for (final account in widget.accounts)
-                    DropdownMenuItem(
-                      value: account['id'] as String,
-                      child: Text(
-                        '${asText(account['name'])}'
-                        '${account['balance'] == null ? '' : ' • ${formatMoney(account['balance'])}'}',
-                      ),
-                    ),
-                ],
-                onChanged: (value) => setState(() => _accountId = value),
-              ),
-              const SizedBox(height: 10),
-              DropdownButtonFormField<String>(
-                initialValue: _method,
-                decoration: const InputDecoration(labelText: 'Method'),
-                items: [
-                  for (final entry in widget.methods.entries)
-                    DropdownMenuItem(value: entry.key, child: Text(entry.value)),
-                ],
-                onChanged: (value) =>
-                    setState(() => _method = value ?? widget.methods.keys.first),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _amount,
-                keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                decoration: const InputDecoration(labelText: 'Amount (ETB)'),
-              ),
-              const SizedBox(height: 10),
-              TextField(
-                controller: _reference,
-                decoration: const InputDecoration(labelText: 'Reference (optional)'),
-              ),
+    title: Text(widget.title),
+    content: SizedBox(
+      width: 460,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          DropdownButtonFormField<String>(
+            initialValue: _accountId,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Account'),
+            items: [
+              for (final account in widget.accounts)
+                DropdownMenuItem(
+                  value: account['id'] as String,
+                  child: Text(
+                    '${asText(account['name'])}'
+                    '${account['balance'] == null ? '' : ' • ${formatMoney(account['balance'])}'}',
+                  ),
+                ),
             ],
+            onChanged: (value) => setState(() => _accountId = value),
           ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            initialValue: _method,
+            decoration: const InputDecoration(labelText: 'Method'),
+            items: [
+              for (final entry in widget.methods.entries)
+                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+            ],
+            onChanged: (value) =>
+                setState(() => _method = value ?? widget.methods.keys.first),
           ),
-          FilledButton(
-            onPressed: () {
-              if (_accountId == null) {
-                showSnack(context, 'Choose an account.', error: true);
-                return;
-              }
-              final amount = asNum(_amount.text);
-              if (amount <= 0) {
-                showSnack(context, 'Enter a positive amount.', error: true);
-                return;
-              }
-              Navigator.of(context).pop({
-                'account_id': _accountId,
-                'amount': amount,
-                'method': _method,
-                'reference': _reference.text.trim(),
-              });
-            },
-            child: const Text('Record payment'),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _amount,
+            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+            decoration: const InputDecoration(labelText: 'Amount (ETB)'),
+          ),
+          const SizedBox(height: 10),
+          TextField(
+            controller: _reference,
+            decoration: const InputDecoration(
+              labelText: 'Reference (optional)',
+            ),
           ),
         ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (_accountId == null) {
+            showSnack(context, 'Choose an account.', error: true);
+            return;
+          }
+          final amount = asNum(_amount.text);
+          if (amount <= 0) {
+            showSnack(context, 'Enter a positive amount.', error: true);
+            return;
+          }
+          Navigator.of(context).pop({
+            'account_id': _accountId,
+            'amount': amount,
+            'method': _method,
+            'reference': _reference.text.trim(),
+          });
+        },
+        child: const Text('Record payment'),
+      ),
+    ],
+  );
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
+import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
@@ -76,23 +77,30 @@ class _PayrollScreenState extends State<PayrollScreen> {
                     spec: _payslipsSpec,
                     readPermission: 'payroll.read',
                     alwaysReadOnly: true,
+                    actions: (row) => [
+                      CrudRowAction(
+                        label: 'Payslip PDF',
+                        icon: Icons.picture_as_pdf_outlined,
+                        onPressed: (row) => _payslipPdf(session, row),
+                      ),
+                    ],
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: _payslipLinesSpec,
                     readPermission: 'payroll.read',
                     alwaysReadOnly: true,
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: advancesSpec,
                     readPermission: 'payroll.read',
                     writePermission: 'payroll.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: salaryComponentsSpec,
                     readPermission: 'payroll.read',
                     writePermission: 'payroll.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: employeeComponentsSpec,
                     readPermission: 'payroll.read',
                     writePermission: 'payroll.write',
@@ -105,6 +113,72 @@ class _PayrollScreenState extends State<PayrollScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _payslipPdf(
+    AuthController session,
+    Map<String, dynamic> payslip,
+  ) async {
+    final branch = session.selectedBranch;
+    try {
+      final employee = await session.client
+          .from('employees')
+          .select('full_name, phone, position, employee_number')
+          .eq('id', payslip['employee_id'])
+          .maybeSingle();
+      final run = await session.client
+          .from('payroll_runs')
+          .select('period_start, period_end, status')
+          .eq('id', payslip['payroll_run_id'])
+          .maybeSingle();
+      final lines = await session.client
+          .from('payslip_lines')
+          .select('name, line_type, amount')
+          .eq('payslip_id', payslip['id']);
+      final rowList = (lines as List)
+          .map((row) => Map<String, dynamic>.from(row as Map))
+          .toList();
+      final bytes = await BrandPdf.document(
+        title: 'Employee payslip',
+        documentNumber: asText(payslip['payslip_number']),
+        branchName: branch?.branchName ?? 'Main branch',
+        subtitle: 'Confidential payroll document',
+        partyLabel: 'Employee',
+        partyName: asText(employee?['full_name'], fallback: 'Employee'),
+        details: [
+          ('Employee no.', asText(employee?['employee_number'])),
+          ('Position', asText(employee?['position'])),
+          (
+            'Period',
+            '${formatDate(run?['period_start'])} – ${formatDate(run?['period_end'])}',
+          ),
+          ('Days worked', asText(payslip['days_worked'])),
+          ('Overtime', '${asText(payslip['overtime_hours'])} hrs'),
+        ],
+        columns: const [
+          PdfColumn('Component', 'name'),
+          PdfColumn('Type', 'line_type'),
+          PdfColumn('Amount', 'amount', numeric: true),
+        ],
+        rows: rowList,
+        totals: [
+          ('Gross pay', formatMoney(payslip['gross_pay'])),
+          ('Deductions', formatMoney(payslip['total_deductions'])),
+          ('Net pay', formatMoney(payslip['net_pay'])),
+        ],
+        note:
+            'This payslip is generated from approved payroll records. '
+            'Please contact the administration office for any correction.',
+      );
+      await BrandPdf.share(
+        fileName: 'payslip_${asText(payslip['payslip_number'])}',
+        bytes: bytes,
+        subject: 'Payslip ${asText(payslip['payslip_number'])}',
+      );
+      if (mounted) showSnack(context, 'Payslip PDF ready to share.');
+    } catch (error) {
+      if (mounted) showSnack(context, readableError(error), error: true);
+    }
   }
 
   Future<void> _runPayroll(AuthController session) async {
@@ -120,23 +194,24 @@ class _PayrollScreenState extends State<PayrollScreen> {
         end: DateTime(now.year, now.month + 1, 0),
       ),
     );
-    if (range == null) return;
+    if (range == null || !mounted) return;
     final notes = await showInputDialog(
       context,
       title: 'Run payroll',
       submitLabel: 'Run payroll',
-      fields: const [
-        InputField('notes', 'Notes', type: FieldType.multiline),
-      ],
+      fields: const [InputField('notes', 'Notes', type: FieldType.multiline)],
     );
     if (notes == null) return;
     try {
-      final response = await session.client.rpc('run_payroll', params: {
-        'target_branch': branch.branchId,
-        'target_period_start': dateOnly(range.start),
-        'target_period_end': dateOnly(range.end),
-        'payroll_notes': notes['notes'] ?? '',
-      });
+      final response = await session.client.rpc(
+        'run_payroll',
+        params: {
+          'target_branch': branch.branchId,
+          'target_period_start': dateOnly(range.start),
+          'target_period_end': dateOnly(range.end),
+          'payroll_notes': notes['notes'] ?? '',
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -160,17 +235,17 @@ class _PayrollScreenState extends State<PayrollScreen> {
     if (!mounted) return;
     final choice = await showDialog<String>(
       context: context,
-      builder: (context) => _ApprovePayrollDialog(
-        run: run,
-        accounts: accounts,
-      ),
+      builder: (context) => _ApprovePayrollDialog(run: run, accounts: accounts),
     );
     if (choice == null) return;
     try {
-      final response = await session.client.rpc('approve_payroll', params: {
-        'target_run': run['id'],
-        'target_account': choice == 'none' ? null : choice,
-      });
+      final response = await session.client.rpc(
+        'approve_payroll',
+        params: {
+          'target_run': run['id'],
+          'target_account': choice == 'none' ? null : choice,
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -197,11 +272,25 @@ const _runsSpec = TableSpec(
   fields: [
     FieldSpec('period_start', 'Period start', type: FieldType.date, list: true),
     FieldSpec('period_end', 'Period end', type: FieldType.date, list: true),
-    FieldSpec('status', 'Status', type: FieldType.select, list: true, options: {
-      'draft': 'Draft', 'approved': 'Approved', 'paid': 'Paid', 'cancelled': 'Cancelled',
-    }),
+    FieldSpec(
+      'status',
+      'Status',
+      type: FieldType.select,
+      list: true,
+      options: {
+        'draft': 'Draft',
+        'approved': 'Approved',
+        'paid': 'Paid',
+        'cancelled': 'Cancelled',
+      },
+    ),
     FieldSpec('gross_total', 'Gross', type: FieldType.number, list: true),
-    FieldSpec('deduction_total', 'Deductions', type: FieldType.number, list: true),
+    FieldSpec(
+      'deduction_total',
+      'Deductions',
+      type: FieldType.number,
+      list: true,
+    ),
     FieldSpec('net_total', 'Net', type: FieldType.number, list: true),
     FieldSpec('notes', 'Notes', type: FieldType.multiline),
   ],
@@ -219,13 +308,37 @@ const _payslipsSpec = TableSpec(
   canDelete: false,
   fields: [
     FieldSpec('payslip_number', 'Payslip number', list: true),
-    FieldSpec('payroll_run_id', 'Run', type: FieldType.lookup, lookupTable: 'payroll_runs', lookupLabel: 'period_start', list: true),
-    FieldSpec('employee_id', 'Employee', type: FieldType.lookup, lookupTable: 'employees', lookupLabel: 'full_name', list: true),
+    FieldSpec(
+      'payroll_run_id',
+      'Run',
+      type: FieldType.lookup,
+      lookupTable: 'payroll_runs',
+      lookupLabel: 'period_start',
+      list: true,
+    ),
+    FieldSpec(
+      'employee_id',
+      'Employee',
+      type: FieldType.lookup,
+      lookupTable: 'employees',
+      lookupLabel: 'full_name',
+      list: true,
+    ),
     FieldSpec('gross_pay', 'Gross', type: FieldType.number, list: true),
-    FieldSpec('total_deductions', 'Deductions', type: FieldType.number, list: true),
+    FieldSpec(
+      'total_deductions',
+      'Deductions',
+      type: FieldType.number,
+      list: true,
+    ),
     FieldSpec('net_pay', 'Net', type: FieldType.number, list: true),
     FieldSpec('days_worked', 'Days worked', type: FieldType.number, list: true),
-    FieldSpec('overtime_hours', 'Overtime hours', type: FieldType.number, list: true),
+    FieldSpec(
+      'overtime_hours',
+      'Overtime hours',
+      type: FieldType.number,
+      list: true,
+    ),
   ],
 );
 
@@ -240,11 +353,22 @@ const _payslipLinesSpec = TableSpec(
   canEdit: false,
   canDelete: false,
   fields: [
-    FieldSpec('payslip_id', 'Payslip', type: FieldType.lookup, lookupTable: 'payslips', lookupLabel: 'payslip_number', list: true),
+    FieldSpec(
+      'payslip_id',
+      'Payslip',
+      type: FieldType.lookup,
+      lookupTable: 'payslips',
+      lookupLabel: 'payslip_number',
+      list: true,
+    ),
     FieldSpec('name', 'Component', list: true),
-    FieldSpec('line_type', 'Type', type: FieldType.select, list: true, options: {
-      'earning': 'Earning', 'deduction': 'Deduction',
-    }),
+    FieldSpec(
+      'line_type',
+      'Type',
+      type: FieldType.select,
+      list: true,
+      options: {'earning': 'Earning', 'deduction': 'Deduction'},
+    ),
     FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
   ],
 );
@@ -264,53 +388,53 @@ class _ApprovePayrollDialogState extends State<_ApprovePayrollDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Approve payroll'),
-        content: SizedBox(
-          width: 460,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Net pay: ${formatMoney(widget.run['net_total'])}',
-                style: Theme.of(context).textTheme.titleMedium,
+    title: const Text('Approve payroll'),
+    content: SizedBox(
+      width: 460,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Net pay: ${formatMoney(widget.run['net_total'])}',
+            style: Theme.of(context).textTheme.titleMedium,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'Choose a cash account to mark the run paid, or approve it without payment.',
+          ),
+          const SizedBox(height: 12),
+          DropdownButtonFormField<String>(
+            initialValue: _account,
+            isExpanded: true,
+            decoration: const InputDecoration(labelText: 'Pay from account'),
+            items: [
+              const DropdownMenuItem(
+                value: 'none',
+                child: Text('Approve without payment'),
               ),
-              const SizedBox(height: 12),
-              const Text(
-                'Choose a cash account to mark the run paid, or approve it without payment.',
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<String>(
-                initialValue: _account,
-                isExpanded: true,
-                decoration: const InputDecoration(labelText: 'Pay from account'),
-                items: [
-                  const DropdownMenuItem(
-                    value: 'none',
-                    child: Text('Approve without payment'),
-                  ),
-                  for (final account in widget.accounts)
-                    DropdownMenuItem(
-                      value: account['id'] as String,
-                      child: Text(asText(account['name'])),
-                    ),
-                ],
-                onChanged: (value) => setState(() => _account = value ?? 'none'),
-              ),
+              for (final account in widget.accounts)
+                DropdownMenuItem(
+                  value: account['id'] as String,
+                  child: Text(asText(account['name'])),
+                ),
             ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(_account),
-            child: const Text('Approve'),
+            onChanged: (value) => setState(() => _account = value ?? 'none'),
           ),
         ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.of(context).pop(_account),
+        child: const Text('Approve'),
+      ),
+    ],
+  );
 }
 
 class _PayrollSettingsView extends StatefulWidget {
@@ -351,8 +475,10 @@ class _PayrollSettingsViewState extends State<_PayrollSettingsView> {
       _overtime.text = '1.5';
       _monthlyHours.text = '208';
     } else {
-      _pensionEmployee.text = (asNum(row['pension_employee_rate']) * 100).toString();
-      _pensionEmployer.text = (asNum(row['pension_employer_rate']) * 100).toString();
+      _pensionEmployee.text = (asNum(row['pension_employee_rate']) * 100)
+          .toString();
+      _pensionEmployer.text = (asNum(row['pension_employer_rate']) * 100)
+          .toString();
       _incomeTax.text = (asNum(row['income_tax_rate']) * 100).toString();
       _overtime.text = asNum(row['overtime_multiplier']).toString();
       _monthlyHours.text = asNum(row['standard_monthly_hours']).toString();
@@ -372,50 +498,50 @@ class _PayrollSettingsViewState extends State<_PayrollSettingsView> {
 
   @override
   Widget build(BuildContext context) => AsyncView<void>(
-        future: _loading ?? Future.value(),
-        onRetry: () async => setState(() => _loading = _load()),
-        builder: (context, _) => ListView(
-          padding: const EdgeInsets.all(16),
-          children: [
-            SectionCard(
-              title: 'Payroll settings',
-              child: Column(
+    future: _loading ?? Future.value(),
+    onRetry: () async => setState(() => _loading = _load()),
+    builder: (context, _) => ListView(
+      padding: const EdgeInsets.all(16),
+      children: [
+        SectionCard(
+          title: 'Payroll settings',
+          child: Column(
+            children: [
+              Wrap(
+                spacing: 12,
+                runSpacing: 12,
                 children: [
-                  Wrap(
-                    spacing: 12,
-                    runSpacing: 12,
-                    children: [
-                      _number('Pension employee rate (%)', _pensionEmployee),
-                      _number('Pension employer rate (%)', _pensionEmployer),
-                      _number('Income tax rate (%)', _incomeTax),
-                      _number('Overtime multiplier', _overtime),
-                      _number('Standard monthly hours', _monthlyHours),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  Align(
-                    alignment: Alignment.centerLeft,
-                    child: FilledButton.icon(
-                      onPressed: _saving ? null : _save,
-                      icon: const Icon(Icons.save_outlined),
-                      label: Text(_saving ? 'Saving…' : 'Save settings'),
-                    ),
-                  ),
+                  _number('Pension employee rate (%)', _pensionEmployee),
+                  _number('Pension employer rate (%)', _pensionEmployer),
+                  _number('Income tax rate (%)', _incomeTax),
+                  _number('Overtime multiplier', _overtime),
+                  _number('Standard monthly hours', _monthlyHours),
                 ],
               ),
-            ),
-          ],
+              const SizedBox(height: 16),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(_saving ? 'Saving…' : 'Save settings'),
+                ),
+              ),
+            ],
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   Widget _number(String label, TextEditingController controller) => SizedBox(
-        width: 240,
-        child: TextField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: InputDecoration(labelText: label),
-        ),
-      );
+    width: 240,
+    child: TextField(
+      controller: controller,
+      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+      decoration: InputDecoration(labelText: label),
+    ),
+  );
 
   Future<void> _save() async {
     setState(() => _saving = true);
@@ -431,8 +557,12 @@ class _PayrollSettingsViewState extends State<_PayrollSettingsView> {
       if (existing == null) {
         await _repo!.insert('payroll_settings', values);
       } else {
-        await _repo!.update('payroll_settings', existing['branch_id'], values,
-            primaryKey: 'branch_id');
+        await _repo!.update(
+          'payroll_settings',
+          existing['branch_id'],
+          values,
+          primaryKey: 'branch_id',
+        );
       }
       if (mounted) showSnack(context, 'Payroll settings saved.');
     } catch (error) {

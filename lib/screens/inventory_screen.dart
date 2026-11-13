@@ -62,17 +62,17 @@ class _InventoryScreenState extends State<InventoryScreen> {
               child: TabBarView(
                 children: [
                   const _StockView(),
-                  CrudTab(
+                  const CrudTab(
                     spec: inventoryItemsSpec,
                     readPermission: 'inventory.read',
                     writePermission: 'inventory.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: storesSpec,
                     readPermission: 'inventory.read',
                     writePermission: 'inventory.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: suppliersSpec,
                     readPermission: 'purchasing.read',
                     writePermission: 'purchasing.write',
@@ -98,7 +98,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ];
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: purchaseOrderItemsSpec,
                     readPermission: 'purchasing.read',
                     writePermission: 'purchasing.write',
@@ -137,7 +137,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ];
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: stockAdjustmentItemsSpec,
                     readPermission: 'inventory.read',
                     writePermission: 'inventory.write',
@@ -176,7 +176,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ];
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: stockTransferItemsSpec,
                     readPermission: 'inventory.read',
                     writePermission: 'inventory.write',
@@ -216,7 +216,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       ];
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: stockCountItemsSpec,
                     readPermission: 'inventory.read',
                     writePermission: 'inventory.write',
@@ -240,7 +240,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final stores = await repo.list('stores', orderBy: 'name');
     final lines = await session.client
         .from('purchase_order_items')
-        .select('id, inventory_item_id, quantity, received_quantity, unit_cost, inventory_items(name, unit)')
+        .select(
+          'id, inventory_item_id, quantity, received_quantity, unit_cost, inventory_items(name, unit)',
+        )
         .eq('purchase_order_id', order['id']);
     if (!mounted) return;
     if (stores.isEmpty) {
@@ -259,14 +261,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
     if (result == null) return;
     try {
-      final response = await session.client.rpc('receive_purchase_order', params: {
-        'target_order': order['id'],
-        'target_store': result['store_id'],
-        'receipt_lines': {
-          'items': result['items'],
-          'notes': result['notes'],
+      final response = await session.client.rpc(
+        'receive_purchase_order',
+        params: {
+          'target_order': order['id'],
+          'target_store': result['store_id'],
+          'receipt_lines': {'items': result['items'], 'notes': result['notes']},
         },
-      });
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -307,83 +309,81 @@ class _StockViewState extends State<_StockView> {
 
   @override
   Widget build(BuildContext context) => AsyncView<Map<String, dynamic>>(
-        future: _future ?? Future.value(<String, dynamic>{}),
-        onRetry: () async => setState(() => _future = _load()),
-        builder: (context, data) {
-          final items = asMapList(data['items']);
-          final lowStock = asMapList(data['low_stock']);
-          return ListView(
-            padding: const EdgeInsets.all(12),
+    future: _future ?? Future.value(<String, dynamic>{}),
+    onRetry: () async => setState(() => _future = _load()),
+    builder: (context, data) {
+      final items = asMapList(data['items']);
+      final lowStock = asMapList(data['low_stock']);
+      return ListView(
+        padding: const EdgeInsets.all(12),
+        children: [
+          Wrap(
+            spacing: 12,
+            runSpacing: 12,
             children: [
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  SizedBox(
-                    width: 240,
-                    child: StatCard(
-                      label: 'Stock value',
-                      value: formatMoney(data['total_value']),
-                      icon: Icons.inventory_2_outlined,
-                    ),
-                  ),
-                  SizedBox(
-                    width: 240,
-                    child: StatCard(
-                      label: 'Items below minimum',
-                      value: formatQuantity(lowStock.length),
-                      icon: Icons.warning_amber_outlined,
-                    ),
-                  ),
-                ],
-              ),
-              SectionCard(
-                title: 'Stock on hand',
-                trailing: Wrap(
-                  spacing: 8,
-                  children: [
-                    IconButton(
-                      tooltip: 'Refresh',
-                      onPressed: () => setState(() => _future = _load()),
-                      icon: const Icon(Icons.refresh),
-                    ),
-                    IconButton(
-                      tooltip: 'Export CSV',
-                      onPressed: () async {
-                        final csv = rowsToCsv(items);
-                        final path = await saveCsvFile('stock_on_hand', csv);
-                        if (!context.mounted) return;
-                        await showDialog<void>(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text('Stock exported'),
-                            content: SelectableText(
-                              path ?? csv,
-                            ),
-                            actions: [
-                              FilledButton(
-                                onPressed: () => Navigator.of(context).pop(),
-                                child: const Text('Done'),
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.download_outlined),
-                    ),
-                  ],
+              SizedBox(
+                width: 240,
+                child: StatCard(
+                  label: 'Stock value',
+                  value: formatMoney(data['total_value']),
+                  icon: Icons.inventory_2_outlined,
                 ),
-                child: ReportTable(rows: items),
               ),
-              if (lowStock.isNotEmpty)
-                SectionCard(
-                  title: 'Low stock alerts',
-                  child: ReportTable(rows: lowStock),
+              SizedBox(
+                width: 240,
+                child: StatCard(
+                  label: 'Items below minimum',
+                  value: formatQuantity(lowStock.length),
+                  icon: Icons.warning_amber_outlined,
                 ),
+              ),
             ],
-          );
-        },
+          ),
+          SectionCard(
+            title: 'Stock on hand',
+            trailing: Wrap(
+              spacing: 8,
+              children: [
+                IconButton(
+                  tooltip: 'Refresh',
+                  onPressed: () => setState(() => _future = _load()),
+                  icon: const Icon(Icons.refresh),
+                ),
+                IconButton(
+                  tooltip: 'Export CSV',
+                  onPressed: () async {
+                    final csv = rowsToCsv(items);
+                    final path = await saveCsvFile('stock_on_hand', csv);
+                    if (!context.mounted) return;
+                    await showDialog<void>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Stock exported'),
+                        content: SelectableText(path ?? csv),
+                        actions: [
+                          FilledButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: const Text('Done'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: const Icon(Icons.download_outlined),
+                ),
+              ],
+            ),
+            child: ReportTable(rows: items),
+          ),
+          if (lowStock.isNotEmpty)
+            SectionCard(
+              title: 'Low stock alerts',
+              child: ReportTable(rows: lowStock),
+            ),
+        ],
       );
+    },
+  );
 }
 
 class _ReceiveDialog extends StatefulWidget {
@@ -411,9 +411,11 @@ class _ReceiveDialogState extends State<_ReceiveDialog> {
     super.initState();
     _storeId = widget.stores.first['id'] as String?;
     for (final line in widget.lines) {
-      final remaining = asNum(line['quantity']) - asNum(line['received_quantity']);
-      _quantities[line['id'] as String] =
-          TextEditingController(text: remaining > 0 ? remaining.toString() : '0');
+      final remaining =
+          asNum(line['quantity']) - asNum(line['received_quantity']);
+      _quantities[line['id'] as String] = TextEditingController(
+        text: remaining > 0 ? remaining.toString() : '0',
+      );
     }
   }
 
@@ -428,53 +430,53 @@ class _ReceiveDialogState extends State<_ReceiveDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text('Receive ${asText(widget.order['po_number'])}'),
-        content: SizedBox(
-          width: 650,
-          child: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                DropdownButtonFormField<String>(
-                  initialValue: _storeId,
-                  isExpanded: true,
-                  decoration: const InputDecoration(labelText: 'Receive into store'),
-                  items: [
-                    for (final store in widget.stores)
-                      DropdownMenuItem(
-                        value: store['id'] as String,
-                        child: Text(asText(store['name'])),
-                      ),
-                  ],
-                  onChanged: (value) => setState(() => _storeId = value),
-                ),
-                const SizedBox(height: 14),
-                for (final line in widget.lines) _lineRow(line),
-                const SizedBox(height: 10),
-                TextField(
-                  controller: _notes,
-                  decoration: const InputDecoration(labelText: 'Receipt notes'),
-                  maxLines: 2,
-                ),
+    title: Text('Receive ${asText(widget.order['po_number'])}'),
+    content: SizedBox(
+      width: 650,
+      child: SingleChildScrollView(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _storeId,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Receive into store',
+              ),
+              items: [
+                for (final store in widget.stores)
+                  DropdownMenuItem(
+                    value: store['id'] as String,
+                    child: Text(asText(store['name'])),
+                  ),
               ],
+              onChanged: (value) => setState(() => _storeId = value),
             ),
-          ),
+            const SizedBox(height: 14),
+            for (final line in widget.lines) _lineRow(line),
+            const SizedBox(height: 10),
+            TextField(
+              controller: _notes,
+              decoration: const InputDecoration(labelText: 'Receipt notes'),
+              maxLines: 2,
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: _submit,
-            child: const Text('Receive goods'),
-          ),
-        ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(onPressed: _submit, child: const Text('Receive goods')),
+    ],
+  );
 
   Widget _lineRow(Map<String, dynamic> line) {
     final item = asMap(line['inventory_items']);
-    final remaining = asNum(line['quantity']) - asNum(line['received_quantity']);
+    final remaining =
+        asNum(line['quantity']) - asNum(line['received_quantity']);
     return Padding(
       padding: const EdgeInsets.only(bottom: 8),
       child: Row(
@@ -489,7 +491,9 @@ class _ReceiveDialogState extends State<_ReceiveDialog> {
             width: 110,
             child: TextField(
               controller: _quantities[line['id'] as String],
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              keyboardType: const TextInputType.numberWithOptions(
+                decimal: true,
+              ),
               decoration: const InputDecoration(
                 isDense: true,
                 labelText: 'Quantity',
@@ -510,9 +514,14 @@ class _ReceiveDialogState extends State<_ReceiveDialog> {
     for (final line in widget.lines) {
       final quantity = asNum(_quantities[line['id'] as String]?.text);
       if (quantity <= 0) continue;
-      final remaining = asNum(line['quantity']) - asNum(line['received_quantity']);
+      final remaining =
+          asNum(line['quantity']) - asNum(line['received_quantity']);
       if (quantity > remaining + 0.001) {
-        showSnack(context, 'Received quantity exceeds the remaining order.', error: true);
+        showSnack(
+          context,
+          'Received quantity exceeds the remaining order.',
+          error: true,
+        );
         return;
       }
       items.add({
@@ -525,10 +534,8 @@ class _ReceiveDialogState extends State<_ReceiveDialog> {
       showSnack(context, 'Enter a quantity to receive.', error: true);
       return;
     }
-    Navigator.of(context).pop({
-      'store_id': _storeId,
-      'items': items,
-      'notes': _notes.text.trim(),
-    });
+    Navigator.of(
+      context,
+    ).pop({'store_id': _storeId, 'items': items, 'notes': _notes.text.trim()});
   }
 }

@@ -7,6 +7,7 @@ import '../data/formatting.dart';
 import '../data/offline_queue.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
+import '../l10n/app_localizations.dart';
 import 'common.dart';
 
 class ModuleScaffold extends StatelessWidget {
@@ -33,7 +34,7 @@ class ModuleScaffold extends StatelessWidget {
       appBar: AppBar(
         leading: Builder(
           builder: (context) => IconButton(
-            tooltip: 'Menu',
+            tooltip: AppLocalizations.of(context).menu,
             icon: const Icon(Icons.menu),
             onPressed: () => Scaffold.of(context).openDrawer(),
           ),
@@ -45,9 +46,7 @@ class ModuleScaffold extends StatelessWidget {
             children: [
               Image.asset(Brand.logoAsset, width: 34, height: 34),
               const SizedBox(width: 10),
-              Flexible(
-                child: Text(title, overflow: TextOverflow.ellipsis),
-              ),
+              Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
               const SizedBox(width: 12),
               _BranchSelector(session: session),
             ],
@@ -75,13 +74,24 @@ class _PortalDrawer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
+    final strings = AppLocalizations.of(context);
     final items = <(String, String, IconData, String?)>[
       ('/', 'Dashboard', Icons.dashboard_outlined, null),
       ('/pos', 'New sale', Icons.point_of_sale_outlined, 'sales.write'),
       ('/sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.read'),
-      ('/production', 'Production', Icons.bakery_dining_outlined, 'production.read'),
+      (
+        '/production',
+        'Production',
+        Icons.bakery_dining_outlined,
+        'production.read',
+      ),
       ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.read'),
-      ('/cash', 'Cash & expenses', Icons.account_balance_wallet_outlined, 'cash.read'),
+      (
+        '/cash',
+        'Cash & expenses',
+        Icons.account_balance_wallet_outlined,
+        'cash.read',
+      ),
       ('/people', 'People & HR', Icons.groups_outlined, 'people.read'),
       ('/payroll', 'Payroll', Icons.payments_outlined, 'payroll.read'),
       ('/rentals', 'Rentals', Icons.apartment_outlined, 'rentals.read'),
@@ -109,15 +119,19 @@ class _PortalDrawer extends StatelessWidget {
                         children: [
                           Text(
                             Brand.appName,
-                            style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                            style: Theme.of(context).textTheme.titleMedium
+                                ?.copyWith(
                                   color: scheme.onPrimary,
                                   fontWeight: FontWeight.w800,
                                 ),
                           ),
                           Text(
                             Brand.slogan,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  color: scheme.onPrimary.withValues(alpha: 0.8),
+                            style: Theme.of(context).textTheme.bodySmall
+                                ?.copyWith(
+                                  color: scheme.onPrimary.withValues(
+                                    alpha: 0.8,
+                                  ),
                                   fontStyle: FontStyle.italic,
                                 ),
                           ),
@@ -128,10 +142,11 @@ class _PortalDrawer extends StatelessWidget {
                 ),
                 const Spacer(),
                 Text(
-                  session.selectedBranch?.branchName ?? 'No branch selected',
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color: scheme.onPrimary,
-                      ),
+                  session.selectedBranch?.branchName ??
+                      strings.noBranchSelected,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall?.copyWith(color: scheme.onPrimary),
                 ),
               ],
             ),
@@ -140,7 +155,7 @@ class _PortalDrawer extends StatelessWidget {
             if (item.$4 == null || session.can(item.$4!))
               ListTile(
                 leading: Icon(item.$3),
-                title: Text(item.$2),
+                title: Text(_portalLabel(strings, item.$1)),
                 onTap: () {
                   Navigator.of(context).pop();
                   context.go(item.$1);
@@ -149,7 +164,7 @@ class _PortalDrawer extends StatelessWidget {
           const Divider(),
           ListTile(
             leading: const Icon(Icons.logout),
-            title: const Text('Sign out'),
+            title: Text(strings.signOut),
             onTap: () {
               Navigator.of(context).pop();
               session.signOut();
@@ -160,6 +175,23 @@ class _PortalDrawer extends StatelessWidget {
     );
   }
 }
+
+String _portalLabel(AppLocalizations strings, String route) => switch (route) {
+  '/' => strings.dashboard,
+  '/pos' => strings.newSale,
+  '/sales' => strings.salesModule,
+  '/production' => strings.productionModule,
+  '/inventory' => strings.inventoryModule,
+  '/cash' => strings.cashModule,
+  '/people' => strings.peopleModule,
+  '/payroll' => strings.payrollModule,
+  '/rentals' => strings.rentalsModule,
+  '/payables' => strings.payablesModule,
+  '/reports' => strings.reportsModule,
+  '/notifications' => strings.notificationsModule,
+  '/settings' => strings.settingsModule,
+  _ => route,
+};
 
 class _BranchSelector extends StatelessWidget {
   const _BranchSelector({required this.session});
@@ -218,6 +250,7 @@ class _OfflineActionState extends State<OfflineAction> {
 
   Future<void> _reload() async {
     final queue = _queue ?? await OfflineQueue.create();
+    if (!mounted) return;
     final session = SessionScope.of(context);
     final branch = session.selectedBranch;
     if (!mounted) return;
@@ -263,18 +296,17 @@ class _OfflineActionState extends State<OfflineAction> {
             height: 18,
             child: CircularProgressIndicator(strokeWidth: 2),
           )
-        : Icon(_count > 0 ? Icons.cloud_upload_outlined : Icons.cloud_done_outlined);
+        : Icon(
+            _count > 0
+                ? Icons.cloud_upload_outlined
+                : Icons.cloud_done_outlined,
+          );
     return IconButton(
       tooltip: _count > 0
           ? '$_count offline sale(s) waiting to sync'
           : 'Offline sales queue',
       onPressed: _sync,
-      icon: _count > 0
-          ? Badge(
-              label: Text('$_count'),
-              child: icon,
-            )
-          : icon,
+      icon: _count > 0 ? Badge(label: Text('$_count'), child: icon) : icon,
     );
   }
 }
@@ -330,18 +362,18 @@ class _NotificationActionState extends State<NotificationAction> {
 
   @override
   Widget build(BuildContext context) => IconButton(
-        tooltip: 'Notifications',
-        onPressed: () async {
-          await context.push('/notifications');
-          await _loadUnread();
-        },
-        icon: _unread > 0
-            ? Badge(
-                label: Text(_unread > 99 ? '99+' : '$_unread'),
-                child: const Icon(Icons.notifications_outlined),
-              )
-            : const Icon(Icons.notifications_outlined),
-      );
+    tooltip: 'Notifications',
+    onPressed: () async {
+      await context.push('/notifications');
+      await _loadUnread();
+    },
+    icon: _unread > 0
+        ? Badge(
+            label: Text(_unread > 99 ? '99+' : '$_unread'),
+            child: const Icon(Icons.notifications_outlined),
+          )
+        : const Icon(Icons.notifications_outlined),
+  );
 }
 
 class _AccountMenu extends StatelessWidget {
@@ -352,8 +384,9 @@ class _AccountMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final name = session.fullName?.trim();
+    final strings = AppLocalizations.of(context);
     return PopupMenuButton<String>(
-      tooltip: 'Account and preferences',
+      tooltip: strings.accountPreferences,
       onSelected: (value) async {
         switch (value) {
           case 'profile':
@@ -391,23 +424,25 @@ class _AccountMenu extends StatelessWidget {
                 ),
               ),
             ),
-            title: Text(name == null || name.isEmpty ? 'My account' : name),
+            title: Text(
+              name == null || name.isEmpty ? strings.myAccount : name,
+            ),
             subtitle: Text(session.userEmail ?? ''),
           ),
         ),
         const PopupMenuDivider(),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'profile',
           child: ListTile(
-            leading: Icon(Icons.person_outline),
-            title: Text('Edit display name'),
+            leading: const Icon(Icons.person_outline),
+            title: Text(strings.editDisplayName),
           ),
         ),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'settings',
           child: ListTile(
-            leading: Icon(Icons.settings_outlined),
-            title: Text('Settings'),
+            leading: const Icon(Icons.settings_outlined),
+            title: Text(strings.settingsModule),
           ),
         ),
         const PopupMenuDivider(),
@@ -419,7 +454,7 @@ class _AccountMenu extends StatelessWidget {
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
             ),
-            title: const Text('Light theme'),
+            title: Text(strings.lightTheme),
           ),
         ),
         PopupMenuItem(
@@ -430,7 +465,7 @@ class _AccountMenu extends StatelessWidget {
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
             ),
-            title: const Text('Dark theme'),
+            title: Text(strings.darkTheme),
           ),
         ),
         PopupMenuItem(
@@ -441,43 +476,49 @@ class _AccountMenu extends StatelessWidget {
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
             ),
-            title: const Text('System theme'),
+            title: Text(strings.systemTheme),
           ),
         ),
         const PopupMenuDivider(),
         PopupMenuItem(
           value: 'en',
           child: ListTile(
-            leading: Icon(session.locale?.languageCode == 'en'
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked),
-            title: const Text('English'),
+            leading: Icon(
+              session.locale?.languageCode == 'en'
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+            ),
+            title: Text(strings.english),
           ),
         ),
         PopupMenuItem(
           value: 'am',
           child: ListTile(
-            leading: Icon(session.locale?.languageCode == 'am'
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked),
+            leading: Icon(
+              session.locale?.languageCode == 'am'
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+            ),
             title: const Text('አማርኛ'),
           ),
         ),
         PopupMenuItem(
           value: 'om',
           child: ListTile(
-            leading: Icon(session.locale?.languageCode == 'om'
-                ? Icons.radio_button_checked
-                : Icons.radio_button_unchecked),
+            leading: Icon(
+              session.locale?.languageCode == 'om'
+                  ? Icons.radio_button_checked
+                  : Icons.radio_button_unchecked,
+            ),
             title: const Text('Afaan Oromoo'),
           ),
         ),
         const PopupMenuDivider(),
-        const PopupMenuItem(
+        PopupMenuItem(
           value: 'signOut',
           child: ListTile(
-            leading: Icon(Icons.logout),
-            title: Text('Sign out'),
+            leading: const Icon(Icons.logout),
+            title: Text(strings.signOut),
           ),
         ),
       ],
@@ -489,21 +530,22 @@ class _AccountMenu extends StatelessWidget {
     final result = await showDialog<String>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Display name'),
+        title: Text(AppLocalizations.of(context).displayName),
         content: TextField(
           controller: controller,
           autofocus: true,
-          decoration: const InputDecoration(labelText: 'Full name'),
+          decoration: InputDecoration(
+            labelText: AppLocalizations.of(context).fullName,
+          ),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
+            child: Text(AppLocalizations.of(context).cancel),
           ),
           FilledButton(
-            onPressed: () =>
-                Navigator.of(context).pop(controller.text.trim()),
-            child: const Text('Save'),
+            onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+            child: Text(AppLocalizations.of(context).save),
           ),
         ],
       ),
@@ -522,15 +564,11 @@ Future<Map<String, dynamic>?> showInputDialog(
   required String title,
   required List<InputField> fields,
   String submitLabel = 'Submit',
-}) =>
-    showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => _InputDialog(
-        title: title,
-        fields: fields,
-        submitLabel: submitLabel,
-      ),
-    );
+}) => showDialog<Map<String, dynamic>>(
+  context: context,
+  builder: (context) =>
+      _InputDialog(title: title, fields: fields, submitLabel: submitLabel),
+);
 
 class InputField {
   const InputField(
@@ -580,8 +618,9 @@ class _InputDialogState extends State<_InputDialog> {
   void initState() {
     super.initState();
     for (final field in widget.fields) {
-      _controllers[field.key] =
-          TextEditingController(text: field.initial ?? '');
+      _controllers[field.key] = TextEditingController(
+        text: field.initial ?? '',
+      );
       if (field.type == FieldType.boolean) {
         _booleans[field.key] = field.initial == 'true';
       }
@@ -598,36 +637,33 @@ class _InputDialogState extends State<_InputDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.title),
-        content: SizedBox(
-          width: 520,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  for (final field in widget.fields)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: _buildField(field),
-                    ),
-                ],
-              ),
-            ),
+    title: Text(widget.title),
+    content: SizedBox(
+      width: 520,
+      child: Form(
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              for (final field in widget.fields)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: _buildField(field),
+                ),
+            ],
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: _submit,
-            child: Text(widget.submitLabel),
-          ),
-        ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
+    ],
+  );
 
   Widget _buildField(InputField field) {
     if (field.type == FieldType.boolean) {
@@ -655,22 +691,18 @@ class _InputDialogState extends State<_InputDialog> {
     }
     return TextFormField(
       controller: _controllers[field.key],
-      keyboardType: field.type == FieldType.number ||
-              field.type == FieldType.integer
+      keyboardType:
+          field.type == FieldType.number || field.type == FieldType.integer
           ? const TextInputType.numberWithOptions(decimal: true)
           : null,
       minLines: field.type == FieldType.multiline ? 2 : 1,
       maxLines: field.type == FieldType.multiline ? 4 : 1,
-      decoration: InputDecoration(
-        labelText: field.label,
-        hintText: field.hint,
-      ),
+      decoration: InputDecoration(labelText: field.label, hintText: field.hint),
       validator: (value) {
         if (field.required && (value == null || value.trim().isEmpty)) {
           return 'Required';
         }
-        if (field.type == FieldType.number ||
-            field.type == FieldType.integer) {
+        if (field.type == FieldType.number || field.type == FieldType.integer) {
           if (value != null && value.trim().isNotEmpty) {
             final number = num.tryParse(value.trim());
             if (number == null) return 'Enter a number';
@@ -724,16 +756,16 @@ class DateRangePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
-        onPressed: () async {
-          final selected = await showDateRangePicker(
-            context: context,
-            firstDate: DateTime(DateTime.now().year - 5),
-            lastDate: DateTime(DateTime.now().year + 2),
-            initialDateRange: range,
-          );
-          if (selected != null) onChanged(selected);
-        },
-        icon: const Icon(Icons.date_range_outlined),
-        label: Text('${formatDate(range.start)} – ${formatDate(range.end)}'),
+    onPressed: () async {
+      final selected = await showDateRangePicker(
+        context: context,
+        firstDate: DateTime(DateTime.now().year - 5),
+        lastDate: DateTime(DateTime.now().year + 2),
+        initialDateRange: range,
       );
+      if (selected != null) onChanged(selected);
+    },
+    icon: const Icon(Icons.date_range_outlined),
+    label: Text('${formatDate(range.start)} – ${formatDate(range.end)}'),
+  );
 }

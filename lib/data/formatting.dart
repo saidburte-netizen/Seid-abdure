@@ -102,13 +102,17 @@ String rowsToCsv(List<Map<String, dynamic>> rows) {
   final ordered = columns.toList()..sort();
   final buffer = StringBuffer()..writeln(ordered.map(csvEscape).join(','));
   for (final row in rows) {
-    buffer.writeln(ordered
-        .map((column) {
-          final value = row[column];
-          if (value is Map || value is List) return csvEscape(jsonEncode(value));
-          return csvEscape(value);
-        })
-        .join(','));
+    buffer.writeln(
+      ordered
+          .map((column) {
+            final value = row[column];
+            if (value is Map || value is List) {
+              return csvEscape(jsonEncode(value));
+            }
+            return csvEscape(value);
+          })
+          .join(','),
+    );
   }
   return buffer.toString();
 }
@@ -134,7 +138,10 @@ List<Map<String, dynamic>> flattenReport(Object? value) {
   ];
 }
 
-Map<String, dynamic> _flattenMap(Map<dynamic, dynamic> source, [String prefix = '']) {
+Map<String, dynamic> _flattenMap(
+  Map<dynamic, dynamic> source, [
+  String prefix = '',
+]) {
   final result = <String, dynamic>{};
   for (final entry in source.entries) {
     final key = prefix.isEmpty ? entry.key.toString() : '$prefix.${entry.key}';

@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
-import '../data/repository.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 
@@ -45,7 +45,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ('production', 'Production', Icons.bakery_dining, 'production.read'),
     ('sales', 'Sales & POS', Icons.point_of_sale, 'sales.read'),
     ('inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.read'),
-    ('cash', 'Cash & expenses', Icons.account_balance_wallet_outlined, 'cash.read'),
+    (
+      'cash',
+      'Cash & expenses',
+      Icons.account_balance_wallet_outlined,
+      'cash.read',
+    ),
     ('people', 'People & HR', Icons.groups_outlined, 'people.read'),
     ('payroll', 'Payroll', Icons.receipt_long_outlined, 'payroll.read'),
     ('rentals', 'Rentals', Icons.apartment_outlined, 'rentals.read'),
@@ -64,8 +69,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
         body: EmptyView(message: 'Select a branch to continue.'),
       );
     }
+    final strings = AppLocalizations.of(context);
     return ModuleScaffold(
-      title: 'Dashboard',
+      title: strings.dashboard,
       showHome: false,
       body: RefreshIndicator(
         onRefresh: _refresh,
@@ -80,14 +86,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 builder: (context, data) => _DashboardBody(data: data),
               )
             else
-              const SectionCard(
-                child: Text(
-                  'Your role does not include dashboard reporting. Use the module shortcuts below.',
-                ),
-              ),
+              SectionCard(child: Text(strings.roleNoReports)),
             PageHeader(
-              title: 'Workspace',
-              subtitle: 'All operational areas available to your role.',
+              title: strings.workspace,
+              subtitle: strings.workspaceSubtitle,
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -96,8 +98,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final columns = constraints.maxWidth >= 1000
                       ? 4
                       : constraints.maxWidth >= 620
-                          ? 3
-                          : 2;
+                      ? 3
+                      : 2;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -109,7 +111,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       for (final module in _modules)
                         if (session.can(module.$4))
                           _ModuleCard(
-                            label: module.$2,
+                            label: _moduleLabel(strings, module.$1),
                             icon: module.$3,
                             onTap: () => context.go('/module/${module.$1}'),
                           ),
@@ -125,6 +127,21 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
+String _moduleLabel(AppLocalizations strings, String module) =>
+    switch (module) {
+      'production' => strings.productionModule,
+      'sales' => strings.salesModule,
+      'inventory' => strings.inventoryModule,
+      'cash' => strings.cashModule,
+      'people' => strings.peopleModule,
+      'payroll' => strings.payrollModule,
+      'rentals' => strings.rentalsModule,
+      'payables' => strings.payablesModule,
+      'reports' => strings.reportsModule,
+      'settings' => strings.settingsModule,
+      _ => module,
+    };
+
 class _WelcomeHeader extends StatelessWidget {
   const _WelcomeHeader({required this.session, required this.branch});
 
@@ -132,50 +149,68 @@ class _WelcomeHeader extends StatelessWidget {
   final BranchAccess branch;
 
   @override
-  Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-        child: Wrap(
-          alignment: WrapAlignment.spaceBetween,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          spacing: 16,
-          runSpacing: 12,
-          children: [
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Welcome${session.fullName == null ? '' : ', ${session.fullName}'}',
-                  style: Theme.of(context).textTheme.headlineSmall,
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final portal = branch.isAdmin
+        ? strings.adminPortal
+        : branch.roleSlugs.any(
+            (role) => role == 'manager' || role == 'supervisor',
+          )
+        ? strings.managerPortal
+        : strings.teamPortal;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.center,
+        spacing: 16,
+        runSpacing: 12,
+        children: [
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                portal,
+                style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                  color: Theme.of(context).colorScheme.secondary,
+                  fontWeight: FontWeight.w700,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  '${branch.branchName} • ${branch.roleSlugs.map(prettyLabel).join(', ')}'
-                  ' • ${formatDate(DateTime.now())}',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                '${strings.welcome}${session.fullName == null ? '' : ', ${session.fullName}'}',
+                style: Theme.of(context).textTheme.headlineSmall,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                '${branch.branchName} • ${branch.roleSlugs.map(prettyLabel).join(', ')}'
+                ' • ${formatDate(DateTime.now())}',
+                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
-              ],
-            ),
-            Wrap(
-              spacing: 8,
-              children: [
-                if (session.can('sales.write'))
-                  FilledButton.icon(
-                    onPressed: () => context.push('/pos'),
-                    icon: const Icon(Icons.point_of_sale),
-                    label: const Text('New sale'),
-                  ),
-                OutlinedButton.icon(
-                  onPressed: () => context.push('/notifications'),
-                  icon: const Icon(Icons.notifications_active_outlined),
-                  label: const Text('Alerts'),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8,
+            children: [
+              if (session.can('sales.write'))
+                FilledButton.icon(
+                  onPressed: () => context.push('/pos'),
+                  icon: const Icon(Icons.point_of_sale),
+                  label: Text(strings.newSale),
                 ),
-              ],
-            ),
-          ],
-        ),
-      );
+              OutlinedButton.icon(
+                onPressed: () => context.push('/notifications'),
+                icon: const Icon(Icons.notifications_active_outlined),
+                label: Text(strings.alerts),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DashboardBody extends StatelessWidget {
@@ -185,27 +220,83 @@ class _DashboardBody extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final cards = [
-      ('Today sales', formatMoney(data['today_sales']), Icons.today, null),
-      ('This month', formatMoney(data['month_sales']), Icons.calendar_month, null),
-      ('Cash balance', formatMoney(data['cash_balance']), Icons.account_balance_wallet_outlined, null),
-      ('Receivables', formatMoney(data['receivables']), Icons.person_search_outlined, null),
-      ('Payables', formatMoney(data['payables']), Icons.request_quote_outlined, null),
-      ('Rent outstanding', formatMoney(data['rent_outstanding']), Icons.apartment_outlined, null),
-      ('Low stock', formatQuantity(data['low_stock_items']), Icons.warning_amber_outlined, Theme.of(context).colorScheme.error),
-      ('Pending expenses', formatQuantity(data['pending_expenses']), Icons.pending_actions_outlined, null),
-      ('Pending leave', formatQuantity(data['pending_leave']), Icons.event_busy_outlined, null),
-      ('Batches today', formatQuantity(data['batches_today']), Icons.bakery_dining_outlined, null),
-      ('Active employees', formatQuantity(data['active_employees']), Icons.groups_outlined, null),
-      ('Revenue this month', formatMoney(data['revenue_this_month']), Icons.trending_up, null),
+      (strings.todaySales, formatMoney(data['today_sales']), Icons.today, null),
+      (
+        strings.thisMonth,
+        formatMoney(data['month_sales']),
+        Icons.calendar_month,
+        null,
+      ),
+      (
+        strings.cashBalance,
+        formatMoney(data['cash_balance']),
+        Icons.account_balance_wallet_outlined,
+        null,
+      ),
+      (
+        strings.receivables,
+        formatMoney(data['receivables']),
+        Icons.person_search_outlined,
+        null,
+      ),
+      (
+        strings.payables,
+        formatMoney(data['payables']),
+        Icons.request_quote_outlined,
+        null,
+      ),
+      (
+        strings.rentOutstanding,
+        formatMoney(data['rent_outstanding']),
+        Icons.apartment_outlined,
+        null,
+      ),
+      (
+        strings.lowStock,
+        formatQuantity(data['low_stock_items']),
+        Icons.warning_amber_outlined,
+        Theme.of(context).colorScheme.error,
+      ),
+      (
+        strings.pendingExpenses,
+        formatQuantity(data['pending_expenses']),
+        Icons.pending_actions_outlined,
+        null,
+      ),
+      (
+        strings.pendingLeave,
+        formatQuantity(data['pending_leave']),
+        Icons.event_busy_outlined,
+        null,
+      ),
+      (
+        strings.batchesToday,
+        formatQuantity(data['batches_today']),
+        Icons.bakery_dining_outlined,
+        null,
+      ),
+      (
+        strings.activeEmployees,
+        formatQuantity(data['active_employees']),
+        Icons.groups_outlined,
+        null,
+      ),
+      (
+        strings.revenueThisMonth,
+        formatMoney(data['revenue_this_month']),
+        Icons.trending_up,
+        null,
+      ),
     ];
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 1100
             ? 4
             : constraints.maxWidth >= 700
-                ? 3
-                : 2;
+            ? 3
+            : 2;
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           child: GridView.count(
@@ -244,30 +335,26 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(
-                  icon,
-                  size: 34,
-                  color: Theme.of(context).colorScheme.primary,
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  label,
-                  textAlign: TextAlign.center,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.titleSmall,
-                ),
-              ],
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(icon, size: 34, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(height: 10),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: Theme.of(context).textTheme.titleSmall,
             ),
-          ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }

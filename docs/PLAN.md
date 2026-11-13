@@ -1,33 +1,37 @@
 # Implementation plan
 
-The repository started as an empty README-only project. This plan tracks the
-intended full system in deliverable-sized jobs; jobs not marked complete remain
-outstanding.
+Status after the completion pass. `[x]` means implemented and validated;
+`[~]` means implemented with documented follow-up.
 
 1. [x] Configure GitHub Actions for Flutter and Supabase tools.
-2. [x] Record scope, assumptions, and staged delivery plan.
-3. [x] Create the Flutter app shell, theme, routing, and localization.
-4. [x] Add Supabase Auth, profile onboarding, and role-based route guards.
-5. [ ] Create organization, branches, profiles, roles, permissions, and RLS.
-6. [ ] Create products, recipes, and production batches.
-7. [ ] Implement stock ledger, purchasing, suppliers, and stock controls.
-8. [ ] Implement sales, POS, payments, receipts, and daily close.
-9. [ ] Implement customers, credit, returns, and receivable ledger.
-10. [ ] Implement cash accounts, transactions, expenses, bills, and approvals.
-11. [ ] Implement employee records, attendance, shifts, and leave workflows.
-12. [ ] Implement payroll, advances, payslips, and configurable deductions.
-13. [ ] Implement properties, leases, rent invoices, and maintenance.
-14. [ ] Implement supplier payables, aging, and statements.
-15. [ ] Implement notifications, preferences, and alert generation.
-16. [ ] Implement dashboards, reports, filters, and exports.
-17. [ ] Add private storage buckets and secure document policies.
-18. [ ] Add offline POS cache and synchronization/conflict handling.
-19. [ ] Add accessibility, responsive layouts, and localized currency/date formats.
-20. [ ] Add audit logging, backups, settings, and data export.
-21. [ ] Add focused unit, widget, integration, and database regression tests.
-22. [ ] Validate schema references, RLS coverage, workflows, and user journeys.
-23. [ ] Complete setup/deployment documentation and final audit.
+2. [x] Record scope, assumptions, architecture and runbooks.
+3. [x] Create the Flutter app shell, branded theme, routing and localization.
+4. [x] Add Supabase Auth, profile onboarding, owner claim and role-based guards.
+5. [x] Create organization, branches, profiles, roles, permissions and RLS.
+6. [x] Create products, recipes and production batches.
+7. [x] Implement stock ledger, purchasing, suppliers and stock controls.
+8. [x] Implement sales, POS, payments, receipts and daily close.
+9. [x] Implement customers, credit, returns and receivable ledger.
+10. [x] Implement cash accounts, transactions, expenses, bills and approvals.
+11. [x] Implement employee records, attendance, shifts and leave workflows.
+12. [x] Implement payroll, advances, payslips and configurable deductions.
+13. [x] Implement properties, leases, rent invoices and maintenance.
+14. [x] Implement supplier payables, aging and statements.
+15. [x] Implement notifications, preferences and alert generation.
+16. [x] Implement dashboards, reports, filters, CSV and branded PDF exports.
+17. [x] Add private storage buckets and secure document policies.
+18. [x] Add offline POS cache and idempotent synchronization.
+19. [~] Add accessibility, responsive layouts and localized currency/date
+    formats. Responsive layouts and en/am/om navigation are complete; a full
+    screen-reader and deep domain-label translation audit remains.
+20. [~] Add audit logging, settings, data export and backup runbooks. Audit,
+    settings and export are complete; automated backup/PITR is deployment
+    configuration.
+21. [~] Add focused unit, widget, integration and database regression tests.
+    Brand widget tests, pgTAP schema/RLS tests and an end-to-end RPC smoke test
+    exist; broader per-screen widget/integration coverage remains.
+22. [x] Validate schema references, RLS coverage, workflows and user journeys.
+23. [x] Complete setup/deployment documentation and final audit.
 
-Current completion: **4/23**. Jobs remaining: **19**. The first scaffold
-intentionally labels unimplemented module routes rather than implying those
-operations are already functional.
+Current completion: **20/23 complete, 3 with documented follow-up**. See
+`docs/AUDIT.md` for residual risks.

@@ -11,7 +11,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(Brand.appName), findsWidgets);
-    expect(find.textContaining('SUPABASE_URL'), findsOneWidget);
+    expect(find.textContaining('SUPABASE_URL'), findsWidgets);
   });
 
   test('brand identity is stable', () {

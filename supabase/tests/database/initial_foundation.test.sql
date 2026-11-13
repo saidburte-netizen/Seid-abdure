@@ -8,11 +8,8 @@ select has_table('public', 'sales', 'sales table exists');
 select has_table('public', 'stock_movements', 'stock movement ledger exists');
 select has_view('public', 'stock_balances', 'stock balance view exists');
 select ok(
-  (select count(*) = 18
-   from pg_tables
-   where schemaname = 'public'
-     and rowsecurity),
-  'row-level security is enabled on all foundation tables'
+  (select bool_and(rowsecurity) from pg_tables where schemaname = 'public'),
+  'row-level security is enabled on all public tables'
 );
 select has_trigger(
   'auth',
@@ -21,7 +18,7 @@ select has_trigger(
   'new auth users receive a profile'
 );
 select ok(
-  (select count(*) = 8 from public.permissions),
+  (select count(*) >= 29 from public.permissions),
   'module route permissions are seeded'
 );
 

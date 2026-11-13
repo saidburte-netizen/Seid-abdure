@@ -27,7 +27,9 @@ class BranchRepository {
     if (orderBy != null) query = query.order(orderBy, ascending: ascending);
     query = query.limit(limit);
     final rows = await query;
-    return (rows as List).map((row) => Map<String, dynamic>.from(row as Map)).toList();
+    return (rows as List)
+        .map((row) => Map<String, dynamic>.from(row as Map))
+        .toList();
   }
 
   Future<Map<String, dynamic>?> first(
@@ -80,23 +82,24 @@ class BranchRepository {
     await client.from(table).delete().eq(primaryKey, id);
   }
 
-  Future<Object?> rpc(String function, [Map<String, Object?> params = const {}]) =>
-      client.rpc(function, params: params);
+  Future<Object?> rpc(
+    String function, [
+    Map<String, Object?> params = const {},
+  ]) => client.rpc(function, params: params);
 
   Future<List<Map<String, dynamic>>> lookup(
     String table, {
     String labelColumn = 'name',
     bool branchScoped = true,
     Map<String, Object?> equals = const {},
-  }) =>
-      list(
-        table,
-        columns: 'id,$labelColumn',
-        branchScoped: branchScoped,
-        equals: equals,
-        orderBy: labelColumn,
-        limit: 500,
-      );
+  }) => list(
+    table,
+    columns: 'id,$labelColumn',
+    branchScoped: branchScoped,
+    equals: equals,
+    orderBy: labelColumn,
+    limit: 500,
+  );
 
   Future<Map<String, dynamic>> settings() async {
     final existing = await first('branch_settings');

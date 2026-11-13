@@ -9,7 +9,7 @@ class AppLocalizationsOm extends AppLocalizations {
   AppLocalizationsOm([String locale = 'om']) : super(locale);
 
   @override
-  String get appTitle => 'Bulchiinsa Buddeenaa fi Keekii';
+  String get appTitle => 'Brade and Cake House';
 
   @override
   String get production => 'Oomisha';
@@ -36,12 +36,8 @@ class AppLocalizationsOm extends AppLocalizations {
   String get settings => 'Qindaa\'ina';
 
   @override
-  String get moduleSetupMessage =>
-      'Moojuuliin kun karoora hojii keessa jira; ammaaf hin argamu.';
-
-  @override
   String get configurationRequired =>
-      'Appii kana Supabase waliin wal qunnamsiisuuf SUPABASE_URL fi SUPABASE_ANON_KEY qindeessaa.';
+      'Appilikeeshinii kan Supabase waliin walqabsiisuuf SUPABASE_URL fi SUPABASE_PUBLISHABLE_KEY (yookaan SUPABASE_ANON_KEY) qindeessi.';
 
   @override
   String get signIn => 'Seeni';
@@ -72,4 +68,191 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get retry => 'Irra deebi\'ii yaali';
+
+  @override
+  String get dashboard => 'Daashboordii';
+
+  @override
+  String get newSale => 'Gurgurtaa haaraa';
+
+  @override
+  String get alerts => 'Akeekkachiisa';
+
+  @override
+  String get productionModule => 'Oomisha';
+
+  @override
+  String get salesModule => 'Gurgurtaa fi POS';
+
+  @override
+  String get inventoryModule => 'Kuusaa';
+
+  @override
+  String get cashModule => 'Maallaqa qulqulluu fi baasii';
+
+  @override
+  String get peopleModule => 'Namoota fi HR';
+
+  @override
+  String get payrollModule => 'Kaffaltii hojjetaa';
+
+  @override
+  String get rentalsModule => 'Kiraa';
+
+  @override
+  String get payablesModule => 'Idaa kaffalamu';
+
+  @override
+  String get reportsModule => 'Gabaasa';
+
+  @override
+  String get settingsModule => 'Qindaa\'ina';
+
+  @override
+  String get notificationsModule => 'Beeksisa';
+
+  @override
+  String get workspace => 'Iddoo hojii';
+
+  @override
+  String get workspaceSubtitle =>
+      'Daawwannaa hojii hundi gahee keetiif argamu.';
+
+  @override
+  String get welcome => 'Baga nagaan dhufte';
+
+  @override
+  String get adminPortal => 'Portaala bulchaa';
+
+  @override
+  String get managerPortal => 'Portaala hoogganaa';
+
+  @override
+  String get teamPortal => 'Portaala garee';
+
+  @override
+  String get roleNoReports =>
+      'Gaheen kee gabaasa daashboordii hin of keessaa qabu. Qaxxaamura kutaa gadii fayyadami.';
+
+  @override
+  String get todaySales => 'Gurgurtaa har\'aa';
+
+  @override
+  String get thisMonth => 'Ji\'a kana';
+
+  @override
+  String get cashBalance => 'Hafteewwan maallaqaa';
+
+  @override
+  String get receivables => 'Maallaqa fudhatamu';
+
+  @override
+  String get payables => 'Idaa kaffalamu';
+
+  @override
+  String get rentOutstanding => 'Kiraa hin kaffalamne';
+
+  @override
+  String get lowStock => 'Kuusaa gadi aanaa';
+
+  @override
+  String get pendingExpenses => 'Baasii eegaa jiru';
+
+  @override
+  String get pendingLeave => 'Boqonnaa eegaa jiru';
+
+  @override
+  String get batchesToday => 'Oomisha har\'aa';
+
+  @override
+  String get activeEmployees => 'Hojjettoota socho\'aa';
+
+  @override
+  String get revenueThisMonth => 'Galii ji\'a kana';
+
+  @override
+  String get signInSubtitle =>
+      'Gurgurtaa, kuusaa, maallaqa, namoota fi qabeenya bulchuuf seeni.';
+
+  @override
+  String get signingIn => 'Seenaa jira…';
+
+  @override
+  String get claimOwner => 'Herrega abbaa qabachuu';
+
+  @override
+  String get claiming => 'Qabachaa jira…';
+
+  @override
+  String get claimOwnerHelp =>
+      'Yoo kun herrega jalqabaa daldalaaf ta\'e, dhaabbata fi damee isaa jalqabaa uumuuf abbaa qabachuu.';
+
+  @override
+  String get backToDashboard => 'Gara daashboordii deebi\'i';
+
+  @override
+  String get menu => 'Baafata';
+
+  @override
+  String get language => 'Afaan';
+
+  @override
+  String get theme => 'Bifa';
+
+  @override
+  String get systemTheme => 'Bifa sirnaa';
+
+  @override
+  String get lightTheme => 'Bifa ifaa';
+
+  @override
+  String get darkTheme => 'Bifa dukkanaa';
+
+  @override
+  String get save => 'Olkaa\'i';
+
+  @override
+  String get cancel => 'Haqi';
+
+  @override
+  String get close => 'Cufi';
+
+  @override
+  String get add => 'Dabali';
+
+  @override
+  String get edit => 'Gulaali';
+
+  @override
+  String get delete => 'Haqi';
+
+  @override
+  String get refresh => 'Haaromsi';
+
+  @override
+  String get search => 'Barbaadi';
+
+  @override
+  String get export => 'Al-ergi';
+
+  @override
+  String get myAccount => 'Herrega koo';
+
+  @override
+  String get accountPreferences => 'Herrega fi filannoo';
+
+  @override
+  String get editDisplayName => 'Maqaa mul\'atu gulaali';
+
+  @override
+  String get displayName => 'Maqaa mul\'atu';
+
+  @override
+  String get fullName => 'Maqaa guutuu';
+
+  @override
+  String get english => 'English';
+
+  @override
+  String get noBranchSelected => 'Dameen hin filatamne';
 }

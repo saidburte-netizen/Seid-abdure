@@ -87,7 +87,10 @@ class AppTheme {
           side: BorderSide(color: BrandColors.lightGold, width: 1),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: BrandColors.lightGold, thickness: 1),
+      dividerTheme: const DividerThemeData(
+        color: BrandColors.lightGold,
+        thickness: 1,
+      ),
       tabBarTheme: const TabBarThemeData(
         labelColor: BrandColors.deepGreen,
         unselectedLabelColor: BrandColors.chocolate,
@@ -98,8 +101,12 @@ class AppTheme {
       navigationDrawerTheme: const NavigationDrawerThemeData(
         backgroundColor: BrandColors.deepGreen,
         indicatorColor: BrandColors.forestGreen,
-        iconTheme: WidgetStatePropertyAll(IconThemeData(color: BrandColors.ivory)),
-        labelTextStyle: WidgetStatePropertyAll(TextStyle(color: BrandColors.ivory)),
+        iconTheme: WidgetStatePropertyAll(
+          IconThemeData(color: BrandColors.ivory),
+        ),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(color: BrandColors.ivory),
+        ),
       ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: BrandColors.deepGreen,
@@ -117,21 +124,27 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: BrandColors.forestGreen,
           foregroundColor: BrandColors.ivory,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: BrandColors.deepGreen,
           foregroundColor: BrandColors.ivory,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: BrandColors.forestGreen,
           side: const BorderSide(color: BrandColors.gold),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -184,19 +197,31 @@ class AppTheme {
         linearTrackColor: BrandColors.cream,
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.lightGold : BrandColors.ivory),
-        trackColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.forestGreen : BrandColors.cream),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.lightGold
+              : BrandColors.ivory,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.forestGreen
+              : BrandColors.cream,
+        ),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.forestGreen : BrandColors.ivory),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.forestGreen
+              : BrandColors.ivory,
+        ),
         side: const BorderSide(color: BrandColors.gold),
       ),
       radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.forestGreen : BrandColors.gold),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.forestGreen
+              : BrandColors.gold,
+        ),
       ),
       dataTableTheme: const DataTableThemeData(
         headingTextStyle: TextStyle(
@@ -205,7 +230,9 @@ class AppTheme {
         ),
         dataTextStyle: TextStyle(color: BrandColors.ink),
       ),
-      listTileTheme: const ListTileThemeData(iconColor: BrandColors.forestGreen),
+      listTileTheme: const ListTileThemeData(
+        iconColor: BrandColors.forestGreen,
+      ),
     );
   }
 
@@ -264,7 +291,10 @@ class AppTheme {
           side: BorderSide(color: BrandColors.forestGreen, width: 1),
         ),
       ),
-      dividerTheme: const DividerThemeData(color: BrandColors.forestGreen, thickness: 1),
+      dividerTheme: const DividerThemeData(
+        color: BrandColors.forestGreen,
+        thickness: 1,
+      ),
       tabBarTheme: const TabBarThemeData(
         labelColor: BrandColors.lightGold,
         unselectedLabelColor: BrandColors.cream,
@@ -275,8 +305,12 @@ class AppTheme {
       navigationDrawerTheme: const NavigationDrawerThemeData(
         backgroundColor: BrandColors.darkSurfaceHigh,
         indicatorColor: BrandColors.forestGreen,
-        iconTheme: WidgetStatePropertyAll(IconThemeData(color: BrandColors.cream)),
-        labelTextStyle: WidgetStatePropertyAll(TextStyle(color: BrandColors.cream)),
+        iconTheme: WidgetStatePropertyAll(
+          IconThemeData(color: BrandColors.cream),
+        ),
+        labelTextStyle: WidgetStatePropertyAll(
+          TextStyle(color: BrandColors.cream),
+        ),
       ),
       navigationRailTheme: const NavigationRailThemeData(
         backgroundColor: BrandColors.darkSurfaceHigh,
@@ -294,21 +328,27 @@ class AppTheme {
         style: ElevatedButton.styleFrom(
           backgroundColor: BrandColors.forestGreen,
           foregroundColor: BrandColors.ivory,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
           backgroundColor: BrandColors.forestGreen,
           foregroundColor: BrandColors.ivory,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           foregroundColor: BrandColors.lightGold,
           side: const BorderSide(color: BrandColors.gold),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       ),
       textButtonTheme: TextButtonThemeData(
@@ -361,19 +401,31 @@ class AppTheme {
         linearTrackColor: BrandColors.darkSurfaceHigh,
       ),
       switchTheme: SwitchThemeData(
-        thumbColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.lightGold : BrandColors.cream),
-        trackColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.forestGreen : BrandColors.darkSurfaceHigh),
+        thumbColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.lightGold
+              : BrandColors.cream,
+        ),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.forestGreen
+              : BrandColors.darkSurfaceHigh,
+        ),
       ),
       checkboxTheme: CheckboxThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.forestGreen : BrandColors.darkSurfaceHigh),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.forestGreen
+              : BrandColors.darkSurfaceHigh,
+        ),
         side: const BorderSide(color: BrandColors.gold),
       ),
       radioTheme: RadioThemeData(
-        fillColor: WidgetStateProperty.resolveWith((states) =>
-            states.contains(WidgetState.selected) ? BrandColors.lightGold : BrandColors.gold),
+        fillColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? BrandColors.lightGold
+              : BrandColors.gold,
+        ),
       ),
       dataTableTheme: const DataTableThemeData(
         headingTextStyle: TextStyle(

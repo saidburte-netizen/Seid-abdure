@@ -67,13 +67,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final session = SessionScope.of(context);
     if (session.userId == null) return;
     try {
-      await session.client.from('notification_reads').upsert(
-        {
-          'notification_id': notification['id'],
-          'user_id': session.userId,
-        },
-        onConflict: 'notification_id,user_id',
-      );
+      await session.client.from('notification_reads').upsert({
+        'notification_id': notification['id'],
+        'user_id': session.userId,
+      }, onConflict: 'notification_id,user_id');
       if (mounted) {
         setState(() => _readIds = {..._readIds, notification['id'] as String});
       }
@@ -87,22 +84,20 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     if (session.userId == null) return;
     final unread = _notifications
         .where((row) => !_readIds.contains(row['id']))
-        .map((row) => {
-              'notification_id': row['id'],
-              'user_id': session.userId,
-            })
+        .map((row) => {'notification_id': row['id'], 'user_id': session.userId})
         .toList();
     if (unread.isEmpty) return;
     try {
-      await session.client.from('notification_reads').upsert(
-        unread,
-        onConflict: 'notification_id,user_id',
-      );
+      await session.client
+          .from('notification_reads')
+          .upsert(unread, onConflict: 'notification_id,user_id');
       if (mounted) {
-        setState(() => _readIds = {
-              ..._readIds,
-              for (final row in _notifications) row['id'] as String,
-            });
+        setState(
+          () => _readIds = {
+            ..._readIds,
+            for (final row in _notifications) row['id'] as String,
+          },
+        );
       }
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
@@ -114,9 +109,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final branch = session.selectedBranch;
     if (branch == null) return;
     try {
-      final response = await session.client.rpc('refresh_branch_alerts', params: {
-        'target_branch': branch.branchId,
-      });
+      final response = await session.client.rpc(
+        'refresh_branch_alerts',
+        params: {'target_branch': branch.branchId},
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -132,31 +128,28 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
-        title: 'Notifications',
-        body: DefaultTabController(
-          length: 2,
-          initialIndex: _tab,
-          child: Column(
-            children: [
-              TabBar(
-                onTap: (value) => _tab = value,
-                tabs: const [
-                  Tab(text: 'Inbox'),
-                  Tab(text: 'Preferences'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [
-                    _inbox(context),
-                    const _NotificationPreferences(),
-                  ],
-                ),
-              ),
+    title: 'Notifications',
+    body: DefaultTabController(
+      length: 2,
+      initialIndex: _tab,
+      child: Column(
+        children: [
+          TabBar(
+            onTap: (value) => _tab = value,
+            tabs: const [
+              Tab(text: 'Inbox'),
+              Tab(text: 'Preferences'),
             ],
           ),
-        ),
-      );
+          Expanded(
+            child: TabBarView(
+              children: [_inbox(context), const _NotificationPreferences()],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _inbox(BuildContext context) {
     final session = SessionScope.of(context);
@@ -190,41 +183,40 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(24),
-                        child: Text(
-                          _error!,
-                          style: TextStyle(
-                            color: Theme.of(context).colorScheme.error,
-                          ),
-                        ),
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(24),
+                    child: Text(
+                      _error!,
+                      style: TextStyle(
+                        color: Theme.of(context).colorScheme.error,
                       ),
-                    )
-                  : _notifications.isEmpty
-                      ? const EmptyView(
-                          message: 'No notifications yet. Refresh alerts to generate them.',
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: _notifications.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final notification = _notifications[index];
-                              final read = _readIds.contains(notification['id']);
-                              return _NotificationTile(
-                                notification: notification,
-                                read: read,
-                                onTap: read
-                                    ? null
-                                    : () => _markRead(notification),
-                              );
-                            },
-                          ),
-                        ),
+                    ),
+                  ),
+                )
+              : _notifications.isEmpty
+              ? const EmptyView(
+                  message:
+                      'No notifications yet. Refresh alerts to generate them.',
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _notifications.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final notification = _notifications[index];
+                      final read = _readIds.contains(notification['id']);
+                      return _NotificationTile(
+                        notification: notification,
+                        read: read,
+                        onTap: read ? null : () => _markRead(notification),
+                      );
+                    },
+                  ),
+                ),
         ),
         if (session.selectedBranch != null)
           Padding(
@@ -362,7 +354,9 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
             .insert({'user_id': userId})
             .select()
             .single();
-        if (mounted) setState(() => _preferences = Map<String, dynamic>.from(created));
+        if (mounted) {
+          setState(() => _preferences = Map<String, dynamic>.from(created));
+        }
       } else {
         if (mounted) {
           setState(() => _preferences = Map<String, dynamic>.from(row));

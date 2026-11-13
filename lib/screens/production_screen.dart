@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
-import '../data/repository.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -19,28 +18,65 @@ class _ProductionScreenState extends State<ProductionScreen> {
   late final TableSpec _batchSpec = _buildBatchSpec();
 
   TableSpec _buildBatchSpec() => TableSpec(
-        table: 'production_batches',
-        title: 'Production batches',
-        singular: 'Production batch',
-        orderBy: 'scheduled_for',
-        ascending: false,
-        searchColumns: ['batch_number', 'status', 'notes'],
-        defaults: {
-          'batch_number':
-              'B-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+    table: 'production_batches',
+    title: 'Production batches',
+    singular: 'Production batch',
+    orderBy: 'scheduled_for',
+    ascending: false,
+    searchColumns: ['batch_number', 'status', 'notes'],
+    defaults: {
+      'batch_number':
+          'B-${DateTime.now().millisecondsSinceEpoch.toString().substring(5)}',
+    },
+    fields: const [
+      FieldSpec('batch_number', 'Batch number', required: true, list: true),
+      FieldSpec(
+        'recipe_id',
+        'Recipe',
+        type: FieldType.lookup,
+        lookupTable: 'recipes',
+        required: true,
+        list: true,
+      ),
+      FieldSpec(
+        'planned_quantity',
+        'Planned quantity',
+        type: FieldType.number,
+        required: true,
+        list: true,
+        min: 0.001,
+      ),
+      FieldSpec(
+        'produced_quantity',
+        'Produced quantity',
+        type: FieldType.number,
+        defaultValue: 0,
+        list: true,
+        min: 0,
+      ),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        defaultValue: 'planned',
+        list: true,
+        options: {
+          'planned': 'Planned',
+          'in_progress': 'In progress',
+          'completed': 'Completed',
+          'cancelled': 'Cancelled',
         },
-        fields: const [
-          FieldSpec('batch_number', 'Batch number', required: true, list: true),
-          FieldSpec('recipe_id', 'Recipe', type: FieldType.lookup, lookupTable: 'recipes', required: true, list: true),
-          FieldSpec('planned_quantity', 'Planned quantity', type: FieldType.number, required: true, list: true, min: 0.001),
-          FieldSpec('produced_quantity', 'Produced quantity', type: FieldType.number, defaultValue: 0, list: true, min: 0),
-          FieldSpec('status', 'Status', type: FieldType.select, defaultValue: 'planned', list: true, options: {
-            'planned': 'Planned', 'in_progress': 'In progress', 'completed': 'Completed', 'cancelled': 'Cancelled',
-          }),
-          FieldSpec('scheduled_for', 'Scheduled for', type: FieldType.date, required: true, list: true),
-          FieldSpec('notes', 'Notes', type: FieldType.multiline),
-        ],
-      );
+      ),
+      FieldSpec(
+        'scheduled_for',
+        'Scheduled for',
+        type: FieldType.date,
+        required: true,
+        list: true,
+      ),
+      FieldSpec('notes', 'Notes', type: FieldType.multiline),
+    ],
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -82,8 +118,9 @@ class _ProductionScreenState extends State<ProductionScreen> {
                           label: 'Complete batch',
                           icon: Icons.check_circle_outline,
                           onPressed: (row) async {
-                            final planned =
-                                asNum(row['planned_quantity']).toString();
+                            final planned = asNum(
+                              row['planned_quantity'],
+                            ).toString();
                             final result = await showInputDialog(
                               context,
                               title: 'Complete production batch',
@@ -110,11 +147,9 @@ class _ProductionScreenState extends State<ProductionScreen> {
                               'complete_production_batch',
                               params: {
                                 'target_batch': row['id'],
-                                'actual_quantity':
-                                    result['actual_quantity'],
+                                'actual_quantity': result['actual_quantity'],
                                 'target_store': null,
-                                'consumption_cost':
-                                    result['consumption_cost'],
+                                'consumption_cost': result['consumption_cost'],
                               },
                             );
                             if (context.mounted) {
@@ -129,35 +164,35 @@ class _ProductionScreenState extends State<ProductionScreen> {
                       ];
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: recipesSpec,
                     readPermission: 'production.read',
                     writePermission: 'production.write',
                     emptyMessage:
                         'No recipes yet. Add a recipe and its ingredients to produce consistently.',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: recipeItemsSpec,
                     readPermission: 'production.read',
                     writePermission: 'production.write',
                     emptyMessage:
                         'No ingredients. Select a recipe and add inventory items.',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: productsSpec,
                     readPermission: 'production.read',
                     writePermission: 'production.write',
                     emptyMessage:
                         'No products. Add finished products for the point of sale.',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: inventoryItemsSpec,
                     readPermission: 'inventory.read',
                     writePermission: 'inventory.write',
                     emptyMessage:
                         'No inventory items. Add raw materials before building recipes.',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: categoriesSpec,
                     readPermission: 'production.read',
                     writePermission: 'production.write',

@@ -33,31 +33,32 @@ class PendingSale {
   String? lastError;
 
   Map<String, dynamic> toJson() => {
-        'client_id': clientId,
-        'branch_id': branchId,
-        'items': items,
-        'payments': payments,
-        'customer_id': customerId,
-        'discount': discount,
-        'notes': notes,
-        'created_at': createdAt.toIso8601String(),
-        'attempts': attempts,
-        'last_error': lastError,
-      };
+    'client_id': clientId,
+    'branch_id': branchId,
+    'items': items,
+    'payments': payments,
+    'customer_id': customerId,
+    'discount': discount,
+    'notes': notes,
+    'created_at': createdAt.toIso8601String(),
+    'attempts': attempts,
+    'last_error': lastError,
+  };
 
   static PendingSale fromJson(Map<String, dynamic> json) => PendingSale(
-        clientId: json['client_id'] as String,
-        branchId: json['branch_id'] as String,
-        items: asMapList(json['items']),
-        payments: asMapList(json['payments']),
-        customerId: json['customer_id'] as String?,
-        discount: asNum(json['discount']),
-        notes: json['notes'] as String? ?? '',
-        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
-            DateTime.now(),
-        attempts: (json['attempts'] as num?)?.toInt() ?? 0,
-        lastError: json['last_error'] as String?,
-      );
+    clientId: json['client_id'] as String,
+    branchId: json['branch_id'] as String,
+    items: asMapList(json['items']),
+    payments: asMapList(json['payments']),
+    customerId: json['customer_id'] as String?,
+    discount: asNum(json['discount']),
+    notes: json['notes'] as String? ?? '',
+    createdAt:
+        DateTime.tryParse(json['created_at'] as String? ?? '') ??
+        DateTime.now(),
+    attempts: (json['attempts'] as num?)?.toInt() ?? 0,
+    lastError: json['last_error'] as String?,
+  );
 }
 
 /// Durable, client-side queue for sales captured while the device is offline.
@@ -126,28 +127,28 @@ class OfflineQueue {
     await _write(rows);
   }
 
-  Future<OfflineSyncResult> sync(
-    SupabaseClient client,
-    String branchId,
-  ) async {
+  Future<OfflineSyncResult> sync(SupabaseClient client, String branchId) async {
     final pending = forBranch(branchId);
     var succeeded = 0;
     final failures = <String>[];
     for (final sale in pending) {
       try {
-        await client.rpc('sync_offline_sale', params: {
-          'target_branch': branchId,
-          'p_device_id': 'flutter-client',
-          'p_client_id': sale.clientId,
-          'p_payload': {
-            'items': sale.items,
-            'payments': sale.payments,
-            'customer_id': sale.customerId,
-            'discount': sale.discount,
-            'notes': sale.notes,
-            'created_at': sale.createdAt.toIso8601String(),
+        await client.rpc(
+          'sync_offline_sale',
+          params: {
+            'target_branch': branchId,
+            'p_device_id': 'flutter-client',
+            'p_client_id': sale.clientId,
+            'p_payload': {
+              'items': sale.items,
+              'payments': sale.payments,
+              'customer_id': sale.customerId,
+              'discount': sale.discount,
+              'notes': sale.notes,
+              'created_at': sale.createdAt.toIso8601String(),
+            },
           },
-        });
+        );
         await remove(sale.clientId);
         succeeded += 1;
       } catch (error) {

@@ -5,6 +5,7 @@ import 'package:uuid/uuid.dart';
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/offline_queue.dart';
+import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../widgets/common.dart';
 
@@ -76,7 +77,9 @@ class _PosScreenState extends State<PosScreen> {
       setState(() {
         _products
           ..clear()
-          ..addEntries(products.map((row) => MapEntry(row['id'] as String, row)));
+          ..addEntries(
+            products.map((row) => MapEntry(row['id'] as String, row)),
+          );
         _customers
           ..clear()
           ..addAll(customers);
@@ -99,7 +102,8 @@ class _PosScreenState extends State<PosScreen> {
     for (final entry in _cart.entries) {
       final product = _products[entry.key];
       if (product == null) continue;
-      total += ((asNum(product['selling_price']) * entry.value) * 100).round() / 100;
+      total +=
+          ((asNum(product['selling_price']) * entry.value) * 100).round() / 100;
     }
     return total;
   }
@@ -169,12 +173,12 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   List<Map<String, dynamic>> get _paymentRows => [
-        {
-          'method': _method,
-          'amount': asNum(_paid.text) <= 0 ? _total : asNum(_paid.text),
-          'reference': '',
-        },
-      ];
+    {
+      'method': _method,
+      'amount': asNum(_paid.text) <= 0 ? _total : asNum(_paid.text),
+      'reference': '',
+    },
+  ];
 
   Future<void> _complete() async {
     if (_cart.isEmpty) {
@@ -210,21 +214,25 @@ class _PosScreenState extends State<PosScreen> {
     final notes = _notes.text.trim();
     setState(() => _submitting = true);
     try {
-      final result = await session.client.rpc('complete_sale', params: {
-        'target_branch': branch.branchId,
-        'sale_items': items,
-        'sale_payments': payments,
-        'target_customer': _customerId,
-        'sale_discount': discount,
-        'sale_notes': notes,
-        'p_client_id': const Uuid().v4(),
-      });
+      final result = await session.client.rpc(
+        'complete_sale',
+        params: {
+          'target_branch': branch.branchId,
+          'sale_items': items,
+          'sale_payments': payments,
+          'target_customer': _customerId,
+          'sale_discount': discount,
+          'sale_notes': notes,
+          'p_client_id': const Uuid().v4(),
+        },
+      );
       if (!mounted) return;
       await _showReceipt(asMap(result));
       _clear();
     } catch (error) {
       final message = readableError(error);
-      final offlinePossible = _method != 'credit' &&
+      final offlinePossible =
+          _method != 'credit' &&
           (message.contains('Network') ||
               message.contains('Socket') ||
               message.contains('Failed host lookup') ||
@@ -261,49 +269,113 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Future<void> _showReceipt(Map<String, dynamic> result) => showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('Sale completed'),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _receiptRow('Sale number', asText(result['sale_number'])),
-              _receiptRow('Receipt number', asText(result['receipt_number'])),
-              _receiptRow('Subtotal', formatMoney(result['subtotal'])),
-              _receiptRow('Discount', formatMoney(result['discount'])),
-              _receiptRow('Service charge', formatMoney(result['service_charge'])),
-              _receiptRow('Tax', formatMoney(result['tax_total'])),
-              const Divider(),
-              _receiptRow('Total', formatMoney(result['grand_total'])),
-              _receiptRow('Paid', formatMoney(result['paid_total'])),
-            ],
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Close'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _clear();
-              },
-              child: const Text('Next sale'),
-            ),
-          ],
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: const Text('Sale completed'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _receiptRow('Sale number', asText(result['sale_number'])),
+          _receiptRow('Receipt number', asText(result['receipt_number'])),
+          _receiptRow('Subtotal', formatMoney(result['subtotal'])),
+          _receiptRow('Discount', formatMoney(result['discount'])),
+          _receiptRow('Service charge', formatMoney(result['service_charge'])),
+          _receiptRow('Tax', formatMoney(result['tax_total'])),
+          const Divider(),
+          _receiptRow('Total', formatMoney(result['grand_total'])),
+          _receiptRow('Paid', formatMoney(result['paid_total'])),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(),
+          child: const Text('Close'),
         ),
+        OutlinedButton.icon(
+          onPressed: () => _shareReceipt(dialogContext, result),
+          icon: const Icon(Icons.picture_as_pdf_outlined),
+          label: const Text('PDF receipt'),
+        ),
+        FilledButton(
+          onPressed: () {
+            Navigator.of(dialogContext).pop();
+            _clear();
+          },
+          child: const Text('Next sale'),
+        ),
+      ],
+    ),
+  );
+
+  Future<void> _shareReceipt(
+    BuildContext dialogContext,
+    Map<String, dynamic> result,
+  ) async {
+    final session = SessionScope.of(context);
+    final branch = session.selectedBranch;
+    try {
+      final bytes = await BrandPdf.document(
+        title: 'Sales receipt',
+        documentNumber: asText(result['receipt_number']),
+        branchName: branch?.branchName ?? 'Main branch',
+        subtitle: 'Payment confirmation',
+        details: [
+          ('Sale', asText(result['sale_number'])),
+          ('Payment', _method.replaceAll('_', ' ').toUpperCase()),
+          ('Cashier', session.fullName ?? session.userEmail ?? ''),
+        ],
+        columns: const [
+          PdfColumn('Item', 'item'),
+          PdfColumn('Qty', 'quantity', numeric: true),
+          PdfColumn('Unit price', 'unit_price', numeric: true),
+          PdfColumn('Line total', 'line_total', numeric: true),
+        ],
+        rows: [
+          for (final entry in _cart.entries)
+            if (_products[entry.key] != null)
+              {
+                'item': asText(_products[entry.key]!['name']),
+                'quantity': entry.value,
+                'unit_price': asNum(_products[entry.key]!['selling_price']),
+                'line_total':
+                    asNum(_products[entry.key]!['selling_price']) * entry.value,
+              },
+        ],
+        totals: [
+          ('Subtotal', formatMoney(result['subtotal'])),
+          ('Discount', formatMoney(result['discount'])),
+          ('Service charge', formatMoney(result['service_charge'])),
+          ('Tax', formatMoney(result['tax_total'])),
+          ('Total', formatMoney(result['grand_total'])),
+          ('Paid', formatMoney(result['paid_total'])),
+        ],
+        note: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
       );
+      await BrandPdf.share(
+        fileName: 'receipt_${asText(result['receipt_number'])}',
+        bytes: bytes,
+        subject: 'Receipt ${asText(result['receipt_number'])}',
+      );
+      if (dialogContext.mounted) {
+        showSnack(dialogContext, 'Receipt PDF ready to share.');
+      }
+    } catch (error) {
+      if (dialogContext.mounted) {
+        showSnack(dialogContext, readableError(error), error: true);
+      }
+    }
+  }
 
   Widget _receiptRow(String label, String value) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Expanded(child: Text(label)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-          ],
-        ),
-      );
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      children: [
+        Expanded(child: Text(label)),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+      ],
+    ),
+  );
 
   List<Map<String, dynamic>> get _filteredProducts {
     final needle = _query.trim().toLowerCase();
@@ -311,9 +383,11 @@ class _PosScreenState extends State<PosScreen> {
       ..sort((a, b) => asText(a['name']).compareTo(asText(b['name'])));
     if (needle.isEmpty) return rows;
     return rows
-        .where((product) =>
-            asText(product['name']).toLowerCase().contains(needle) ||
-            asText(product['sku']).toLowerCase().contains(needle))
+        .where(
+          (product) =>
+              asText(product['name']).toLowerCase().contains(needle) ||
+              asText(product['sku']).toLowerCase().contains(needle),
+        )
         .toList();
   }
 
@@ -349,132 +423,126 @@ class _PosScreenState extends State<PosScreen> {
       body: _loading
           ? const LoadingView()
           : _error != null
-              ? ErrorView(message: _error!, onRetry: _load)
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final wide = constraints.maxWidth >= 900;
-                    if (wide) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          Expanded(child: _productsPane()),
-                          SizedBox(
-                            width: 390,
-                            child: _cartPane(compact: false),
-                          ),
-                        ],
-                      );
-                    }
-                    return Column(
-                      children: [
-                        Expanded(child: _productsPane()),
-                        _mobileCartBar(),
-                      ],
-                    );
-                  },
-                ),
+          ? ErrorView(message: _error!, onRetry: _load)
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 900;
+                if (wide) {
+                  return Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Expanded(child: _productsPane()),
+                      SizedBox(width: 390, child: _cartPane(compact: false)),
+                    ],
+                  );
+                }
+                return Column(
+                  children: [
+                    Expanded(child: _productsPane()),
+                    _mobileCartBar(),
+                  ],
+                );
+              },
+            ),
     );
   }
 
   Widget _productsPane() => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _search,
-              decoration: const InputDecoration(
-                labelText: 'Search products',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (value) => setState(() => _query = value),
-            ),
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: TextField(
+          controller: _search,
+          decoration: const InputDecoration(
+            labelText: 'Search products',
+            prefixIcon: Icon(Icons.search),
           ),
-          Expanded(
-            child: _filteredProducts.isEmpty
-                ? const EmptyView(
-                    icon: Icons.bakery_dining_outlined,
-                    message: 'No active products found.',
-                  )
-                : LayoutBuilder(
-                    builder: (context, constraints) {
-                      final columns = constraints.maxWidth >= 1000
-                          ? 4
-                          : constraints.maxWidth >= 700
-                              ? 3
-                              : 2;
-                      return GridView.builder(
-                        padding: const EdgeInsets.all(16),
-                        gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: columns,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 1.5,
-                        ),
-                        itemCount: _filteredProducts.length,
-                        itemBuilder: (context, index) {
-                          final product = _filteredProducts[index];
-                          final id = product['id'] as String;
-                          final inCart = _cart[id] ?? 0;
-                          return Card(
-                            clipBehavior: Clip.antiAlias,
-                            child: InkWell(
-                              onTap: () => _add(product),
-                              child: Padding(
-                                padding: const EdgeInsets.all(12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+          onChanged: (value) => setState(() => _query = value),
+        ),
+      ),
+      Expanded(
+        child: _filteredProducts.isEmpty
+            ? const EmptyView(
+                icon: Icons.bakery_dining_outlined,
+                message: 'No active products found.',
+              )
+            : LayoutBuilder(
+                builder: (context, constraints) {
+                  final columns = constraints.maxWidth >= 1000
+                      ? 4
+                      : constraints.maxWidth >= 700
+                      ? 3
+                      : 2;
+                  return GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: columns,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                      childAspectRatio: 1.5,
+                    ),
+                    itemCount: _filteredProducts.length,
+                    itemBuilder: (context, index) {
+                      final product = _filteredProducts[index];
+                      final id = product['id'] as String;
+                      final inCart = _cart[id] ?? 0;
+                      return Card(
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () => _add(product),
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
                                   children: [
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: Text(
-                                            asText(product['name']),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .titleSmall,
-                                          ),
+                                    Expanded(
+                                      child: Text(
+                                        asText(product['name']),
+                                        maxLines: 2,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: Theme.of(
+                                          context,
+                                        ).textTheme.titleSmall,
+                                      ),
+                                    ),
+                                    if (inCart > 0)
+                                      CircleAvatar(
+                                        radius: 13,
+                                        child: Text(
+                                          formatQuantity(inCart),
+                                          style: const TextStyle(fontSize: 12),
                                         ),
-                                        if (inCart > 0)
-                                          CircleAvatar(
-                                            radius: 13,
-                                            child: Text(
-                                              formatQuantity(inCart),
-                                              style: const TextStyle(fontSize: 12),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                    const Spacer(),
-                                    Text(
-                                      formatMoney(product['selling_price']),
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleMedium
-                                          ?.copyWith(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .primary,
-                                          ),
-                                    ),
-                                    Text(
-                                      asText(product['unit'], fallback: 'piece'),
-                                      style:
-                                          Theme.of(context).textTheme.bodySmall,
-                                    ),
+                                      ),
                                   ],
                                 ),
-                              ),
+                                const Spacer(),
+                                Text(
+                                  formatMoney(product['selling_price']),
+                                  style: Theme.of(context).textTheme.titleMedium
+                                      ?.copyWith(
+                                        color: Theme.of(
+                                          context,
+                                        ).colorScheme.primary,
+                                      ),
+                                ),
+                                Text(
+                                  asText(product['unit'], fallback: 'piece'),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
                             ),
-                          );
-                        },
+                          ),
+                        ),
                       );
                     },
-                  ),
-          ),
-        ],
-      );
+                  );
+                },
+              ),
+      ),
+    ],
+  );
 
   Widget _mobileCartBar() {
     final itemCount = _cart.values.fold<num>(0, (sum, value) => sum + value);
@@ -491,8 +559,10 @@ class _PosScreenState extends State<PosScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text('$itemCount item(s) • ${formatMoney(_total)}',
-                        style: Theme.of(context).textTheme.titleMedium),
+                    Text(
+                      '$itemCount item(s) • ${formatMoney(_total)}',
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
                     Text(
                       'Tax ${formatMoney(_tax)}',
                       style: Theme.of(context).textTheme.bodySmall,
@@ -504,18 +574,18 @@ class _PosScreenState extends State<PosScreen> {
                 onPressed: _cart.isEmpty
                     ? null
                     : () => showModalBottomSheet<void>(
-                          context: context,
-                          isScrollControlled: true,
-                          builder: (context) => DraggableScrollableSheet(
-                            expand: false,
-                            initialChildSize: 0.85,
-                            maxChildSize: 0.95,
-                            builder: (context, scrollController) => _cartPane(
-                              compact: true,
-                              scrollController: scrollController,
-                            ),
+                        context: context,
+                        isScrollControlled: true,
+                        builder: (context) => DraggableScrollableSheet(
+                          expand: false,
+                          initialChildSize: 0.85,
+                          maxChildSize: 0.95,
+                          builder: (context, scrollController) => _cartPane(
+                            compact: true,
+                            scrollController: scrollController,
                           ),
                         ),
+                      ),
                 icon: const Icon(Icons.shopping_cart_outlined),
                 label: Text('Cart (${_cart.length})'),
               ),
@@ -526,7 +596,10 @@ class _PosScreenState extends State<PosScreen> {
     );
   }
 
-  Widget _cartPane({required bool compact, ScrollController? scrollController}) {
+  Widget _cartPane({
+    required bool compact,
+    ScrollController? scrollController,
+  }) {
     final content = ListView(
       controller: scrollController,
       padding: const EdgeInsets.all(12),
@@ -534,8 +607,10 @@ class _PosScreenState extends State<PosScreen> {
         Row(
           children: [
             Expanded(
-              child: Text('Current sale',
-                  style: Theme.of(context).textTheme.titleLarge),
+              child: Text(
+                'Current sale',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
             ),
             TextButton(
               onPressed: _cart.isEmpty ? null : _clear,
@@ -654,26 +729,24 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Widget _totalRow(String label, num value, {bool strong = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style: strong
-                    ? const TextStyle(fontWeight: FontWeight.w600)
-                    : null,
-              ),
-            ),
-            Text(
-              formatMoney(value),
-              style: strong
-                  ? const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)
-                  : null,
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 3),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: strong ? const TextStyle(fontWeight: FontWeight.w600) : null,
+          ),
         ),
-      );
+        Text(
+          formatMoney(value),
+          style: strong
+              ? const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)
+              : null,
+        ),
+      ],
+    ),
+  );
 }
 
 class _CartLine extends StatelessWidget {
@@ -693,29 +766,29 @@ class _CartLine extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        title: Text(asText(product['name'])),
-        subtitle: Text(formatMoney(product['selling_price'])),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              onPressed: onRemove,
-              icon: const Icon(Icons.remove_circle_outline),
-            ),
-            Text(formatQuantity(quantity)),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              onPressed: onAdd,
-              icon: const Icon(Icons.add_circle_outline),
-            ),
-            IconButton(
-              visualDensity: VisualDensity.compact,
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete_outline),
-            ),
-          ],
+    contentPadding: EdgeInsets.zero,
+    title: Text(asText(product['name'])),
+    subtitle: Text(formatMoney(product['selling_price'])),
+    trailing: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          onPressed: onRemove,
+          icon: const Icon(Icons.remove_circle_outline),
         ),
-      );
+        Text(formatQuantity(quantity)),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          onPressed: onAdd,
+          icon: const Icon(Icons.add_circle_outline),
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
+          onPressed: onDelete,
+          icon: const Icon(Icons.delete_outline),
+        ),
+      ],
+    ),
+  );
 }

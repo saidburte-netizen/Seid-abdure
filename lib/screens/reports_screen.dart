@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../auth/auth_controller.dart';
 import '../data/export.dart';
 import '../data/formatting.dart';
+import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
@@ -38,11 +39,8 @@ class _ReportsScreenState extends State<ReportsScreen> {
     'export': 'Full branch export',
   };
 
-  bool get _usesDates => const {
-        'sales',
-        'production',
-        'profit_and_loss',
-      }.contains(_report);
+  bool get _usesDates =>
+      const {'sales', 'production', 'profit_and_loss'}.contains(_report);
 
   @override
   void didChangeDependencies() {
@@ -78,11 +76,15 @@ class _ReportsScreenState extends State<ReportsScreen> {
         if (runs.isEmpty) {
           throw Exception('No payroll run exists yet.');
         }
-        response = await session.client.rpc('report_payroll', params: {
-          'target_run': runs.first['id'],
-        });
+        response = await session.client.rpc(
+          'report_payroll',
+          params: {'target_run': runs.first['id']},
+        );
       } else if (_report == 'export') {
-        response = await session.client.rpc('export_branch_data', params: params);
+        response = await session.client.rpc(
+          'export_branch_data',
+          params: params,
+        );
       } else {
         response = await session.client.rpc('report_$_report', params: params);
       }
@@ -127,6 +129,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
       title: 'Report exported',
       content: 'CSV written to:\n$path',
     );
+  }
+
+  Future<void> _exportPdf() async {
+    final data = _data;
+    if (data == null) return;
+    final session = SessionScope.of(context);
+    final branch = session.selectedBranch;
+    final rows = flattenReport(data);
+    final keys = <String>{};
+    for (final row in rows.take(80)) {
+      keys.addAll(row.keys);
+    }
+    final columns = [
+      for (final key in keys.take(7))
+        PdfColumn(
+          prettyLabel(key),
+          key,
+          numeric: rows.any((row) => row[key] is num),
+        ),
+    ];
+    try {
+      final bytes = await BrandPdf.document(
+        title: _reports[_report] ?? 'Business report',
+        documentNumber: formatDate(DateTime.now()),
+        branchName: branch?.branchName ?? 'Main branch',
+        subtitle: _usesDates
+            ? '${formatDate(_range.start)} to ${formatDate(_range.end)}'
+            : 'Current position',
+        details: [
+          ('Prepared by', session.fullName ?? session.userEmail ?? ''),
+          if (_usesDates) ('Period start', formatDate(_range.start)),
+          if (_usesDates) ('Period end', formatDate(_range.end)),
+        ],
+        columns: columns,
+        rows: rows.take(80).toList(),
+        note:
+            'Figures are generated from the live branch ledger at the time of export.',
+      );
+      await BrandPdf.share(
+        fileName: 'report_$_report',
+        bytes: bytes,
+        subject: _reports[_report] ?? 'Business report',
+      );
+      if (mounted) showSnack(context, 'Report PDF ready to share.');
+    } catch (error) {
+      if (mounted) showSnack(context, readableError(error), error: true);
+    }
   }
 
   @override
@@ -182,6 +231,11 @@ class _ReportsScreenState extends State<ReportsScreen> {
                     onPressed: _data == null ? null : _exportCsv,
                     icon: const Icon(Icons.download_outlined),
                     label: const Text('Export CSV'),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _data == null ? null : _exportPdf,
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: const Text('Export PDF'),
                   ),
                 ],
               ),

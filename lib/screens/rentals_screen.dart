@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
+import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
@@ -42,22 +43,22 @@ class _RentalsScreenState extends State<RentalsScreen> {
             Expanded(
               child: TabBarView(
                 children: [
-                  CrudTab(
+                  const CrudTab(
                     spec: _rentRollSpec,
                     readPermission: 'rentals.read',
                     alwaysReadOnly: true,
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: propertiesSpec,
                     readPermission: 'rentals.read',
                     writePermission: 'rentals.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: unitsSpec,
                     readPermission: 'rentals.read',
                     writePermission: 'rentals.write',
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: leasesSpec,
                     readPermission: 'rentals.read',
                     writePermission: 'rentals.write',
@@ -80,28 +81,36 @@ class _RentalsScreenState extends State<RentalsScreen> {
                       ),
                     ),
                     actions: (row) {
-                      final remaining = asNum(row['amount']) - asNum(row['paid_amount']);
-                      if (remaining <= 0 ||
-                          row['status'] == 'paid' ||
-                          row['status'] == 'void' ||
-                          !session.can('rentals.write')) {
-                        return const [];
-                      }
-                      return [
+                      final actions = <CrudRowAction>[
                         CrudRowAction(
-                          label: 'Record payment',
-                          icon: Icons.payments_outlined,
-                          onPressed: (row) => _recordPayment(session, row),
+                          label: 'Invoice PDF',
+                          icon: Icons.picture_as_pdf_outlined,
+                          onPressed: (row) => _invoicePdf(session, row),
                         ),
                       ];
+                      final remaining =
+                          asNum(row['amount']) - asNum(row['paid_amount']);
+                      if (remaining > 0 &&
+                          row['status'] != 'paid' &&
+                          row['status'] != 'void' &&
+                          session.can('rentals.write')) {
+                        actions.add(
+                          CrudRowAction(
+                            label: 'Record payment',
+                            icon: Icons.payments_outlined,
+                            onPressed: (row) => _recordPayment(session, row),
+                          ),
+                        );
+                      }
+                      return actions;
                     },
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: _rentPaymentsSpec,
                     readPermission: 'rentals.read',
                     alwaysReadOnly: true,
                   ),
-                  CrudTab(
+                  const CrudTab(
                     spec: maintenanceSpec,
                     readPermission: 'rentals.read',
                     writePermission: 'rentals.write',
@@ -113,6 +122,79 @@ class _RentalsScreenState extends State<RentalsScreen> {
         ),
       ),
     );
+  }
+
+  Future<void> _invoicePdf(
+    AuthController session,
+    Map<String, dynamic> invoice,
+  ) async {
+    final branch = session.selectedBranch;
+    try {
+      Map<String, dynamic>? lease;
+      try {
+        final response = await session.client
+            .from('leases')
+            .select(
+              'tenant_name, tenant_phone, tenant_email, rent_amount, '
+              'units(name, properties(name))',
+            )
+            .eq('id', invoice['lease_id'])
+            .maybeSingle();
+        lease = response == null ? null : Map<String, dynamic>.from(response);
+      } catch (_) {
+        final response = await session.client
+            .from('leases')
+            .select('tenant_name, tenant_phone, tenant_email, rent_amount')
+            .eq('id', invoice['lease_id'])
+            .maybeSingle();
+        lease = response == null ? null : Map<String, dynamic>.from(response);
+      }
+      final unit = asMap(lease?['units']);
+      final property = asMap(unit['properties']);
+      final propertyLabel = [
+        asText(property['name']),
+        asText(unit['name']),
+      ].where((value) => value.isNotEmpty).join(' • ');
+      final bytes = await BrandPdf.document(
+        title: 'Rent invoice',
+        documentNumber: asText(invoice['invoice_number']),
+        branchName: branch?.branchName ?? 'Main branch',
+        subtitle: 'Property rental invoice',
+        partyLabel: 'Tenant',
+        partyName: asText(lease?['tenant_name'], fallback: 'Tenant'),
+        details: [
+          ('Property', propertyLabel.isEmpty ? '—' : propertyLabel),
+          ('Phone', asText(lease?['tenant_phone'])),
+          (
+            'Period',
+            '${formatDate(invoice['period_start'])} – ${formatDate(invoice['period_end'])}',
+          ),
+          ('Due date', formatDate(invoice['due_date'])),
+          ('Status', prettyLabel(asText(invoice['status']))),
+        ],
+        totals: [
+          ('Invoice amount', formatMoney(invoice['amount'])),
+          ('Paid', formatMoney(invoice['paid_amount'])),
+          (
+            'Balance',
+            formatMoney(
+              asNum(invoice['amount']) - asNum(invoice['paid_amount']),
+            ),
+          ),
+        ],
+        note: asText(invoice['notes']).trim().isEmpty
+            ? null
+            : asText(invoice['notes']),
+      );
+      await BrandPdf.share(
+        fileName: 'rent_invoice_${asText(invoice['invoice_number'])}',
+        bytes: bytes,
+        subject: 'Rent invoice ${asText(invoice['invoice_number'])}',
+      );
+      if (mounted) showSnack(context, 'Rent invoice PDF ready to share.');
+    } catch (error) {
+      if (mounted) showSnack(context, readableError(error), error: true);
+    }
   }
 
   Future<void> _generateInvoices(AuthController session) async {
@@ -130,11 +212,13 @@ class _RentalsScreenState extends State<RentalsScreen> {
     );
     if (range == null) return;
     try {
-      final response = await session.client.rpc('generate_rent_invoices', params: {
-        'target_branch': branch.branchId,
-        'target_period_start': dateOnly(range.start),
-        'target_period_end': dateOnly(range.end),
-      });
+      final response = await session.client.rpc(
+        'generate_rent_invoices',
+        params: {
+          'target_branch': branch.branchId,
+          'target_period_start': dateOnly(range.start),
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -171,13 +255,16 @@ class _RentalsScreenState extends State<RentalsScreen> {
     );
     if (payment == null) return;
     try {
-      final response = await session.client.rpc('record_rent_payment', params: {
-        'target_invoice': invoice['id'],
-        'target_account': payment['account_id'],
-        'payment_amount': payment['amount'],
-        'payment_method': payment['method'],
-        'payment_reference': payment['reference'],
-      });
+      final response = await session.client.rpc(
+        'record_rent_payment',
+        params: {
+          'target_invoice': invoice['id'],
+          'target_account': payment['account_id'],
+          'payment_amount': payment['amount'],
+          'payment_method': payment['method'],
+          'payment_reference': payment['reference'],
+        },
+      );
       if (mounted) {
         await showInfoDialog(
           context,
@@ -208,7 +295,12 @@ const _rentRollSpec = TableSpec(
     FieldSpec('tenant_phone', 'Phone', list: true),
     FieldSpec('rent_amount', 'Rent', type: FieldType.number, list: true),
     FieldSpec('invoiced_total', 'Invoiced', type: FieldType.number, list: true),
-    FieldSpec('collected_total', 'Collected', type: FieldType.number, list: true),
+    FieldSpec(
+      'collected_total',
+      'Collected',
+      type: FieldType.number,
+      list: true,
+    ),
     FieldSpec('outstanding', 'Outstanding', type: FieldType.number, list: true),
     FieldSpec('status', 'Status', list: true),
   ],
@@ -226,15 +318,31 @@ const _rentInvoicesSpec = TableSpec(
   canDelete: false,
   fields: [
     FieldSpec('invoice_number', 'Invoice', list: true),
-    FieldSpec('lease_id', 'Lease', type: FieldType.lookup, lookupTable: 'leases', lookupLabel: 'tenant_name', list: true),
+    FieldSpec(
+      'lease_id',
+      'Lease',
+      type: FieldType.lookup,
+      lookupTable: 'leases',
+      lookupLabel: 'tenant_name',
+      list: true,
+    ),
     FieldSpec('period_start', 'Period start', type: FieldType.date, list: true),
     FieldSpec('period_end', 'Period end', type: FieldType.date, list: true),
     FieldSpec('due_date', 'Due date', type: FieldType.date, list: true),
     FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
     FieldSpec('paid_amount', 'Paid', type: FieldType.number, list: true),
-    FieldSpec('status', 'Status', type: FieldType.select, list: true, options: {
-      'unpaid': 'Unpaid', 'partial': 'Partial', 'paid': 'Paid', 'void': 'Void',
-    }),
+    FieldSpec(
+      'status',
+      'Status',
+      type: FieldType.select,
+      list: true,
+      options: {
+        'unpaid': 'Unpaid',
+        'partial': 'Partial',
+        'paid': 'Paid',
+        'void': 'Void',
+      },
+    ),
   ],
 );
 
@@ -251,8 +359,21 @@ const _rentPaymentsSpec = TableSpec(
   canDelete: false,
   fields: [
     FieldSpec('paid_at', 'Paid at', type: FieldType.date, list: true),
-    FieldSpec('rent_invoice_id', 'Invoice', type: FieldType.lookup, lookupTable: 'rent_invoices', lookupLabel: 'invoice_number', list: true),
-    FieldSpec('cash_account_id', 'Account', type: FieldType.lookup, lookupTable: 'cash_accounts', list: true),
+    FieldSpec(
+      'rent_invoice_id',
+      'Invoice',
+      type: FieldType.lookup,
+      lookupTable: 'rent_invoices',
+      lookupLabel: 'invoice_number',
+      list: true,
+    ),
+    FieldSpec(
+      'cash_account_id',
+      'Account',
+      type: FieldType.lookup,
+      lookupTable: 'cash_accounts',
+      list: true,
+    ),
     FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
     FieldSpec('method', 'Method', list: true),
     FieldSpec('reference', 'Reference', list: true),

@@ -13,48 +13,48 @@ class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => ModuleScaffold(
-        title: 'Settings & administration',
-        body: DefaultTabController(
-          length: 6,
-          child: Column(
-            children: [
-              const TabBar(
-                isScrollable: true,
-                tabAlignment: TabAlignment.start,
-                tabs: [
-                  Tab(text: 'Organization'),
-                  Tab(text: 'Branch'),
-                  Tab(text: 'Branches'),
-                  Tab(text: 'Members'),
-                  Tab(text: 'Roles'),
-                  Tab(text: 'Numbering'),
-                ],
-              ),
-              const Expanded(
-                child: TabBarView(
-                  children: [
-                    _OrganizationSettings(),
-                    _BranchSettings(),
-                    CrudTab(
-                      spec: _branchesSpec,
-                      readPermission: 'settings.manage',
-                      writePermission: 'settings.manage',
-                    ),
-                    _MembersView(),
-                    _RolesView(),
-                    CrudTab(
-                      spec: _numberingSpec,
-                      readPermission: 'settings.manage',
-                      writePermission: 'settings.manage',
-                    ),
-                  ],
-                ),
-              ),
+  Widget build(BuildContext context) => const ModuleScaffold(
+    title: 'Settings & administration',
+    body: DefaultTabController(
+      length: 6,
+      child: Column(
+        children: [
+          TabBar(
+            isScrollable: true,
+            tabAlignment: TabAlignment.start,
+            tabs: [
+              Tab(text: 'Organization'),
+              Tab(text: 'Branch'),
+              Tab(text: 'Branches'),
+              Tab(text: 'Members'),
+              Tab(text: 'Roles'),
+              Tab(text: 'Numbering'),
             ],
           ),
-        ),
-      );
+          Expanded(
+            child: TabBarView(
+              children: [
+                _OrganizationSettings(),
+                _BranchSettings(),
+                CrudTab(
+                  spec: _branchesSpec,
+                  readPermission: 'settings.manage',
+                  writePermission: 'settings.manage',
+                ),
+                _MembersView(),
+                _RolesView(),
+                CrudTab(
+                  spec: _numberingSpec,
+                  readPermission: 'settings.manage',
+                  writePermission: 'settings.manage',
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }
 
 class _OrganizationSettings extends StatefulWidget {
@@ -104,8 +104,12 @@ class _OrganizationSettingsState extends State<_OrganizationSettings> {
       _phone.text = asText(data['phone']);
       _email.text = asText(data['email']);
       _address.text = asText(data['address']);
-      _taxRate.text = (asNum(data['default_tax_rate'] == null ? 0.15 : data['default_tax_rate']) * 100).toString();
-      _fiscalMonth.text = asText(data['fiscal_year_start_month'], fallback: '7');
+      _taxRate.text = (asNum(data['default_tax_rate'] ?? 0.15) * 100)
+          .toString();
+      _fiscalMonth.text = asText(
+        data['fiscal_year_start_month'],
+        fallback: '7',
+      );
       _footer.text = asText(data['receipt_footer']);
       _locale = asText(data['default_locale'], fallback: 'en');
       _lowStockAlerts = asBool(data['low_stock_alerts'], fallback: true);
@@ -194,7 +198,12 @@ class _OrganizationSettingsState extends State<_OrganizationSettings> {
                   _text('Email', _email),
                   _text('Address', _address),
                   _text('Default tax rate (%)', _taxRate, number: true),
-                  _text('Fiscal year start month', _fiscalMonth, number: true, integer: true),
+                  _text(
+                    'Fiscal year start month',
+                    _fiscalMonth,
+                    number: true,
+                    integer: true,
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -203,13 +212,19 @@ class _OrganizationSettingsState extends State<_OrganizationSettings> {
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       initialValue: _locale,
-                      decoration: const InputDecoration(labelText: 'Default locale'),
+                      decoration: const InputDecoration(
+                        labelText: 'Default locale',
+                      ),
                       items: const [
                         DropdownMenuItem(value: 'en', child: Text('English')),
                         DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
-                        DropdownMenuItem(value: 'om', child: Text('Afaan Oromoo')),
+                        DropdownMenuItem(
+                          value: 'om',
+                          child: Text('Afaan Oromoo'),
+                        ),
                       ],
-                      onChanged: (value) => setState(() => _locale = value ?? 'en'),
+                      onChanged: (value) =>
+                          setState(() => _locale = value ?? 'en'),
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -218,7 +233,8 @@ class _OrganizationSettingsState extends State<_OrganizationSettings> {
                       contentPadding: EdgeInsets.zero,
                       title: const Text('Low stock alerts'),
                       value: _lowStockAlerts,
-                      onChanged: (value) => setState(() => _lowStockAlerts = value),
+                      onChanged: (value) =>
+                          setState(() => _lowStockAlerts = value),
                     ),
                   ),
                 ],
@@ -250,17 +266,16 @@ class _OrganizationSettingsState extends State<_OrganizationSettings> {
     TextEditingController controller, {
     bool number = false,
     bool integer = false,
-  }) =>
-      SizedBox(
-        width: 300,
-        child: TextField(
-          controller: controller,
-          keyboardType: number
-              ? TextInputType.numberWithOptions(decimal: !integer)
-              : null,
-          decoration: InputDecoration(labelText: label),
-        ),
-      );
+  }) => SizedBox(
+    width: 300,
+    child: TextField(
+      controller: controller,
+      keyboardType: number
+          ? TextInputType.numberWithOptions(decimal: !integer)
+          : null,
+      decoration: InputDecoration(labelText: label),
+    ),
+  );
 }
 
 class _BranchSettings extends StatefulWidget {
@@ -299,9 +314,8 @@ class _BranchSettingsState extends State<_BranchSettings> {
       if (!mounted) return;
       _receiptPrefix.text = asText(row['receipt_prefix'], fallback: 'RCPT');
       _salePrefix.text = asText(row['sale_prefix'], fallback: 'SALE');
-      _taxRate.text = (asNum(row['tax_rate'] == null ? 0.15 : row['tax_rate']) * 100).toString();
-      _serviceRate.text =
-          (asNum(row['service_charge_rate']) * 100).toString();
+      _taxRate.text = (asNum(row['tax_rate'] ?? 0.15) * 100).toString();
+      _serviceRate.text = (asNum(row['service_charge_rate']) * 100).toString();
       _taxInclusive = asBool(row['tax_inclusive']);
       _dailyClose = asBool(row['daily_close_required'], fallback: true);
     } catch (error) {
@@ -335,8 +349,12 @@ class _BranchSettingsState extends State<_BranchSettings> {
       if (existing == null) {
         await _repo!.insert('branch_settings', values);
       } else {
-        await _repo!.update('branch_settings', _repo!.branchId, values,
-            primaryKey: 'branch_id');
+        await _repo!.update(
+          'branch_settings',
+          _repo!.branchId,
+          values,
+          primaryKey: 'branch_id',
+        );
       }
       if (mounted) showSnack(context, 'Branch settings saved.');
     } catch (error) {
@@ -405,18 +423,20 @@ class _BranchSettingsState extends State<_BranchSettings> {
     );
   }
 
-  Widget _text(String label, TextEditingController controller,
-          {bool number = false}) =>
-      SizedBox(
-        width: 240,
-        child: TextField(
-          controller: controller,
-          keyboardType: number
-              ? const TextInputType.numberWithOptions(decimal: true)
-              : null,
-          decoration: InputDecoration(labelText: label),
-        ),
-      );
+  Widget _text(
+    String label,
+    TextEditingController controller, {
+    bool number = false,
+  }) => SizedBox(
+    width: 240,
+    child: TextField(
+      controller: controller,
+      keyboardType: number
+          ? const TextInputType.numberWithOptions(decimal: true)
+          : null,
+      decoration: InputDecoration(labelText: label),
+    ),
+  );
 }
 
 class _MembersView extends StatefulWidget {
@@ -445,7 +465,9 @@ class _MembersViewState extends State<_MembersView> {
     try {
       final members = await session.client
           .from('branch_memberships')
-          .select('id, user_id, is_active, roles(name, slug), profiles(full_name)')
+          .select(
+            'id, user_id, is_active, roles(name, slug), profiles(full_name)',
+          )
           .eq('branch_id', branch.branchId)
           .order('created_at');
       final roles = await session.client
@@ -498,11 +520,14 @@ class _MembersViewState extends State<_MembersView> {
     );
     if (result == null) return;
     try {
-      await session.client.rpc('assign_branch_membership', params: {
-        'target_branch': branch.branchId,
-        'member_email': result['email'],
-        'role_slug': result['role'],
-      });
+      await session.client.rpc(
+        'assign_branch_membership',
+        params: {
+          'target_branch': branch.branchId,
+          'member_email': result['email'],
+          'role_slug': result['role'],
+        },
+      );
       if (mounted) {
         showSnack(context, 'Member added.');
         await _load();
@@ -557,15 +582,17 @@ class _MembersViewState extends State<_MembersView> {
             child: ListTile(
               leading: CircleAvatar(
                 child: Text(
-                  asText(asMap(member['profiles'])['full_name'], fallback: '?')
-                      .characters
-                      .first
-                      .toUpperCase(),
+                  asText(
+                    asMap(member['profiles'])['full_name'],
+                    fallback: '?',
+                  ).characters.first.toUpperCase(),
                 ),
               ),
               title: Text(
-                asText(asMap(member['profiles'])['full_name'],
-                    fallback: 'Unnamed member'),
+                asText(
+                  asMap(member['profiles'])['full_name'],
+                  fallback: 'Unnamed member',
+                ),
               ),
               subtitle: Text(
                 '${asText(asMap(member['roles'])['name'])} • '
@@ -578,7 +605,9 @@ class _MembersViewState extends State<_MembersView> {
             ),
           ),
         if (_members.isEmpty)
-          const EmptyView(message: 'No members have been added to this branch.'),
+          const EmptyView(
+            message: 'No members have been added to this branch.',
+          ),
       ],
     );
   }
@@ -613,8 +642,9 @@ class _RolesViewState extends State<_RolesView> {
           .select('id, name, slug, branch_id')
           .eq('branch_id', branch.branchId)
           .order('name');
-      final permissions =
-          await session.client.from('permissions').select('id, permission_key, description');
+      final permissions = await session.client
+          .from('permissions')
+          .select('id, permission_key, description');
       if (!mounted) return;
       setState(() {
         _roles = (roles as List)
@@ -753,44 +783,44 @@ class _PermissionDialog extends StatefulWidget {
 }
 
 class _PermissionDialogState extends State<_PermissionDialog> {
-  late Set<String> _selected = {...widget.selected};
+  late final Set<String> _selected = {...widget.selected};
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text('Permissions — ${asText(widget.role['name'])}'),
-        content: SizedBox(
-          width: 560,
-          child: ListView(
-            shrinkWrap: true,
-            children: [
-              for (final permission in widget.permissions)
-                CheckboxListTile(
-                  value: _selected.contains(permission['id']),
-                  title: Text(asText(permission['permission_key'])),
-                  subtitle: Text(asText(permission['description'])),
-                  onChanged: (value) => setState(() {
-                    final id = permission['id'] as String;
-                    if (value == true) {
-                      _selected.add(id);
-                    } else {
-                      _selected.remove(id);
-                    }
-                  }),
-                ),
-            ],
-          ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(_selected),
-            child: const Text('Save permissions'),
-          ),
+    title: Text('Permissions — ${asText(widget.role['name'])}'),
+    content: SizedBox(
+      width: 560,
+      child: ListView(
+        shrinkWrap: true,
+        children: [
+          for (final permission in widget.permissions)
+            CheckboxListTile(
+              value: _selected.contains(permission['id']),
+              title: Text(asText(permission['permission_key'])),
+              subtitle: Text(asText(permission['description'])),
+              onChanged: (value) => setState(() {
+                final id = permission['id'] as String;
+                if (value == true) {
+                  _selected.add(id);
+                } else {
+                  _selected.remove(id);
+                }
+              }),
+            ),
         ],
-      );
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.of(context).pop(_selected),
+        child: const Text('Save permissions'),
+      ),
+    ],
+  );
 }
 
 const _branchesSpec = TableSpec(
@@ -803,7 +833,13 @@ const _branchesSpec = TableSpec(
   fields: [
     FieldSpec('name', 'Branch name', required: true, list: true),
     FieldSpec('code', 'Code', required: true, list: true),
-    FieldSpec('is_active', 'Active', type: FieldType.boolean, defaultValue: 'true', list: true),
+    FieldSpec(
+      'is_active',
+      'Active',
+      type: FieldType.boolean,
+      defaultValue: 'true',
+      list: true,
+    ),
   ],
 );
 
@@ -816,6 +852,13 @@ const _numberingSpec = TableSpec(
   fields: [
     FieldSpec('document_type', 'Document type', required: true, list: true),
     FieldSpec('prefix', 'Prefix', required: true, list: true),
-    FieldSpec('next_number', 'Next number', type: FieldType.integer, defaultValue: '1', list: true, min: 1),
+    FieldSpec(
+      'next_number',
+      'Next number',
+      type: FieldType.integer,
+      defaultValue: '1',
+      list: true,
+      min: 1,
+    ),
   ],
 );

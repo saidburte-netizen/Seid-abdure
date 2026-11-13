@@ -148,11 +148,22 @@ begin
     action_name := 'insert';
   end if;
 
-  branch := nullif(row_data ->> 'branch_id', '')::uuid;
-  if branch is null and tg_table_name = 'branches' then
-    branch := nullif(row_data ->> 'id', '')::uuid;
-  end if;
-  entity := nullif(row_data ->> 'id', '')::uuid;
+  begin
+    branch := nullif(row_data ->> 'branch_id', '')::uuid;
+    if branch is null and tg_table_name = 'branches' then
+      branch := nullif(row_data ->> 'id', '')::uuid;
+    end if;
+  exception when invalid_text_representation then
+    branch := null;
+  end;
+
+  -- Some audited tables (for example organization_settings) use a boolean
+  -- singleton key rather than a UUID. Audit those rows with a null entity id.
+  begin
+    entity := nullif(row_data ->> 'id', '')::uuid;
+  exception when invalid_text_representation then
+    entity := null;
+  end;
 
   insert into public.audit_logs (
     branch_id, actor_id, action, entity_table, entity_id, details
