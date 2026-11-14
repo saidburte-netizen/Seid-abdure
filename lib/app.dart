@@ -20,6 +20,7 @@ import 'screens/reports_screen.dart';
 import 'screens/sales_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/common.dart';
 
 class BakeryApp extends StatelessWidget {
   const BakeryApp({this.client, super.key});
@@ -405,6 +406,37 @@ class _SignInScreenState extends State<SignInScreen> {
     }
   }
 
+  Future<void> _signUp() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => const _SignUpDialog(),
+    );
+    if (result == null || !mounted) return;
+    setState(() {
+      _submitting = true;
+      _errorMessage = null;
+    });
+    try {
+      final response = await widget.client.auth.signUp(
+        email: result['email']!,
+        password: result['password']!,
+        data: {'full_name': result['name']!},
+      );
+      if (response.session == null && mounted) {
+        showSnack(
+          context,
+          'Account created. Check your email to confirm it, then sign in.',
+        );
+      }
+    } on AuthException catch (exception) {
+      if (mounted) setState(() => _errorMessage = exception.message);
+    } catch (error) {
+      if (mounted) setState(() => _errorMessage = error.toString());
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
@@ -503,6 +535,12 @@ class _SignInScreenState extends State<SignInScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 8),
+                          TextButton.icon(
+                            onPressed: _submitting ? null : _signUp,
+                            icon: const Icon(Icons.person_add_alt_1),
+                            label: const Text('Create the first account'),
+                          ),
                         ],
                       ),
                     ),
@@ -515,6 +553,89 @@ class _SignInScreenState extends State<SignInScreen> {
       ),
     );
   }
+}
+
+class _SignUpDialog extends StatefulWidget {
+  const _SignUpDialog();
+
+  @override
+  State<_SignUpDialog> createState() => _SignUpDialogState();
+}
+
+class _SignUpDialogState extends State<_SignUpDialog> {
+  final _formKey = GlobalKey<FormState>();
+  final _name = TextEditingController();
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+
+  @override
+  void dispose() {
+    _name.dispose();
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: const Text('Create the first account'),
+    content: Form(
+      key: _formKey,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextFormField(
+            controller: _name,
+            decoration: const InputDecoration(labelText: 'Full name'),
+            textCapitalization: TextCapitalization.words,
+            validator: (value) =>
+                value == null || value.trim().isEmpty ? 'Required' : null,
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _email,
+            decoration: const InputDecoration(labelText: 'Email'),
+            keyboardType: TextInputType.emailAddress,
+            validator: (value) =>
+                value == null || !value.contains('@') ? 'Enter an email' : null,
+          ),
+          const SizedBox(height: 10),
+          TextFormField(
+            controller: _password,
+            decoration: const InputDecoration(labelText: 'Password'),
+            obscureText: true,
+            validator: (value) => value == null || value.length < 6
+                ? 'Use at least 6 characters'
+                : null,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            'The first account created in a new Supabase project becomes the '
+            'administrator. Later accounts need a profile role assigned by an '
+            'administrator.',
+            style: TextStyle(fontSize: 12),
+          ),
+        ],
+      ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () {
+          if (!_formKey.currentState!.validate()) return;
+          Navigator.of(context).pop({
+            'name': _name.text.trim(),
+            'email': _email.text.trim(),
+            'password': _password.text,
+          });
+        },
+        child: const Text('Create account'),
+      ),
+    ],
+  );
 }
 
 class LoadingScreen extends StatelessWidget {
