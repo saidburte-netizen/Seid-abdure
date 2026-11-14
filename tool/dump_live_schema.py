@@ -169,12 +169,17 @@ def data_inserts(
     schema: str,
     columns: List[Dict[str, Any]],
     where: str = "",
+    only_columns: Optional[List[str]] = None,
 ) -> List[str]:
     rows = query(token, ref, f"select row_to_json(t) as row from {schema}.{table} t {where}")
     if not rows:
         return []
     by_name = {column["column_name"]: column for column in columns}
-    names = [column["column_name"] for column in columns]
+    names = [
+        column["column_name"]
+        for column in columns
+        if only_columns is None or column["column_name"] in only_columns
+    ]
     statements: List[str] = []
     for item in rows:
         row = item.get("row")
@@ -493,7 +498,16 @@ def main() -> int:
     for table in data_tables:
         out.extend(data_inserts(token, ref, table, "public", data_columns[table]))
     if storage_columns:
-        out.extend(data_inserts(token, ref, "buckets", "storage", storage_columns))
+        out.extend(
+            data_inserts(
+                token,
+                ref,
+                "buckets",
+                "storage",
+                storage_columns,
+                only_columns=["id", "name", "public", "file_size_limit", "allowed_mime_types"],
+            )
+        )
     out.append("")
 
     out.append("-- End of generated schema fixture.")
