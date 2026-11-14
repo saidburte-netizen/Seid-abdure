@@ -18,9 +18,13 @@ const _rawSupabasePublishableKey = String.fromEnvironment(
   'SUPABASE_PUBLISHABLE_KEY',
 );
 Future<void> main() async {
+  var firstFrameRendered = false;
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        firstFrameRendered = true;
+      });
 
       SupabaseClient? client;
       Future<void> restartApp() async {
@@ -40,7 +44,7 @@ Future<void> main() async {
 
       void reportError(String message, Object error, StackTrace? stack) {
         AppLogger.error(message, error, stack);
-        unawaited(_markLocaleForRecovery());
+        if (!firstFrameRendered) unawaited(_markLocaleForRecovery());
       }
 
       FlutterError.onError = (details) {
@@ -78,7 +82,7 @@ Future<void> main() async {
     },
     (error, stack) {
       AppLogger.error('Uncaught zoned error', error, stack);
-      unawaited(_markLocaleForRecovery());
+      if (!firstFrameRendered) unawaited(_markLocaleForRecovery());
     },
   );
 }
