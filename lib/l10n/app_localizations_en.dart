@@ -524,4 +524,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get signOutConfirmation => 'Sign out of this account?';
+
+  @override
+  String get approvals => 'Approvals';
 }

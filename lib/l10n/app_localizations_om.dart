@@ -529,4 +529,7 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get signOutConfirmation => 'Herrega kana irraa ba\'uu?';
+
+  @override
+  String get approvals => 'Mirkaneessaa';
 }

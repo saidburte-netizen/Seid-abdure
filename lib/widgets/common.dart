@@ -7,6 +7,8 @@ import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
 import '../l10n/app_localizations.dart';
+import '../theme/app_theme.dart';
+import 'brand_ui.dart';
 
 export '../core/errors/error_ui.dart';
 
@@ -23,8 +25,16 @@ class PageHeader extends StatelessWidget {
   final List<Widget> actions;
 
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+  Widget build(BuildContext context) => Container(
+    margin: const EdgeInsets.fromLTRB(16, 18, 16, 4),
+    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+    decoration: const BoxDecoration(
+      color: BrandColors.deepGreen,
+      borderRadius: BorderRadius.all(Radius.circular(12)),
+      border: Border.fromBorderSide(
+        BorderSide(color: BrandColors.gold, width: 1),
+      ),
+    ),
     child: Wrap(
       alignment: WrapAlignment.spaceBetween,
       crossAxisAlignment: WrapCrossAlignment.center,
@@ -34,14 +44,20 @@ class PageHeader extends StatelessWidget {
         Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                color: BrandColors.ivory,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
             if (subtitle != null)
               Padding(
-                padding: const EdgeInsets.only(top: 4),
+                padding: const EdgeInsets.only(top: 2),
                 child: Text(
                   subtitle!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: BrandColors.cream.withValues(alpha: 0.88),
                   ),
                 ),
               ),
@@ -69,33 +85,12 @@ class SectionCard extends StatelessWidget {
   final EdgeInsets padding;
 
   @override
-  Widget build(BuildContext context) => Card(
+  Widget build(BuildContext context) => AppCard(
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(
-      padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title!,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  if (trailing != null) trailing!,
-                ],
-              ),
-            ),
-          child,
-        ],
-      ),
-    ),
+    padding: padding,
+    title: title,
+    trailing: trailing,
+    child: child,
   );
 }
 
@@ -116,50 +111,12 @@ class StatCard extends StatelessWidget {
   final VoidCallback? onTap;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      child: InkWell(
-        onTap: onTap,
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Row(
-                children: [
-                  if (icon != null) ...[
-                    Icon(icon, color: color ?? scheme.primary, size: 20),
-                    const SizedBox(width: 8),
-                  ],
-                  Expanded(
-                    child: Text(
-                      label,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 12),
-              Text(
-                value,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: color ?? scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
+  Widget build(BuildContext context) => KpiCard(
+    label: label,
+    value: value,
+    icon: icon,
+    onTap: onTap,
+  );
 }
 
 class LoadingView extends StatelessWidget {

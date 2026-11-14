@@ -1089,6 +1089,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Sign out of this account?'**
   String get signOutConfirmation;
+
+  /// No description provided for @approvals.
+  ///
+  /// In en, this message translates to:
+  /// **'Approvals'**
+  String get approvals;
 }
 
 class _AppLocalizationsDelegate

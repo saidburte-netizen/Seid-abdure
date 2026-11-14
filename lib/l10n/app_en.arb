@@ -164,5 +164,6 @@
   "exportSaved": "Export saved.",
   "pressBackToReturn": "Press back to return.",
   "saving": "Saving…",
-  "signOutConfirmation": "Sign out of this account?"
+  "signOutConfirmation": "Sign out of this account?",
+  "approvals": "Approvals"
 }

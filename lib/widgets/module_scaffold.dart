@@ -17,6 +17,10 @@ class ModuleScaffold extends StatelessWidget {
     this.floatingActionButton,
     this.showHome = true,
     this.isRoot = false,
+    this.hero,
+    this.showHero = true,
+    this.heroSubtitle,
+    this.heroHeightFactor = 0.34,
     super.key,
   });
 
@@ -31,6 +35,11 @@ class ModuleScaffold extends StatelessWidget {
   /// The home dashboard is the only screen without a back arrow.
   final bool isRoot;
 
+  final Widget? hero;
+  final bool showHero;
+  final String? heroSubtitle;
+  final double heroHeightFactor;
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
@@ -40,11 +49,9 @@ class ModuleScaffold extends StatelessWidget {
       title: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Image.asset(Brand.logoAsset, width: 34, height: 34),
-          const SizedBox(width: 10),
+          Image.asset(Brand.logoAsset, width: 32, height: 32),
+          const SizedBox(width: 9),
           Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
-          const SizedBox(width: 12),
-          _BranchSelector(session: session),
         ],
       ),
       actions: [
@@ -53,6 +60,11 @@ class ModuleScaffold extends StatelessWidget {
         _AccountMenu(session: session),
         const SizedBox(width: 4),
       ],
+      hero: hero,
+      showHero: showHero,
+      heroTitle: title,
+      heroSubtitle: heroSubtitle,
+      heroHeightFactor: heroHeightFactor,
       body: body,
       floatingActionButton: floatingActionButton,
     );
@@ -152,6 +164,8 @@ class _PortalDrawer extends StatelessWidget {
                     context,
                   ).textTheme.bodySmall?.copyWith(color: scheme.onPrimary),
                 ),
+                if (session.branches.length > 1)
+                  _BranchSelector(session: session),
               ],
             ),
           ),
@@ -216,6 +230,10 @@ class _BranchSelector extends StatelessWidget {
         value: session.selectedBranchId,
         isDense: true,
         borderRadius: BorderRadius.circular(12),
+        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+          color: Theme.of(context).colorScheme.onPrimary,
+        ),
+        dropdownColor: Theme.of(context).colorScheme.primary,
         items: [
           for (final branch in session.branches)
             DropdownMenuItem(

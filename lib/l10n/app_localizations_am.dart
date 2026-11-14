@@ -510,4 +510,7 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get signOutConfirmation => 'ከዚህ መለያ ውጣ?';
+
+  @override
+  String get approvals => 'ማጽደቆች';
 }

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/brand_ui.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 
@@ -50,55 +52,65 @@ class _DashboardScreenState extends State<DashboardScreen> {
     final session = SessionScope.of(context);
     try {
       await session.client.rpc('fn_generate_alerts');
-      if (mounted) showSnack(context, 'Alerts generated.');
+      if (mounted) {
+        showSnack(context, AppLocalizations.of(context).alertsGenerated);
+      }
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }
   }
 
-  static const List<(String, String, IconData, String?)> _modules = [
-    ('pos', 'Point of sale', Icons.point_of_sale, 'pos.use'),
-    ('sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.view'),
-    ('production', 'Production', Icons.bakery_dining, 'production.manage'),
-    ('inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.view'),
-    (
-      'cash',
-      'Cash & expenses',
-      Icons.account_balance_wallet_outlined,
-      'cash.view',
-    ),
-    ('people', 'People & HR', Icons.groups_outlined, 'hr.view'),
-    ('payroll', 'Payroll', Icons.receipt_long_outlined, 'payroll.manage'),
-    ('rentals', 'Rentals', Icons.apartment_outlined, 'rentals.manage'),
-    (
-      'credit',
-      'Credit control',
-      Icons.account_balance_outlined,
-      'credit.manage',
-    ),
-    ('approvals', 'Approvals', Icons.fact_check_outlined, 'expenses.approve'),
-    ('reports', 'Reports', Icons.bar_chart, 'reports.view'),
-    ('settings', 'Settings', Icons.settings_outlined, null),
+  static const List<(String, IconData, String?)> _modules = [
+    ('pos', Icons.point_of_sale, 'pos.use'),
+    ('sales', Icons.receipt_long_outlined, 'sales.view'),
+    ('production', Icons.bakery_dining, 'production.manage'),
+    ('inventory', Icons.inventory_2_outlined, 'inventory.view'),
+    ('cash', Icons.account_balance_wallet_outlined, 'cash.view'),
+    ('people', Icons.groups_outlined, 'hr.view'),
+    ('payroll', Icons.receipt_long_outlined, 'payroll.manage'),
+    ('rentals', Icons.apartment_outlined, 'rentals.manage'),
+    ('credit', Icons.account_balance_outlined, 'credit.manage'),
+    ('approvals', Icons.fact_check_outlined, 'expenses.approve'),
+    ('reports', Icons.bar_chart, 'reports.view'),
+    ('settings', Icons.settings_outlined, null),
   ];
+
+  String _moduleLabel(AppLocalizations strings, String name) => switch (name) {
+    'pos' => strings.newSale,
+    'sales' => strings.salesModule,
+    'production' => strings.productionModule,
+    'inventory' => strings.inventoryModule,
+    'cash' => strings.cashModule,
+    'people' => strings.peopleModule,
+    'payroll' => strings.payrollModule,
+    'rentals' => strings.rentalsModule,
+    'credit' => strings.payablesModule,
+    'approvals' => strings.approvals,
+    'reports' => strings.reportsModule,
+    _ => strings.settingsModule,
+  };
 
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    final strings = AppLocalizations.of(context);
     if (session.isCustomer) return const _CustomerDashboard();
     final branch = session.selectedBranch;
     if (branch == null) {
-      return const ModuleScaffold(
-        title: 'Dashboard',
+      return ModuleScaffold(
+        title: strings.dashboard,
         isRoot: true,
-        body: EmptyView(message: 'No branch is available.'),
+        showHero: false,
+        body: EmptyView(message: strings.noBranchSelected),
       );
     }
     return ModuleScaffold(
-      title: 'Dashboard',
+      title: strings.dashboard,
       isRoot: true,
+      showHero: false,
       actions: [
         IconButton(
-          tooltip: 'Generate alerts',
+          tooltip: strings.runAlerts,
           onPressed: _alerts,
           icon: const Icon(Icons.notifications_active_outlined),
         ),
@@ -114,12 +126,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onRetry: _refresh,
               builder: (context, data) => _KpiGrid(data: data),
             ),
-            const PageHeader(
-              title: 'Workspace',
-              subtitle: 'Open a module to manage the business.',
+            SectionBar(
+              title: strings.workspace,
+              subtitle: strings.workspaceSubtitle,
             ),
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
               child: LayoutBuilder(
                 builder: (context, constraints) {
                   final columns = constraints.maxWidth >= 1000
@@ -136,10 +148,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     childAspectRatio: columns >= 3 ? 1.55 : 1.25,
                     children: [
                       for (final module in _modules)
-                        if (module.$4 == null || session.can(module.$4!))
+                        if (module.$3 == null || session.can(module.$3!))
                           _ModuleCard(
-                            label: module.$2,
-                            icon: module.$3,
+                            label: _moduleLabel(strings, module.$1),
+                            icon: module.$2,
                             onTap: () => context.push(
                               module.$1 == 'pos'
                                   ? '/pos'
@@ -166,58 +178,34 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final portal = branch.isAdmin
-        ? 'Admin portal'
+        ? strings.adminPortal
         : branch.isManager
-        ? 'Manager portal'
-        : 'Staff portal';
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
-      child: Wrap(
-        alignment: WrapAlignment.spaceBetween,
-        crossAxisAlignment: WrapCrossAlignment.center,
-        spacing: 16,
-        runSpacing: 12,
+        ? strings.managerPortal
+        : strings.teamPortal;
+    return AppHeroHeader(
+      kicker: portal,
+      title: session.fullName == null
+          ? strings.welcome
+          : '${strings.welcome}, ${session.fullName}',
+      subtitle:
+          '${branch.branchName} • ${branch.roleLabel} • ${formatDate(DateTime.now())}',
+      heightFactor: 0.36,
+      trailing: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                portal,
-                style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.secondary,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                'Welcome${session.fullName == null ? '' : ', ${session.fullName}'}',
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 4),
-              Text(
-                '${branch.branchName} • ${branch.roleLabel} • ${formatDate(DateTime.now())}',
-                style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-            ],
-          ),
-          Wrap(
-            spacing: 8,
-            children: [
-              if (session.can('pos.use'))
-                FilledButton.icon(
-                  onPressed: () => context.push('/pos'),
-                  icon: const Icon(Icons.point_of_sale),
-                  label: const Text('New sale'),
-                ),
-              OutlinedButton.icon(
-                onPressed: () => context.push('/notifications'),
-                icon: const Icon(Icons.notifications_outlined),
-                label: const Text('Alerts'),
-              ),
-            ],
+          if (session.can('pos.use'))
+            IconButton.filledTonal(
+              tooltip: strings.newSale,
+              onPressed: () => context.push('/pos'),
+              icon: const Icon(Icons.point_of_sale),
+            ),
+          const SizedBox(height: 8),
+          IconButton.filledTonal(
+            tooltip: strings.alerts,
+            onPressed: () => context.push('/notifications'),
+            icon: const Icon(Icons.notifications_outlined),
           ),
         ],
       ),
@@ -232,26 +220,31 @@ class _KpiGrid extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
     final cards = [
-      ('Today sales', formatMoney(data['today_sales']), Icons.today),
+      (strings.todaySales, formatMoney(data['today_sales']), Icons.today),
       (
-        'Cash balance',
+        strings.cashBalance,
         formatMoney(data['cash_balance']),
         Icons.account_balance_wallet_outlined,
       ),
       (
-        'Low stock',
+        strings.lowStock,
         formatQuantity(data['low_stock_items']),
         Icons.warning_amber_outlined,
       ),
       (
-        'Overdue credit',
+        strings.receivables,
         formatMoney(data['overdue_receivables']),
         Icons.person_search_outlined,
       ),
-      ('Rent due', formatMoney(data['rent_due']), Icons.apartment_outlined),
       (
-        'Staff present',
+        strings.rentOutstanding,
+        formatMoney(data['rent_due']),
+        Icons.apartment_outlined,
+      ),
+      (
+        strings.activeEmployees,
         formatQuantity(data['staff_present_today']),
         Icons.groups_outlined,
       ),

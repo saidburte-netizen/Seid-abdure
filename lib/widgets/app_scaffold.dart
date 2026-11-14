@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../l10n/app_localizations.dart';
+import 'brand_ui.dart';
 
 /// The shared page shell for every authenticated screen.
 ///
@@ -28,6 +29,11 @@ class AppScaffold extends StatefulWidget {
     this.showBack,
     this.bottomNavigationBar,
     this.resizeToAvoidBottomInset,
+    this.hero,
+    this.heroTitle,
+    this.heroSubtitle,
+    this.showHero = true,
+    this.heroHeightFactor = 0.34,
     super.key,
   });
 
@@ -41,6 +47,14 @@ class AppScaffold extends StatefulWidget {
   final bool? showBack;
   final Widget? bottomNavigationBar;
   final bool? resizeToAvoidBottomInset;
+
+  /// Overrides the automatic brand hero. Pass [showHero] false for immersive
+  /// screens such as the sign-in shell.
+  final Widget? hero;
+  final String? heroTitle;
+  final String? heroSubtitle;
+  final bool showHero;
+  final double heroHeightFactor;
 
   @override
   State<AppScaffold> createState() => _AppScaffoldState();
@@ -117,9 +131,27 @@ class _AppScaffoldState extends State<AppScaffold> {
       );
   }
 
+  String? get _titleText {
+    final title = widget.title;
+    if (title is Text) return title.data;
+    return widget.heroTitle;
+  }
+
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
+    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
+    final heroWidget = widget.hero ??
+        (widget.showHero
+            ? AppHeroHeader(
+                title:
+                    _titleText ??
+                    widget.heroTitle ??
+                    strings.appTitle,
+                subtitle: widget.heroSubtitle ?? strings.appTitle,
+                heightFactor: widget.heroHeightFactor,
+              )
+            : null);
     final leading = !_showBack
         ? (widget.drawer == null
               ? null
@@ -166,7 +198,14 @@ class _AppScaffoldState extends State<AppScaffold> {
           title: widget.title,
           actions: appBarActions,
         ),
-        body: widget.body,
+        body: heroWidget == null || keyboardOpen
+            ? widget.body
+            : Column(
+                children: [
+                  heroWidget,
+                  Expanded(child: widget.body),
+                ],
+              ),
         floatingActionButton: widget.floatingActionButton,
         bottomNavigationBar: widget.bottomNavigationBar,
         resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,
