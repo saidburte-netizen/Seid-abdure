@@ -433,7 +433,16 @@ def main() -> int:
     out.append("")
 
     constraint_names = {(row["schema_name"], row["table_name"], row["conname"]) for row in constraints}
-    for row in constraints:
+    priority = {"p": 0, "u": 0, "c": 1, "f": 2}
+    for row in sorted(
+        constraints,
+        key=lambda item: (
+            priority.get(item["contype"], 3),
+            item["schema_name"],
+            item["table_name"],
+            item["conname"],
+        ),
+    ):
         if row["schema_name"] != "public":
             continue
         out.append(
