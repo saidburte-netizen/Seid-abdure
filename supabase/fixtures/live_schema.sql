@@ -9,6 +9,10 @@ create extension if not exists "pgcrypto" with schema "extensions";
 create extension if not exists "supabase_vault" with schema "vault";
 create extension if not exists "uuid-ossp" with schema "extensions";
 
+-- Table defaults call next_number() before the real body is created below.
+-- The real CREATE OR REPLACE later keeps this same function OID.
+create or replace function public.next_number(p_prefix text)
+returns text language sql as $$ select p_prefix || '-000001'; $$;
 
 create table if not exists "public"."app_settings" (
   "key" text not null,

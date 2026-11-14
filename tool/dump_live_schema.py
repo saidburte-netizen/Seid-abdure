@@ -410,6 +410,13 @@ def main() -> int:
         out.append(
             f"create sequence if not exists {qident(row['sequence_schema'])}.{qident(row['sequence_name'])};"
         )
+    # Several table defaults call next_number() before the real function body is
+    # created further down. A same-signature stub lets CREATE TABLE resolve the
+    # default; the real CREATE OR REPLACE later keeps the same function OID.
+    out.append(
+        "create or replace function public.next_number(p_prefix text) "
+        "returns text language sql as $$ select p_prefix || '-000001'; $$;"
+    )
     out.append("")
 
     column_groups: Dict[tuple, List[Dict[str, Any]]] = {}
