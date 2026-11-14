@@ -307,6 +307,26 @@ def main() -> int:
         order by viewname
         """,
     )
+    view_dependencies = query(
+        token,
+        ref,
+        """
+        select distinct
+               dependent_view.relname as dependent_view,
+               source_view.relname as source_view
+        from pg_depend
+        join pg_rewrite on pg_depend.objid = pg_rewrite.oid
+        join pg_class dependent_view on pg_rewrite.ev_class = dependent_view.oid
+        join pg_class source_view on pg_depend.refobjid = source_view.oid
+        join pg_namespace dependent_ns on dependent_view.relnamespace = dependent_ns.oid
+        join pg_namespace source_ns on source_view.relnamespace = source_ns.oid
+        where dependent_view.relkind = 'v'
+          and source_view.relkind = 'v'
+          and dependent_view.oid <> source_view.oid
+          and dependent_ns.nspname = 'public'
+          and source_ns.nspname = 'public'
+        """,
+    )
     functions = query(
         token,
         ref,
@@ -468,7 +488,22 @@ def main() -> int:
         out.append(row["definition"].rstrip(";") + ";")
     out.append("")
 
-    for row in views:
+    dependencies: Dict[str, set] = {}
+    for row in view_dependencies:
+        dependencies.setdefault(row["dependent_view"], set()).add(row["source_view"])
+    remaining = {row["viewname"]: row for row in views}
+    ordered_views = []
+    while remaining:
+        ready = sorted(
+            name
+            for name in remaining
+            if not (dependencies.get(name, set()) & set(remaining))
+        )
+        if not ready:
+            ready = sorted(remaining)
+        for name in ready:
+            ordered_views.append(remaining.pop(name))
+    for row in ordered_views:
         out.append(
             f"create or replace view public.{qident(row['viewname'])} as\n"
             f"{row['definition'].rstrip(';')};"
