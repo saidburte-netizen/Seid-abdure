@@ -14,11 +14,12 @@ jobs:
       - name: Download PostgREST OpenAPI schema
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: |
           set -euo pipefail
-          curl -fsS "$SUPABASE_URL/rest/v1/?apikey=$SUPABASE_ANON_KEY" \
-            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+          curl -fsS "$SUPABASE_URL/rest/v1/" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Accept: application/openapi+json" \
             -o openapi.json
           python3 - <<'PY'
