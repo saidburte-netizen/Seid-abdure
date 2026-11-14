@@ -336,7 +336,7 @@ select pg_temp.assert_true(
   'rent invoice generation is idempotent'
 );
 
-update public.items set min_stock = 10 where id = '55555555-5555-5555-5555-555555555502';
+update public.items set min_stock = 20 where id = '55555555-5555-5555-5555-555555555502';
 update public.rent_invoices set due_date = current_date + 2 where lease_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
 select public.fn_generate_alerts();
 select public.fn_generate_alerts();
