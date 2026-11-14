@@ -14,18 +14,32 @@ class BranchAccess {
     required this.branchId,
     required this.branchName,
     required this.branchCode,
-    required this.roleSlugs,
+    required this.roleCode,
     required this.permissions,
   });
 
   final String branchId;
   final String branchName;
   final String branchCode;
-  final Set<String> roleSlugs;
+  final String roleCode;
   final Set<String> permissions;
 
-  bool get isAdmin =>
-      roleSlugs.contains('owner') || roleSlugs.contains('admin');
+  bool get isAdmin => roleCode == 'admin';
+  bool get isManager => roleCode == 'manager';
+  bool get isCustomer => roleCode == 'customer';
+
+  String get roleLabel => switch (roleCode) {
+        'admin' => 'Administrator',
+        'manager' => 'Manager',
+        'cashier' => 'Cashier',
+        'baker' => 'Baker',
+        'store_keeper' => 'Store keeper',
+        'hr_officer' => 'HR officer',
+        'accountant' => 'Accountant',
+        'staff' => 'Staff',
+        'customer' => 'Customer',
+        _ => prettyLabel(roleCode),
+      };
 }
 
 class AuthController extends ChangeNotifier {
@@ -43,6 +57,7 @@ class AuthController extends ChangeNotifier {
   String? userId;
   String? userEmail;
   String? fullName;
+  String? roleCode;
   List<BranchAccess> branches = const [];
   String? selectedBranchId;
   Locale? locale;
@@ -58,7 +73,11 @@ class AuthController extends ChangeNotifier {
     return branches.isEmpty ? null : branches.first;
   }
 
+  bool get isAdmin => roleCode == 'admin' || selectedBranch?.isAdmin == true;
+  bool get isCustomer => roleCode == 'customer';
+
   bool can(String permission, {String? branchId}) {
+    if (isAdmin) return true;
     BranchAccess? branch;
     if (branchId == null) {
       branch = selectedBranch;
@@ -77,9 +96,7 @@ class AuthController extends ChangeNotifier {
   Future<void> _initialize() async {
     final preferences = await SharedPreferences.getInstance();
     final savedLocale = preferences.getString('locale');
-    if (savedLocale != null) {
-      locale = Locale(savedLocale);
-    }
+    if (savedLocale != null) locale = Locale(savedLocale);
     final savedTheme = preferences.getString('theme_mode');
     if (savedTheme != null) {
       themeMode = ThemeMode.values.firstWhere(
@@ -100,6 +117,7 @@ class AuthController extends ChangeNotifier {
       userId = null;
       userEmail = null;
       fullName = null;
+      roleCode = null;
       branches = const [];
       selectedBranchId = null;
       status = AuthStatus.signedOut;
@@ -114,53 +132,73 @@ class AuthController extends ChangeNotifier {
     try {
       final profile = await client
           .from('profiles')
-          .select('full_name')
+          .select('*')
           .eq('id', session.user.id)
           .maybeSingle();
-      fullName = profile?['full_name'] as String?;
-
-      final rows = await client
-          .from('branch_memberships')
-          .select(
-            'branch_id, is_active, branches(id, name, code, is_active), '
-            'roles(slug, role_permissions(permissions(permission_key)))',
-          )
-          .eq('user_id', session.user.id)
-          .eq('is_active', true);
-
       if (loadId != _loadId) return;
-      final loaded = <BranchAccess>[];
-      for (final raw in rows) {
-        final row = asMap(raw);
-        final branch = asMap(row['branches']);
-        if (branch.isEmpty || !asBool(branch['is_active'], fallback: true)) {
-          continue;
+      if (profile == null) {
+        status = AuthStatus.needsMembership;
+        _notify();
+        return;
+      }
+      fullName = profile['full_name'] as String?;
+      roleCode = profile['role_code'] as String? ?? 'staff';
+
+      final permissionRows = await client
+          .from('role_permissions')
+          .select('permission_code')
+          .eq('role_code', roleCode!);
+      final permissions = {
+        for (final raw in (permissionRows as List))
+          if (asMap(raw)['permission_code'] is String)
+            asMap(raw)['permission_code'] as String,
+      };
+
+      final isAdminRole = roleCode == 'admin';
+      List<Map<String, dynamic>> branchRows;
+      if (isAdminRole) {
+        branchRows = (await client
+                .from('branches')
+                .select('id, name, code')
+                .eq('is_active', true)
+                .order('name'))
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+      } else {
+        final branchId = profile['branch_id'] as String?;
+        if (branchId == null) {
+          branches = const [];
+          status = AuthStatus.needsMembership;
+          errorMessage = 'Your profile is not assigned to a branch.';
+          _notify();
+          return;
         }
-        final role = asMap(row['roles']);
-        final roleSlugs = <String>{};
-        final permissions = <String>{};
-        final slug = role['slug'] as String?;
-        if (slug != null) roleSlugs.add(slug);
-        for (final rolePermission in asMapList(role['role_permissions'])) {
-          final permission = asMap(rolePermission['permissions']);
-          final key = permission['permission_key'] as String?;
-          if (key != null) permissions.add(key);
-        }
-        loaded.add(
-          BranchAccess(
-            branchId: row['branch_id'] as String,
-            branchName: branch['name'] as String? ?? 'Branch',
-            branchCode: branch['code'] as String? ?? '',
-            roleSlugs: roleSlugs,
-            permissions: permissions,
-          ),
-        );
+        final row = await client
+            .from('branches')
+            .select('id, name, code')
+            .eq('id', branchId)
+            .maybeSingle();
+        branchRows = row == null ? const [] : [Map<String, dynamic>.from(row)];
       }
 
-      branches = loaded;
+      if (loadId != _loadId) return;
+      branches = [
+        for (final row in branchRows)
+          BranchAccess(
+            branchId: row['id'] as String,
+            branchName: row['name'] as String? ?? 'Main branch',
+            branchCode: row['code'] as String? ?? '',
+            roleCode: roleCode!,
+            permissions: isAdminRole ? const {} : permissions,
+          ),
+      ];
       if (branches.isEmpty) {
         selectedBranchId = null;
-        status = AuthStatus.needsMembership;
+        status = isAdminRole ? AuthStatus.ready : AuthStatus.needsMembership;
+        if (isAdminRole) {
+          errorMessage =
+              'No active branch exists yet. Create the first branch to continue.';
+        }
         _notify();
         return;
       }
@@ -193,8 +231,12 @@ class AuthController extends ChangeNotifier {
     await preferences.setString('selected_branch', branchId);
   }
 
-  Future<void> bootstrapOwner() async {
-    await client.rpc('bootstrap_first_owner');
+  Future<void> createFirstBranch() async {
+    await client.from('branches').insert({
+      'code': 'MAIN',
+      'name': 'Main branch',
+      'is_active': true,
+    });
     await retry();
   }
 
@@ -222,8 +264,7 @@ class AuthController extends ChangeNotifier {
     if (userId == null) return;
     await client
         .from('profiles')
-        .update({'full_name': name.trim()})
-        .eq('id', userId!);
+        .update({'full_name': name.trim()}).eq('id', userId!);
     fullName = name.trim();
     _notify();
   }

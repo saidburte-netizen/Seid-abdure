@@ -15,22 +15,17 @@ class NotificationsScreen extends StatefulWidget {
 
 class _NotificationsScreenState extends State<NotificationsScreen> {
   List<Map<String, dynamic>> _notifications = const [];
-  Set<String> _readIds = const {};
   bool _loading = true;
   String? _error;
-  int _tab = 0;
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_notifications.isEmpty && _loading) _load();
+    if (_loading) _load();
   }
 
   Future<void> _load() async {
     final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    final userId = session.userId;
-    if (branch == null || userId == null) return;
     setState(() {
       _loading = true;
       _error = null;
@@ -39,22 +34,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       final rows = await session.client
           .from('notifications')
           .select()
-          .eq('branch_id', branch.branchId)
           .order('created_at', ascending: false)
-          .limit(150);
-      final notifications = (rows as List)
-          .map((row) => Map<String, dynamic>.from(row as Map))
-          .toList();
-      final reads = await session.client
-          .from('notification_reads')
-          .select('notification_id')
-          .eq('user_id', userId);
+          .limit(200);
       if (!mounted) return;
       setState(() {
-        _notifications = notifications;
-        _readIds = {
-          for (final row in (reads as List)) row['notification_id'] as String,
-        };
+        _notifications = (rows as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
       });
     } catch (error) {
       if (mounted) setState(() => _error = readableError(error));
@@ -65,15 +51,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _markRead(Map<String, dynamic> notification) async {
     final session = SessionScope.of(context);
-    if (session.userId == null) return;
     try {
-      await session.client.from('notification_reads').upsert({
-        'notification_id': notification['id'],
-        'user_id': session.userId,
-      }, onConflict: 'notification_id,user_id');
-      if (mounted) {
-        setState(() => _readIds = {..._readIds, notification['id'] as String});
-      }
+      await session.client.from('notifications').update({
+        'is_read': true,
+        'read_at': nowIso(),
+      }).eq('id', notification['id']);
+      await _load();
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
     }
@@ -81,24 +64,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _markAllRead() async {
     final session = SessionScope.of(context);
-    if (session.userId == null) return;
-    final unread = _notifications
-        .where((row) => !_readIds.contains(row['id']))
-        .map((row) => {'notification_id': row['id'], 'user_id': session.userId})
-        .toList();
-    if (unread.isEmpty) return;
     try {
       await session.client
-          .from('notification_reads')
-          .upsert(unread, onConflict: 'notification_id,user_id');
-      if (mounted) {
-        setState(
-          () => _readIds = {
-            ..._readIds,
-            for (final row in _notifications) row['id'] as String,
-          },
-        );
-      }
+          .from('notifications')
+          .update({'is_read': true, 'read_at': nowIso()}).eq('is_read', false);
+      await _load();
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
     }
@@ -106,21 +76,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   Future<void> _refreshAlerts() async {
     final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    if (branch == null) return;
     try {
-      final response = await session.client.rpc(
-        'refresh_branch_alerts',
-        params: {'target_branch': branch.branchId},
-      );
-      if (mounted) {
-        await showInfoDialog(
-          context,
-          title: 'Alerts refreshed',
-          content: response,
-        );
-        await _load();
-      }
+      await session.client.rpc('fn_generate_alerts');
+      await _load();
+      if (mounted) showSnack(context, 'Alerts generated.');
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
     }
@@ -128,31 +87,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
-    title: 'Notifications',
-    body: DefaultTabController(
-      length: 2,
-      initialIndex: _tab,
-      child: Column(
-        children: [
-          TabBar(
-            onTap: (value) => _tab = value,
-            tabs: const [
-              Tab(text: 'Inbox'),
-              Tab(text: 'Preferences'),
+        title: 'Notifications',
+        body: DefaultTabController(
+          length: 2,
+          child: Column(
+            children: [
+              const TabBar(
+                tabs: [
+                  Tab(text: 'Inbox'),
+                  Tab(text: 'Preferences'),
+                ],
+              ),
+              Expanded(
+                child: TabBarView(
+                  children: [_inbox(), const _NotificationPreferences()],
+                ),
+              ),
             ],
           ),
-          Expanded(
-            child: TabBarView(
-              children: [_inbox(context), const _NotificationPreferences()],
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 
-  Widget _inbox(BuildContext context) {
-    final session = SessionScope.of(context);
+  Widget _inbox() {
+    final unread = _notifications.where((row) => row['is_read'] != true).length;
     return Column(
       children: [
         Padding(
@@ -164,12 +121,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               FilledButton.icon(
                 onPressed: _refreshAlerts,
                 icon: const Icon(Icons.notifications_active_outlined),
-                label: const Text('Refresh alerts'),
+                label: const Text('Generate alerts'),
               ),
               OutlinedButton.icon(
-                onPressed: _markAllRead,
+                onPressed: unread == 0 ? null : _markAllRead,
                 icon: const Icon(Icons.done_all),
-                label: const Text('Mark all read'),
+                label: Text('Mark all read ($unread)'),
               ),
               IconButton(
                 tooltip: 'Reload',
@@ -183,128 +140,54 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      _error!,
-                      style: TextStyle(
-                        color: Theme.of(context).colorScheme.error,
-                      ),
-                    ),
-                  ),
-                )
-              : _notifications.isEmpty
-              ? const EmptyView(
-                  message:
-                      'No notifications yet. Refresh alerts to generate them.',
-                )
-              : RefreshIndicator(
-                  onRefresh: _load,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.all(12),
-                    itemCount: _notifications.length,
-                    separatorBuilder: (context, index) =>
-                        const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final notification = _notifications[index];
-                      final read = _readIds.contains(notification['id']);
-                      return _NotificationTile(
-                        notification: notification,
-                        read: read,
-                        onTap: read ? null : () => _markRead(notification),
-                      );
-                    },
-                  ),
-                ),
+                  ? ErrorView(message: _error!, onRetry: _load)
+                  : _notifications.isEmpty
+                      ? const EmptyView(
+                          message:
+                              'No notifications yet. Generate alerts to refresh.',
+                        )
+                      : RefreshIndicator(
+                          onRefresh: _load,
+                          child: ListView.separated(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: _notifications.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 8),
+                            itemBuilder: (context, index) {
+                              final notification = _notifications[index];
+                              final read = notification['is_read'] == true;
+                              return Card(
+                                child: ListTile(
+                                  leading: Icon(
+                                    read
+                                        ? Icons.notifications_none
+                                        : Icons.notifications_active,
+                                    color: read
+                                        ? null
+                                        : Theme.of(context)
+                                            .colorScheme
+                                            .secondary,
+                                  ),
+                                  title: Text(asText(notification['title'])),
+                                  subtitle: Text(
+                                    '${asText(notification['body'])}\n${formatDateTime(notification['created_at'])}',
+                                  ),
+                                  isThreeLine: true,
+                                  trailing: read
+                                      ? null
+                                      : IconButton(
+                                          tooltip: 'Mark read',
+                                          onPressed: () =>
+                                              _markRead(notification),
+                                          icon: const Icon(Icons.done),
+                                        ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
         ),
-        if (session.selectedBranch != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-            child: Text(
-              'Showing alerts for ${session.selectedBranch!.branchName}.',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
       ],
-    );
-  }
-}
-
-class _NotificationTile extends StatelessWidget {
-  const _NotificationTile({
-    required this.notification,
-    required this.read,
-    this.onTap,
-  });
-
-  final Map<String, dynamic> notification;
-  final bool read;
-  final VoidCallback? onTap;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final severity = asText(notification['severity'], fallback: 'info');
-    final color = switch (severity) {
-      'critical' => scheme.error,
-      'warning' => scheme.tertiary,
-      _ => scheme.primary,
-    };
-    final icon = switch (asText(notification['category'])) {
-      'stock' => Icons.inventory_2_outlined,
-      'sales' => Icons.point_of_sale_outlined,
-      'cash' => Icons.account_balance_wallet_outlined,
-      'payables' => Icons.request_quote_outlined,
-      'rentals' => Icons.apartment_outlined,
-      'people' => Icons.groups_outlined,
-      _ => Icons.notifications_outlined,
-    };
-    return Card(
-      child: ListTile(
-        onTap: onTap,
-        leading: CircleAvatar(
-          backgroundColor: color.withValues(alpha: 0.12),
-          child: Icon(icon, color: color),
-        ),
-        title: Row(
-          children: [
-            Expanded(
-              child: Text(
-                asText(notification['title'], fallback: 'Notification'),
-                style: TextStyle(
-                  fontWeight: read ? FontWeight.w400 : FontWeight.w700,
-                ),
-              ),
-            ),
-            if (!read)
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: scheme.secondary,
-                  shape: BoxShape.circle,
-                ),
-              ),
-          ],
-        ),
-        subtitle: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            if (asText(notification['body']).isNotEmpty)
-              Text(asText(notification['body'])),
-            const SizedBox(height: 4),
-            Text(
-              '${prettyLabel(asText(notification['category']))} • '
-              '${formatDateTime(notification['created_at'])}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ],
-        ),
-        trailing: read
-            ? const Icon(Icons.mark_email_read_outlined)
-            : const Icon(Icons.mark_email_unread_outlined),
-      ),
     );
   }
 }
@@ -318,119 +201,103 @@ class _NotificationPreferences extends StatefulWidget {
 }
 
 class _NotificationPreferencesState extends State<_NotificationPreferences> {
-  Map<String, dynamic>? _preferences;
+  static const _types = [
+    'low_stock',
+    'rent_due',
+    'receivable_overdue',
+    'payable_due',
+    'payroll',
+    'approval',
+    'system',
+  ];
+  final _rows = <String, Map<String, dynamic>>{};
   bool _loading = true;
-  bool _saving = false;
-  String? _error;
-
-  static const _keys = {
-    'in_app': 'In-app notifications',
-    'email_digest': 'Email digest',
-    'stock_alerts': 'Stock alerts',
-    'payable_alerts': 'Payable alerts',
-    'rent_alerts': 'Rent alerts',
-    'approval_alerts': 'Approval alerts',
-  };
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_loading && _preferences == null) _load();
+    if (_loading) _load();
   }
 
   Future<void> _load() async {
     final session = SessionScope.of(context);
-    final userId = session.userId;
-    if (userId == null) return;
     try {
-      final row = await session.client
-          .from('notification_preferences')
+      final rows = await session.client
+          .from('notification_settings')
           .select()
-          .eq('user_id', userId)
-          .maybeSingle();
-      if (row == null) {
-        final created = await session.client
-            .from('notification_preferences')
-            .insert({'user_id': userId})
-            .select()
-            .single();
-        if (mounted) {
-          setState(() => _preferences = Map<String, dynamic>.from(created));
+          .eq('user_id', session.userId ?? '');
+      if (!mounted) return;
+      setState(() {
+        for (final raw in (rows as List)) {
+          final row = Map<String, dynamic>.from(raw as Map);
+          _rows[row['notification_type'] as String] = row;
         }
-      } else {
-        if (mounted) {
-          setState(() => _preferences = Map<String, dynamic>.from(row));
-        }
-      }
-    } catch (error) {
-      if (mounted) setState(() => _error = readableError(error));
-    } finally {
+        _loading = false;
+      });
+    } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
   }
 
-  Future<void> _save() async {
+  Future<void> _set(String type, String field, bool value) async {
     final session = SessionScope.of(context);
-    final userId = session.userId;
-    final preferences = _preferences;
-    if (userId == null || preferences == null) return;
-    setState(() => _saving = true);
+    final current = _rows[type] ??
+        {
+          'user_id': session.userId,
+          'notification_type': type,
+          'in_app': true,
+          'push': false,
+          'sms': false,
+          'email': false,
+        };
+    current[field] = value;
+    setState(() => _rows[type] = current);
     try {
-      await session.client.from('notification_preferences').upsert({
-        'user_id': userId,
-        for (final key in _keys.keys) key: preferences[key] ?? true,
-      }, onConflict: 'user_id');
-      if (mounted) showSnack(context, 'Notification preferences saved.');
+      await session.client.from('notification_settings').upsert(
+            current,
+            onConflict: 'user_id,notification_type',
+          );
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
-    } finally {
-      if (mounted) setState(() => _saving = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
-    if (_error != null) {
-      return Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Text(
-            _error!,
-            style: TextStyle(color: Theme.of(context).colorScheme.error),
-          ),
-        ),
-      );
-    }
-    final preferences = _preferences ?? {};
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        SectionCard(
-          title: 'Notification preferences',
-          child: Column(
-            children: [
-              for (final entry in _keys.entries)
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(entry.value),
-                  value: asBool(preferences[entry.key], fallback: true),
-                  onChanged: (value) => setState(() {
-                    _preferences = {...preferences, entry.key: value};
-                  }),
-                ),
-              const SizedBox(height: 8),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(_saving ? 'Saving…' : 'Save preferences'),
-                ),
-              ),
-            ],
-          ),
+        const Text(
+          'Choose how you receive each notification type. In-app alerts are '
+          'stored in the notifications inbox.',
         ),
+        const SizedBox(height: 12),
+        for (final type in _types)
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(prettyLabel(type),
+                      style: Theme.of(context).textTheme.titleMedium),
+                  Wrap(
+                    spacing: 8,
+                    children: [
+                      for (final field in ['in_app', 'push', 'sms', 'email'])
+                        FilterChip(
+                          label: Text(prettyLabel(field)),
+                          selected: (_rows[type]?[field] as bool?) ??
+                              field == 'in_app',
+                          onSelected: (value) => _set(type, field, value),
+                        ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
       ],
     );
   }

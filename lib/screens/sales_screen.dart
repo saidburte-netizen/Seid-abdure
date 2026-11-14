@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
@@ -9,6 +8,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import 'pos_screen.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -18,355 +18,105 @@ class SalesScreen extends StatefulWidget {
 }
 
 class _SalesScreenState extends State<SalesScreen> {
-  int _tab = 0;
-
-  @override
-  Widget build(BuildContext context) {
-    final session = SessionScope.of(context);
-    return ModuleScaffold(
-      title: 'Sales',
-      body: DefaultTabController(
-        length: 5,
-        initialIndex: _tab,
-        child: Column(
-          children: [
-            TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              onTap: (value) => _tab = value,
-              tabs: const [
-                Tab(text: 'Sales'),
-                Tab(text: 'Returns'),
-                Tab(text: 'Customers'),
-                Tab(text: 'Receivables'),
-                Tab(text: 'Daily closes'),
-              ],
-            ),
-            Expanded(
-              child: TabBarView(
-                children: [
-                  _salesTab(session),
-                  _returnsTab(),
-                  _customersTab(session),
-                  const _ReceivablesView(),
-                  _dailyClosesTab(session),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
-      floatingActionButton: session.can('sales.write')
-          ? FloatingActionButton.extended(
-              onPressed: () => context.push('/pos'),
-              icon: const Icon(Icons.point_of_sale),
-              label: const Text('New sale'),
-            )
-          : null,
+  Future<void> _returnSale(
+      AuthController session, Map<String, dynamic> sale) async {
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => _ReturnDialog(sale: sale, session: session),
     );
+    if (result == null || !mounted) return;
+    try {
+      final branch = session.selectedBranch;
+      if (branch == null) return;
+      final repo = BranchRepository(session.client, branch.branchId);
+      final accounts = await repo.list(
+        'cash_accounts',
+        equals: {'is_active': true},
+        orderBy: 'name',
+      );
+      if (accounts.isEmpty) {
+        throw Exception('Create a cash account before recording a return.');
+      }
+      String returnNo;
+      try {
+        returnNo = (await session.client.rpc(
+          'next_number',
+          params: {'p_prefix': 'RETURN'},
+        ))
+            .toString();
+      } catch (_) {
+        returnNo = 'RETURN-${DateTime.now().millisecondsSinceEpoch}';
+      }
+      final returned = await session.client
+          .from('sale_returns')
+          .insert({
+            'return_no': returnNo,
+            'sale_id': sale['id'],
+            'return_date': dateOnly(DateTime.now()),
+            'reason': result['reason'],
+            'refund_amount': result['refund'],
+            'cash_account_id': accounts.first['id'],
+            'created_by': session.userId,
+          })
+          .select()
+          .single();
+      final lines = (result['lines'] as List)
+          .map((line) => Map<String, dynamic>.from(line as Map))
+          .map(
+            (line) => {
+              'return_id': returned['id'],
+              'sale_item_id': line['sale_item_id'],
+              'product_id': line['product_id'],
+              'quantity': line['quantity'],
+              'amount': line['amount'],
+            },
+          )
+          .toList();
+      if (lines.isNotEmpty) {
+        await session.client.from('sale_return_items').insert(lines);
+      }
+      if (mounted) {
+        showSnack(context, 'Return $returnNo recorded.');
+      }
+    } catch (error) {
+      if (mounted) showSnack(context, readableError(error), error: true);
+    }
   }
 
-  Future<void> _receiptPdf(
-    AuthController session,
-    Map<String, dynamic> sale,
-  ) async {
-    final branch = session.selectedBranch;
+  Future<void> _receipt(
+      AuthController session, Map<String, dynamic> sale) async {
     try {
-      final receipt = await session.client
-          .from('receipts')
+      final items = await session.client
+          .from('sale_items')
           .select()
-          .eq('sale_id', sale['id'])
-          .maybeSingle();
-      final payload = receipt == null
-          ? <String, dynamic>{}
-          : asMap(receipt['payload']);
-      List<Map<String, dynamic>> items = const [];
-      try {
-        final response = await session.client
-            .from('sale_items')
-            .select('quantity, unit_price, line_total, products(name)')
-            .eq('sale_id', sale['id']);
-        items = (response as List)
-            .map((row) => Map<String, dynamic>.from(row as Map))
-            .toList();
-      } catch (_) {
-        items = const [];
-      }
+          .eq('sale_id', sale['id']);
+      final branch = session.selectedBranch;
       final bytes = await BrandPdf.document(
         title: 'Sales receipt',
-        documentNumber: asText(
-          receipt?['receipt_number'],
-          fallback: asText(sale['sale_number']),
-        ),
+        documentNumber: asText(sale['receipt_no']),
         branchName: branch?.branchName ?? 'Main branch',
-        subtitle: 'Payment confirmation',
+        subtitle: formatDate(sale['sale_date']),
         details: [
-          ('Sale', asText(sale['sale_number'])),
-          ('Status', prettyLabel(asText(sale['status']))),
-          ('Date', formatDateTime(sale['created_at'])),
+          ('Total', formatMoney(sale['total_amount'])),
+          ('Paid', formatMoney(sale['paid_amount'])),
+          ('Status', prettyLabel(asText(sale['payment_status']))),
         ],
         columns: const [
-          PdfColumn('Item', 'item'),
+          PdfColumn('Item', 'product_name'),
           PdfColumn('Qty', 'quantity', numeric: true),
           PdfColumn('Unit price', 'unit_price', numeric: true),
-          PdfColumn('Line total', 'line_total', numeric: true),
+          PdfColumn('Total', 'line_total', numeric: true),
         ],
-        rows: [
-          for (final item in items)
-            {
-              'item': asText(asMap(item['products'])['name'], fallback: 'Item'),
-              'quantity': item['quantity'],
-              'unit_price': item['unit_price'],
-              'line_total': item['line_total'],
-            },
-        ],
-        totals: [
-          ('Subtotal', formatMoney(payload['subtotal'] ?? sale['subtotal'])),
-          ('Discount', formatMoney(payload['discount'] ?? sale['discount'])),
-          (
-            'Service charge',
-            formatMoney(payload['service_charge'] ?? sale['service_charge']),
-          ),
-          ('Tax', formatMoney(payload['tax_total'] ?? sale['tax_total'])),
-          ('Total', formatMoney(payload['grand_total'] ?? sale['grand_total'])),
-        ],
-        note: asText(sale['notes']).trim().isEmpty
-            ? null
-            : asText(sale['notes']),
-      );
-      await BrandPdf.share(
-        fileName: 'receipt_${asText(sale['sale_number'])}',
-        bytes: bytes,
-        subject: 'Receipt ${asText(sale['sale_number'])}',
-      );
-      if (mounted) showSnack(context, 'Receipt PDF ready to share.');
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    }
-  }
-
-  Widget _salesTab(AuthController session) => CrudTab(
-    spec: _salesSpec,
-    readPermission: 'sales.read',
-    alwaysReadOnly: true,
-    emptyMessage: 'No sales recorded yet.',
-    actions: (row) {
-      final status = row['status']?.toString();
-      final actions = <CrudRowAction>[
-        CrudRowAction(
-          label: 'View receipt',
-          icon: Icons.receipt_long_outlined,
-          onPressed: (row) async {
-            final receipt = await session.client
-                .from('receipts')
-                .select()
-                .eq('sale_id', row['id'])
-                .maybeSingle();
-            if (!mounted) return;
-            await showInfoDialog(
-              context,
-              title: 'Receipt ${asText(receipt?['receipt_number'])}',
-              content: receipt?['payload'] ?? receipt ?? 'No receipt found.',
-            );
-          },
-        ),
-        CrudRowAction(
-          label: 'Receipt PDF',
-          icon: Icons.picture_as_pdf_outlined,
-          onPressed: (row) => _receiptPdf(session, row),
-        ),
-      ];
-      if (status == 'completed' && session.can('sales.void')) {
-        actions.add(
-          CrudRowAction(
-            label: 'Return items',
-            icon: Icons.assignment_return_outlined,
-            onPressed: (row) => _processReturn(session, row),
-          ),
-        );
-        actions.add(
-          CrudRowAction(
-            label: 'Void sale',
-            icon: Icons.cancel_outlined,
-            danger: true,
-            onPressed: (row) async {
-              final reason = await showInputDialog(
-                context,
-                title: 'Void sale ${asText(row['sale_number'])}',
-                submitLabel: 'Void sale',
-                fields: const [
-                  InputField(
-                    'reason',
-                    'Reason',
-                    required: true,
-                    type: FieldType.multiline,
-                  ),
-                ],
-              );
-              if (reason == null) return;
-              await session.client.rpc(
-                'void_sale',
-                params: {'target_sale': row['id'], 'reason': reason['reason']},
-              );
-              if (!mounted) return;
-              showSnack(context, 'Sale voided and stock restored.');
-            },
-          ),
-        );
-      }
-      return actions;
-    },
-  );
-
-  Widget _returnsTab() => const CrudTab(
-    spec: _returnsSpec,
-    readPermission: 'sales.read',
-    alwaysReadOnly: true,
-    emptyMessage: 'No returns recorded.',
-  );
-
-  Widget _customersTab(AuthController session) => CrudTab(
-    spec: customersSpec,
-    readPermission: 'customers.read',
-    writePermission: 'customers.write',
-    emptyMessage: 'No customers yet.',
-    actions: (row) {
-      if (!session.can('customers.write')) return const [];
-      return [
-        CrudRowAction(
-          label: 'Receive payment',
-          icon: Icons.payments_outlined,
-          onPressed: (row) => _receiveCustomerPayment(session, row),
-        ),
-        CrudRowAction(
-          label: 'Account statement',
-          icon: Icons.receipt_long_outlined,
-          onPressed: (row) async {
-            final ledger = await session.client
-                .from('customer_ledger')
-                .select()
-                .eq('customer_id', row['id'])
-                .order('created_at', ascending: false)
-                .limit(200);
-            if (!mounted) return;
-            await showInfoDialog(
-              context,
-              title: 'Statement — ${asText(row['name'])}',
-              content: ledger,
-            );
-          },
-        ),
-      ];
-    },
-  );
-
-  Widget _dailyClosesTab(AuthController session) => CrudTab(
-    spec: _dailyClosesSpec,
-    readPermission: 'sales.read',
-    alwaysReadOnly: true,
-    emptyMessage: 'No business day has been closed yet.',
-    header: Padding(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-      child: Align(
-        alignment: Alignment.centerLeft,
-        child: FilledButton.icon(
-          onPressed: session.can('sales.write')
-              ? () => _closeDay(session)
-              : null,
-          icon: const Icon(Icons.lock_clock_outlined),
-          label: const Text('Close business day'),
-        ),
-      ),
-    ),
-  );
-
-  Future<void> _processReturn(
-    AuthController session,
-    Map<String, dynamic> sale,
-  ) async {
-    final items = await session.client
-        .from('sale_items')
-        .select('id, product_id, quantity, unit_price, products(name)')
-        .eq('sale_id', sale['id']);
-    if (!mounted) return;
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => _ReturnDialog(
-        sale: sale,
-        items: (items as List)
+        rows: (items as List)
             .map((row) => Map<String, dynamic>.from(row as Map))
             .toList(),
-      ),
-    );
-    if (result == null) return;
-    try {
-      final response = await session.client.rpc(
-        'process_sale_return',
-        params: {
-          'target_sale': sale['id'],
-          'return_lines': result['lines'],
-          'refund_method': result['refund_method'],
-          'return_reason': result['reason'],
-        },
+        note: 'Thank you for choosing Brade and Cake House.',
       );
-      if (mounted) {
-        showSnack(
-          context,
-          'Return ${asText(asMap(response)['return_number'])} completed: '
-          '${formatMoney(asMap(response)['total'])}.',
-        );
-      }
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    }
-  }
-
-  Future<void> _receiveCustomerPayment(
-    AuthController session,
-    Map<String, dynamic> customer,
-  ) async {
-    final branch = session.selectedBranch;
-    if (branch == null) return;
-    final repo = BranchRepository(session.client, branch.branchId);
-    final accounts = await repo.list(
-      'cash_accounts',
-      equals: {'is_active': true},
-      orderBy: 'name',
-    );
-    final balanceRows = await repo.list(
-      'customer_balances',
-      equals: {'customer_id': customer['id']},
-      limit: 1,
-    );
-    if (!mounted) return;
-    if (accounts.isEmpty) {
-      showSnack(context, 'Create a cash account first.', error: true);
-      return;
-    }
-    final outstanding = balanceRows.isEmpty
-        ? 0
-        : asNum(balanceRows.first['balance']);
-    final result = await showDialog<Map<String, dynamic>>(
-      context: context,
-      builder: (context) => _CustomerPaymentDialog(
-        customerName: asText(customer['name']),
-        outstanding: outstanding,
-        accounts: accounts,
-      ),
-    );
-    if (result == null) return;
-    try {
-      await session.client.rpc(
-        'record_customer_payment',
-        params: {
-          'target_customer': customer['id'],
-          'target_account': result['account_id'],
-          'payment_amount': result['amount'],
-          'payment_method': result['method'],
-          'payment_reference': result['reference'],
-        },
+      await BrandPdf.share(
+        fileName: 'receipt_${sale['receipt_no']}',
+        bytes: bytes,
+        subject: 'Brade and Cake House receipt',
       );
-      if (mounted) showSnack(context, 'Customer payment recorded.');
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
     }
@@ -375,456 +125,327 @@ class _SalesScreenState extends State<SalesScreen> {
   Future<void> _closeDay(AuthController session) async {
     final branch = session.selectedBranch;
     if (branch == null) return;
-    final result = await showInputDialog(
-      context,
-      title: 'Close ${formatDate(DateTime.now())}',
-      submitLabel: 'Close day',
-      fields: const [
-        InputField(
-          'counted_cash',
-          'Counted cash (ETB)',
-          type: FieldType.number,
-          required: true,
-          min: 0,
-        ),
-        InputField('notes', 'Notes', type: FieldType.multiline),
-      ],
+    final result = await showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) => const _CloseDayDialog(),
     );
     if (result == null) return;
     try {
-      final response = await session.client.rpc(
-        'close_business_day',
+      await session.client.rpc(
+        'fn_close_day',
         params: {
-          'target_branch': branch.branchId,
-          'business_date': dateOnly(DateTime.now()),
-          'counted_cash': result['counted_cash'],
-          'close_notes': result['notes'] ?? '',
+          'p_branch': branch.branchId,
+          'p_date': dateOnly(DateTime.now()),
+          'p_counted': asNum(result['counted']),
+          'p_notes': result['notes'] ?? '',
         },
       );
-      if (mounted) {
-        await showInfoDialog(
-          context,
-          title: 'Business day closed',
-          content: response,
-        );
-      }
+      if (mounted) showSnack(context, 'Day closed successfully.');
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
     }
   }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = SessionScope.of(context);
+    return ModuleScaffold(
+      title: 'Sales & returns',
+      actions: [
+        if (session.can('pos.use'))
+          FilledButton.icon(
+            onPressed: () => Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PosScreen()),
+            ),
+            icon: const Icon(Icons.point_of_sale),
+            label: const Text('New sale'),
+          ),
+      ],
+      body: DefaultTabController(
+        length: 7,
+        child: Column(
+          children: [
+            const TabBar(
+              isScrollable: true,
+              tabAlignment: TabAlignment.start,
+              tabs: [
+                Tab(text: 'Sales'),
+                Tab(text: 'Sale items'),
+                Tab(text: 'Payments'),
+                Tab(text: 'Returns'),
+                Tab(text: 'Return items'),
+                Tab(text: 'Daily closings'),
+                Tab(text: 'Customers'),
+              ],
+            ),
+            Expanded(
+              child: TabBarView(
+                children: [
+                  CrudTab(
+                    spec: specFor('sales'),
+                    readPermission: 'sales.view',
+                    alwaysReadOnly: true,
+                    actions: (row) => [
+                      CrudRowAction(
+                        label: 'Print receipt',
+                        icon: Icons.print_outlined,
+                        onPressed: (row) => _receipt(session, row),
+                      ),
+                      if (session.can('sales.void') &&
+                          row['status'] != 'returned')
+                        CrudRowAction(
+                          label: 'Record return',
+                          icon: Icons.assignment_return_outlined,
+                          onPressed: (row) => _returnSale(session, row),
+                        ),
+                    ],
+                  ),
+                  CrudTab(
+                    spec: specFor('sale_items'),
+                    readPermission: 'sales.view',
+                    alwaysReadOnly: true,
+                  ),
+                  CrudTab(
+                    spec: specFor('sale_payments'),
+                    readPermission: 'sales.view',
+                    alwaysReadOnly: true,
+                  ),
+                  CrudTab(
+                    spec: specFor('sale_returns'),
+                    readPermission: 'sales.view',
+                    alwaysReadOnly: true,
+                  ),
+                  CrudTab(
+                    spec: specFor('sale_return_items'),
+                    readPermission: 'sales.view',
+                    alwaysReadOnly: true,
+                  ),
+                  Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: FilledButton.icon(
+                            onPressed: session.can('cash.manage')
+                                ? () => _closeDay(session)
+                                : null,
+                            icon: const Icon(Icons.lock_clock_outlined),
+                            label: const Text('Close today'),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: CrudTab(
+                          spec: specFor('daily_closings'),
+                          readPermission: 'cash.view',
+                          alwaysReadOnly: true,
+                        ),
+                      ),
+                    ],
+                  ),
+                  CrudTab(
+                    spec: specFor('customers'),
+                    readPermission: 'sales.view',
+                    writePermission: 'credit.manage',
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
-const _salesSpec = TableSpec(
-  table: 'sales',
-  title: 'Sales',
-  singular: 'Sale',
-  orderBy: 'created_at',
-  ascending: false,
-  searchColumns: ['sale_number', 'status', 'notes'],
-  canCreate: false,
-  canEdit: false,
-  canDelete: false,
-  fields: [
-    FieldSpec('sale_number', 'Sale number', list: true),
-    FieldSpec('created_at', 'Date', type: FieldType.date, list: true),
-    FieldSpec(
-      'customer_id',
-      'Customer',
-      type: FieldType.lookup,
-      lookupTable: 'customers',
-      list: true,
-    ),
-    FieldSpec(
-      'status',
-      'Status',
-      type: FieldType.select,
-      list: true,
-      options: {
-        'draft': 'Draft',
-        'completed': 'Completed',
-        'voided': 'Voided',
-        'refunded': 'Refunded',
-      },
-    ),
-    FieldSpec('subtotal', 'Subtotal', type: FieldType.number, list: true),
-    FieldSpec('discount', 'Discount', type: FieldType.number),
-    FieldSpec('tax_total', 'Tax', type: FieldType.number),
-    FieldSpec('grand_total', 'Total', type: FieldType.number, list: true),
-    FieldSpec('notes', 'Notes', type: FieldType.multiline),
-  ],
-);
-
-const _returnsSpec = TableSpec(
-  table: 'sale_returns',
-  title: 'Returns',
-  singular: 'Return',
-  orderBy: 'created_at',
-  ascending: false,
-  searchColumns: ['return_number', 'status', 'reason'],
-  canCreate: false,
-  canEdit: false,
-  canDelete: false,
-  fields: [
-    FieldSpec('return_number', 'Return number', list: true),
-    FieldSpec('created_at', 'Date', type: FieldType.date, list: true),
-    FieldSpec(
-      'refund_method',
-      'Refund method',
-      type: FieldType.select,
-      list: true,
-      options: {
-        'cash': 'Cash',
-        'customer_credit': 'Customer credit',
-        'original': 'Original method',
-      },
-    ),
-    FieldSpec('total', 'Total', type: FieldType.number, list: true),
-    FieldSpec(
-      'status',
-      'Status',
-      type: FieldType.select,
-      list: true,
-      options: {'completed': 'Completed', 'voided': 'Voided'},
-    ),
-    FieldSpec('reason', 'Reason', list: true),
-  ],
-);
-
-const _dailyClosesSpec = TableSpec(
-  table: 'daily_closes',
-  title: 'Daily closes',
-  singular: 'Business day',
-  orderBy: 'business_date',
-  ascending: false,
-  searchColumns: ['business_date', 'status', 'notes'],
-  canCreate: false,
-  canEdit: false,
-  canDelete: false,
-  fields: [
-    FieldSpec('business_date', 'Date', type: FieldType.date, list: true),
-    FieldSpec('sales_total', 'Sales', type: FieldType.number, list: true),
-    FieldSpec(
-      'expected_cash',
-      'Expected cash',
-      type: FieldType.number,
-      list: true,
-    ),
-    FieldSpec(
-      'counted_cash',
-      'Counted cash',
-      type: FieldType.number,
-      list: true,
-    ),
-    FieldSpec('variance', 'Variance', type: FieldType.number, list: true),
-    FieldSpec(
-      'status',
-      'Status',
-      type: FieldType.select,
-      list: true,
-      options: {'closed': 'Closed', 'reopened': 'Reopened'},
-    ),
-    FieldSpec('notes', 'Notes', type: FieldType.multiline),
-  ],
-);
-
 class _ReturnDialog extends StatefulWidget {
-  const _ReturnDialog({required this.sale, required this.items});
+  const _ReturnDialog({required this.sale, required this.session});
 
   final Map<String, dynamic> sale;
-  final List<Map<String, dynamic>> items;
+  final AuthController session;
 
   @override
   State<_ReturnDialog> createState() => _ReturnDialogState();
 }
 
 class _ReturnDialogState extends State<_ReturnDialog> {
-  final _selected = <String, bool>{};
+  final _reason = TextEditingController(text: 'Customer return');
   final _quantities = <String, TextEditingController>{};
-  String _refundMethod = 'cash';
-  final _reason = TextEditingController();
+  List<Map<String, dynamic>> _items = const [];
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    for (final item in widget.items) {
-      final id = item['id'] as String;
-      _selected[id] = false;
-      _quantities[id] = TextEditingController(text: '0');
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final rows = await widget.session.client
+          .from('sale_items')
+          .select()
+          .eq('sale_id', widget.sale['id']);
+      if (!mounted) return;
+      setState(() {
+        _items = (rows as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+        for (final item in _items) {
+          _quantities[item['id'] as String] = TextEditingController(text: '0');
+        }
+        _loading = false;
+      });
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _error = readableError(error);
+          _loading = false;
+        });
+      }
     }
   }
 
   @override
   void dispose() {
+    _reason.dispose();
     for (final controller in _quantities.values) {
       controller.dispose();
     }
-    _reason.dispose();
     super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text('Return — ${asText(widget.sale['sale_number'])}'),
-    content: SizedBox(
-      width: 620,
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            for (final item in widget.items) _itemRow(item),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              initialValue: _refundMethod,
-              decoration: const InputDecoration(labelText: 'Refund method'),
-              items: const [
-                DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                DropdownMenuItem(
-                  value: 'customer_credit',
-                  child: Text('Customer credit'),
-                ),
-                DropdownMenuItem(
-                  value: 'original',
-                  child: Text('Original payment method'),
-                ),
-              ],
-              onChanged: (value) =>
-                  setState(() => _refundMethod = value ?? 'cash'),
-            ),
-            const SizedBox(height: 10),
-            TextField(
-              controller: _reason,
-              decoration: const InputDecoration(labelText: 'Reason'),
-              maxLines: 2,
-            ),
-          ],
-        ),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(onPressed: _submit, child: const Text('Process return')),
-    ],
-  );
-
-  Widget _itemRow(Map<String, dynamic> item) {
-    final id = item['id'] as String;
-    final quantity = asNum(item['quantity']);
-    final product = asMap(item['products']);
-    return Row(
-      children: [
-        Checkbox(
-          value: _selected[id] ?? false,
-          onChanged: (value) => setState(() => _selected[id] = value == true),
-        ),
-        Expanded(
-          child: Text(
-            '${asText(product['name'], fallback: 'Product')} • '
-            '${formatMoney(item['unit_price'])} x ${formatQuantity(quantity)}',
-          ),
-        ),
-        SizedBox(
-          width: 90,
-          child: TextField(
-            controller: _quantities[id],
-            enabled: _selected[id] == true,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: InputDecoration(
-              isDense: true,
-              labelText: 'Qty',
-              helperText: 'Max ${formatQuantity(quantity)}',
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   void _submit() {
     final lines = <Map<String, dynamic>>[];
-    for (final item in widget.items) {
-      final id = item['id'] as String;
-      if (_selected[id] != true) continue;
-      final quantity = asNum(_quantities[id]?.text);
-      if (quantity <= 0 || quantity > asNum(item['quantity'])) continue;
-      lines.add({'sale_item_id': id, 'quantity': quantity});
+    var refund = 0.0;
+    for (final item in _items) {
+      final quantity = asNum(_quantities[item['id']]?.text);
+      if (quantity <= 0) continue;
+      final unit = asNum(item['line_total']) / asNum(item['quantity']);
+      final amount = (unit * quantity * 100).round() / 100;
+      refund += amount;
+      lines.add({
+        'sale_item_id': item['id'],
+        'product_id': item['product_id'],
+        'quantity': quantity,
+        'amount': amount,
+      });
     }
-    if (lines.isEmpty) {
-      showSnack(context, 'Select at least one item and quantity.', error: true);
-      return;
-    }
+    if (lines.isEmpty) return;
     Navigator.of(context).pop({
-      'lines': lines,
-      'refund_method': _refundMethod,
       'reason': _reason.text.trim(),
+      'refund': (refund * 100).round() / 100,
+      'lines': lines,
     });
   }
-}
-
-class _CustomerPaymentDialog extends StatefulWidget {
-  const _CustomerPaymentDialog({
-    required this.customerName,
-    required this.outstanding,
-    required this.accounts,
-  });
-
-  final String customerName;
-  final num outstanding;
-  final List<Map<String, dynamic>> accounts;
 
   @override
-  State<_CustomerPaymentDialog> createState() => _CustomerPaymentDialogState();
+  Widget build(BuildContext context) => AlertDialog(
+        title: Text('Return ${widget.sale['receipt_no']}'),
+        content: SizedBox(
+          width: 520,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Text(_error!)
+                  : SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextField(
+                            controller: _reason,
+                            decoration:
+                                const InputDecoration(labelText: 'Reason'),
+                          ),
+                          const SizedBox(height: 12),
+                          for (final item in _items)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${item['product_name']} (${item['quantity']})',
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 90,
+                                  child: TextField(
+                                    controller: _quantities[item['id']],
+                                    keyboardType: TextInputType.number,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Return qty',
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
+                    ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _loading || _error != null ? null : _submit,
+            child: const Text('Record return'),
+          ),
+        ],
+      );
 }
 
-class _CustomerPaymentDialogState extends State<_CustomerPaymentDialog> {
-  final _amount = TextEditingController();
-  final _reference = TextEditingController();
-  String? _accountId;
-  String _method = 'cash';
+class _CloseDayDialog extends StatefulWidget {
+  const _CloseDayDialog();
 
   @override
-  void initState() {
-    super.initState();
-    _amount.text = widget.outstanding > 0
-        ? widget.outstanding.toStringAsFixed(2)
-        : '';
-    _accountId = widget.accounts.isEmpty
-        ? null
-        : widget.accounts.first['id'] as String?;
-  }
+  State<_CloseDayDialog> createState() => _CloseDayDialogState();
+}
+
+class _CloseDayDialogState extends State<_CloseDayDialog> {
+  final _counted = TextEditingController(text: '0');
+  final _notes = TextEditingController();
 
   @override
   void dispose() {
-    _amount.dispose();
-    _reference.dispose();
+    _counted.dispose();
+    _notes.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Payment from ${widget.customerName}'),
-    content: SizedBox(
-      width: 460,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Text('Outstanding: ${formatMoney(widget.outstanding)}'),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _accountId,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Deposit to account'),
-            items: [
-              for (final account in widget.accounts)
-                DropdownMenuItem(
-                  value: account['id'] as String,
-                  child: Text(asText(account['name'])),
-                ),
-            ],
-            onChanged: (value) => setState(() => _accountId = value),
-          ),
-          const SizedBox(height: 10),
-          DropdownButtonFormField<String>(
-            initialValue: _method,
-            decoration: const InputDecoration(labelText: 'Payment method'),
-            items: const [
-              DropdownMenuItem(value: 'cash', child: Text('Cash')),
-              DropdownMenuItem(value: 'telebirr', child: Text('TeleBirr')),
-              DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-              DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-              DropdownMenuItem(value: 'other', child: Text('Other')),
-            ],
-            onChanged: (value) => setState(() => _method = value ?? 'cash'),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _amount,
-            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            decoration: const InputDecoration(labelText: 'Amount (ETB)'),
-          ),
-          const SizedBox(height: 10),
-          TextField(
-            controller: _reference,
-            decoration: const InputDecoration(
-              labelText: 'Reference (optional)',
+        title: const Text('Close business day'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _counted,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(labelText: 'Counted cash'),
             ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notes,
+              decoration: const InputDecoration(labelText: 'Notes'),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop({
+              'counted': _counted.text,
+              'notes': _notes.text.trim(),
+            }),
+            child: const Text('Close day'),
           ),
         ],
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () {
-          final amount = asNum(_amount.text);
-          if (_accountId == null) {
-            showSnack(context, 'Choose an account.', error: true);
-            return;
-          }
-          if (amount <= 0) {
-            showSnack(context, 'Enter a payment amount.', error: true);
-            return;
-          }
-          Navigator.of(context).pop({
-            'account_id': _accountId,
-            'amount': amount,
-            'method': _method,
-            'reference': _reference.text.trim(),
-          });
-        },
-        child: const Text('Record payment'),
-      ),
-    ],
-  );
-}
-
-class _ReceivablesView extends StatefulWidget {
-  const _ReceivablesView();
-
-  @override
-  State<_ReceivablesView> createState() => _ReceivablesViewState();
-}
-
-class _ReceivablesViewState extends State<_ReceivablesView> {
-  Future<Map<String, dynamic>>? _future;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _future ??= _load();
-  }
-
-  Future<Map<String, dynamic>> _load() {
-    final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    if (branch == null) return Future.value(const {});
-    return session.client
-        .rpc('report_receivables', params: {'target_branch': branch.branchId})
-        .then(asMap);
-  }
-
-  @override
-  Widget build(BuildContext context) => AsyncView<Map<String, dynamic>>(
-    future: _future ?? Future.value(const {}),
-    onRetry: () async => setState(() => _future = _load()),
-    builder: (context, data) => ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'Receivables',
-          trailing: IconButton(
-            tooltip: 'Refresh',
-            onPressed: () => setState(() => _future = _load()),
-            icon: const Icon(Icons.refresh),
-          ),
-          child: JsonView(value: data),
-        ),
-      ],
-    ),
-  );
+      );
 }

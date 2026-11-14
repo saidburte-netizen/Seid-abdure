@@ -9,103 +9,196 @@ import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
 
-class PayrollScreen extends StatefulWidget {
+class PayrollScreen extends StatelessWidget {
   const PayrollScreen({super.key});
 
-  @override
-  State<PayrollScreen> createState() => _PayrollScreenState();
-}
+  Future<void> _generate(
+    BuildContext context,
+    AuthController session,
+    Map<String, dynamic> run,
+  ) async {
+    final confirmed = await confirmAction(
+      context,
+      title: 'Generate payslips?',
+      message:
+          'The database will calculate gross pay, tax, pension, advances and net pay.',
+      confirmLabel: 'Generate',
+    );
+    if (!confirmed) return;
+    try {
+      await session.client.rpc(
+        'fn_generate_payroll',
+        params: {'p_run_id': run['id']},
+      );
+      if (context.mounted) showSnack(context, 'Payslips generated.');
+    } catch (error) {
+      if (context.mounted) {
+        showSnack(context, readableError(error), error: true);
+      }
+    }
+  }
 
-class _PayrollScreenState extends State<PayrollScreen> {
+  Future<void> _setStatus(
+    BuildContext context,
+    AuthController session,
+    Map<String, dynamic> run,
+    String status,
+  ) async {
+    final confirmed = await confirmAction(
+      context,
+      title: 'Mark payroll ${prettyLabel(status)}?',
+      message:
+          'This updates the payroll run and lets the database apply its totals.',
+      confirmLabel: prettyLabel(status),
+    );
+    if (!confirmed) return;
+    try {
+      final values = <String, dynamic>{'status': status};
+      if (status == 'approved') {
+        values['approved_by'] = session.userId;
+        values['approved_at'] = nowIso();
+      }
+      if (status == 'paid') values['paid_at'] = nowIso();
+      await session.client
+          .from('payroll_runs')
+          .update(values)
+          .eq('id', run['id']);
+      if (context.mounted) {
+        showSnack(context, 'Payroll marked ${prettyLabel(status)}.');
+      }
+    } catch (error) {
+      if (context.mounted) {
+        showSnack(context, readableError(error), error: true);
+      }
+    }
+  }
+
+  Future<void> _payslip(
+    BuildContext context,
+    AuthController session,
+    Map<String, dynamic> slip,
+  ) async {
+    try {
+      final employee = await session.client
+          .from('employees')
+          .select('full_name, employee_no, job_title')
+          .eq('id', slip['employee_id'])
+          .maybeSingle();
+      final branch = session.selectedBranch;
+      final bytes = await BrandPdf.document(
+        title: 'Payslip',
+        documentNumber: asText(slip['id']).substring(0, 8).toUpperCase(),
+        branchName: branch?.branchName ?? 'Main branch',
+        subtitle: asText(slip['created_at']).split('T').first,
+        partyLabel: 'Employee',
+        partyName: asText(employee?['full_name']),
+        details: [
+          ('Employee no', asText(employee?['employee_no'])),
+          ('Job title', asText(employee?['job_title'])),
+          ('Gross pay', formatMoney(slip['gross_pay'])),
+          ('Deductions', formatMoney(slip['total_deductions'])),
+          ('Net pay', formatMoney(slip['net_pay'])),
+        ],
+        columns: const [
+          PdfColumn('Component', 'component'),
+          PdfColumn('Amount', 'amount', numeric: true),
+        ],
+        rows: [
+          {'component': 'Base salary', 'amount': slip['base_salary']},
+          {'component': 'Allowances', 'amount': slip['allowances']},
+          {'component': 'Overtime', 'amount': slip['overtime_amount']},
+          {'component': 'Bonus', 'amount': slip['bonus']},
+          {'component': 'Income tax', 'amount': slip['income_tax']},
+          {'component': 'Pension', 'amount': slip['pension_employee']},
+          {
+            'component': 'Advance deduction',
+            'amount': slip['advance_deduction']
+          },
+          {'component': 'Other deductions', 'amount': slip['other_deductions']},
+          {'component': 'Net pay', 'amount': slip['net_pay']},
+        ],
+        note: 'This payslip is generated from the live payroll ledger.',
+      );
+      await BrandPdf.share(
+        fileName: 'payslip_${employee?['employee_no'] ?? slip['id']}',
+        bytes: bytes,
+        subject: 'Brade and Cake House payslip',
+      );
+    } catch (error) {
+      if (context.mounted) {
+        showSnack(context, readableError(error), error: true);
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
       title: 'Payroll',
       body: DefaultTabController(
-        length: 7,
+        length: 3,
         child: Column(
           children: [
             const TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
               tabs: [
-                Tab(text: 'Runs'),
+                Tab(text: 'Payroll runs'),
                 Tab(text: 'Payslips'),
-                Tab(text: 'Payslip lines'),
-                Tab(text: 'Advances'),
-                Tab(text: 'Components'),
-                Tab(text: 'Employee components'),
-                Tab(text: 'Settings'),
+                Tab(text: 'Tax brackets'),
               ],
             ),
             Expanded(
               child: TabBarView(
                 children: [
                   CrudTab(
-                    spec: _runsSpec,
-                    readPermission: 'payroll.read',
-                    alwaysReadOnly: true,
-                    header: Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                      child: Align(
-                        alignment: Alignment.centerLeft,
-                        child: FilledButton.icon(
-                          onPressed: session.can('payroll.write')
-                              ? () => _runPayroll(session)
-                              : null,
-                          icon: const Icon(Icons.play_arrow_outlined),
-                          label: const Text('Run payroll'),
-                        ),
-                      ),
-                    ),
+                    spec: specFor('payroll_runs'),
+                    readPermission: 'payroll.manage',
+                    writePermission: 'payroll.manage',
                     actions: (row) {
-                      if (row['status'] != 'draft' ||
-                          !session.can('payroll.write')) {
-                        return const [];
-                      }
+                      if (!session.can('payroll.manage')) return const [];
+                      final status = asText(row['status']);
                       return [
-                        CrudRowAction(
-                          label: 'Approve / pay',
-                          icon: Icons.check_circle_outline,
-                          onPressed: (row) => _approvePayroll(session, row),
-                        ),
+                        if (status == 'draft')
+                          CrudRowAction(
+                            label: 'Generate payslips',
+                            icon: Icons.calculate_outlined,
+                            onPressed: (row) =>
+                                _generate(context, session, row),
+                          ),
+                        if (status == 'draft')
+                          CrudRowAction(
+                            label: 'Approve run',
+                            icon: Icons.check_circle_outline,
+                            onPressed: (row) =>
+                                _setStatus(context, session, row, 'approved'),
+                          ),
+                        if (status == 'approved')
+                          CrudRowAction(
+                            label: 'Mark paid',
+                            icon: Icons.payments_outlined,
+                            onPressed: (row) =>
+                                _setStatus(context, session, row, 'paid'),
+                          ),
                       ];
                     },
                   ),
                   CrudTab(
-                    spec: _payslipsSpec,
-                    readPermission: 'payroll.read',
+                    spec: specFor('payslips'),
+                    readPermission: 'payroll.manage',
                     alwaysReadOnly: true,
                     actions: (row) => [
                       CrudRowAction(
                         label: 'Payslip PDF',
-                        icon: Icons.picture_as_pdf_outlined,
-                        onPressed: (row) => _payslipPdf(session, row),
+                        icon: Icons.print_outlined,
+                        onPressed: (row) => _payslip(context, session, row),
                       ),
                     ],
                   ),
-                  const CrudTab(
-                    spec: _payslipLinesSpec,
-                    readPermission: 'payroll.read',
-                    alwaysReadOnly: true,
+                  CrudTab(
+                    spec: specFor('tax_brackets'),
+                    readPermission: 'payroll.manage',
+                    writePermission: 'payroll.manage',
                   ),
-                  const CrudTab(
-                    spec: advancesSpec,
-                    readPermission: 'payroll.read',
-                    writePermission: 'payroll.write',
-                  ),
-                  const CrudTab(
-                    spec: salaryComponentsSpec,
-                    readPermission: 'payroll.read',
-                    writePermission: 'payroll.write',
-                  ),
-                  const CrudTab(
-                    spec: employeeComponentsSpec,
-                    readPermission: 'payroll.read',
-                    writePermission: 'payroll.write',
-                  ),
-                  const _PayrollSettingsView(),
                 ],
               ),
             ),
@@ -113,462 +206,5 @@ class _PayrollScreenState extends State<PayrollScreen> {
         ),
       ),
     );
-  }
-
-  Future<void> _payslipPdf(
-    AuthController session,
-    Map<String, dynamic> payslip,
-  ) async {
-    final branch = session.selectedBranch;
-    try {
-      final employee = await session.client
-          .from('employees')
-          .select('full_name, phone, position, employee_number')
-          .eq('id', payslip['employee_id'])
-          .maybeSingle();
-      final run = await session.client
-          .from('payroll_runs')
-          .select('period_start, period_end, status')
-          .eq('id', payslip['payroll_run_id'])
-          .maybeSingle();
-      final lines = await session.client
-          .from('payslip_lines')
-          .select('name, line_type, amount')
-          .eq('payslip_id', payslip['id']);
-      final rowList = (lines as List)
-          .map((row) => Map<String, dynamic>.from(row as Map))
-          .toList();
-      final bytes = await BrandPdf.document(
-        title: 'Employee payslip',
-        documentNumber: asText(payslip['payslip_number']),
-        branchName: branch?.branchName ?? 'Main branch',
-        subtitle: 'Confidential payroll document',
-        partyLabel: 'Employee',
-        partyName: asText(employee?['full_name'], fallback: 'Employee'),
-        details: [
-          ('Employee no.', asText(employee?['employee_number'])),
-          ('Position', asText(employee?['position'])),
-          (
-            'Period',
-            '${formatDate(run?['period_start'])} – ${formatDate(run?['period_end'])}',
-          ),
-          ('Days worked', asText(payslip['days_worked'])),
-          ('Overtime', '${asText(payslip['overtime_hours'])} hrs'),
-        ],
-        columns: const [
-          PdfColumn('Component', 'name'),
-          PdfColumn('Type', 'line_type'),
-          PdfColumn('Amount', 'amount', numeric: true),
-        ],
-        rows: rowList,
-        totals: [
-          ('Gross pay', formatMoney(payslip['gross_pay'])),
-          ('Deductions', formatMoney(payslip['total_deductions'])),
-          ('Net pay', formatMoney(payslip['net_pay'])),
-        ],
-        note:
-            'This payslip is generated from approved payroll records. '
-            'Please contact the administration office for any correction.',
-      );
-      await BrandPdf.share(
-        fileName: 'payslip_${asText(payslip['payslip_number'])}',
-        bytes: bytes,
-        subject: 'Payslip ${asText(payslip['payslip_number'])}',
-      );
-      if (mounted) showSnack(context, 'Payslip PDF ready to share.');
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    }
-  }
-
-  Future<void> _runPayroll(AuthController session) async {
-    final branch = session.selectedBranch;
-    if (branch == null) return;
-    final now = DateTime.now();
-    final range = await showDateRangePicker(
-      context: context,
-      firstDate: DateTime(now.year - 2),
-      lastDate: DateTime(now.year + 1, 12, 31),
-      initialDateRange: DateTimeRange(
-        start: DateTime(now.year, now.month, 1),
-        end: DateTime(now.year, now.month + 1, 0),
-      ),
-    );
-    if (range == null || !mounted) return;
-    final notes = await showInputDialog(
-      context,
-      title: 'Run payroll',
-      submitLabel: 'Run payroll',
-      fields: const [InputField('notes', 'Notes', type: FieldType.multiline)],
-    );
-    if (notes == null) return;
-    try {
-      final response = await session.client.rpc(
-        'run_payroll',
-        params: {
-          'target_branch': branch.branchId,
-          'target_period_start': dateOnly(range.start),
-          'target_period_end': dateOnly(range.end),
-          'payroll_notes': notes['notes'] ?? '',
-        },
-      );
-      if (mounted) {
-        await showInfoDialog(
-          context,
-          title: 'Payroll run generated',
-          content: response,
-        );
-      }
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    }
-  }
-
-  Future<void> _approvePayroll(
-    AuthController session,
-    Map<String, dynamic> run,
-  ) async {
-    final branch = session.selectedBranch;
-    if (branch == null) return;
-    final repo = BranchRepository(session.client, branch.branchId);
-    final accounts = await repo.list('cash_accounts', orderBy: 'name');
-    if (!mounted) return;
-    final choice = await showDialog<String>(
-      context: context,
-      builder: (context) => _ApprovePayrollDialog(run: run, accounts: accounts),
-    );
-    if (choice == null) return;
-    try {
-      final response = await session.client.rpc(
-        'approve_payroll',
-        params: {
-          'target_run': run['id'],
-          'target_account': choice == 'none' ? null : choice,
-        },
-      );
-      if (mounted) {
-        await showInfoDialog(
-          context,
-          title: 'Payroll approved',
-          content: response,
-        );
-      }
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    }
-  }
-}
-
-const _runsSpec = TableSpec(
-  table: 'payroll_runs',
-  title: 'Payroll runs',
-  singular: 'Payroll run',
-  orderBy: 'period_start',
-  ascending: false,
-  searchColumns: ['status', 'notes'],
-  canCreate: false,
-  canEdit: false,
-  canDelete: false,
-  fields: [
-    FieldSpec('period_start', 'Period start', type: FieldType.date, list: true),
-    FieldSpec('period_end', 'Period end', type: FieldType.date, list: true),
-    FieldSpec(
-      'status',
-      'Status',
-      type: FieldType.select,
-      list: true,
-      options: {
-        'draft': 'Draft',
-        'approved': 'Approved',
-        'paid': 'Paid',
-        'cancelled': 'Cancelled',
-      },
-    ),
-    FieldSpec('gross_total', 'Gross', type: FieldType.number, list: true),
-    FieldSpec(
-      'deduction_total',
-      'Deductions',
-      type: FieldType.number,
-      list: true,
-    ),
-    FieldSpec('net_total', 'Net', type: FieldType.number, list: true),
-    FieldSpec('notes', 'Notes', type: FieldType.multiline),
-  ],
-);
-
-const _payslipsSpec = TableSpec(
-  table: 'payslips',
-  title: 'Payslips',
-  singular: 'Payslip',
-  orderBy: 'generated_at',
-  ascending: false,
-  searchColumns: ['payslip_number'],
-  canCreate: false,
-  canEdit: false,
-  canDelete: false,
-  fields: [
-    FieldSpec('payslip_number', 'Payslip number', list: true),
-    FieldSpec(
-      'payroll_run_id',
-      'Run',
-      type: FieldType.lookup,
-      lookupTable: 'payroll_runs',
-      lookupLabel: 'period_start',
-      list: true,
-    ),
-    FieldSpec(
-      'employee_id',
-      'Employee',
-      type: FieldType.lookup,
-      lookupTable: 'employees',
-      lookupLabel: 'full_name',
-      list: true,
-    ),
-    FieldSpec('gross_pay', 'Gross', type: FieldType.number, list: true),
-    FieldSpec(
-      'total_deductions',
-      'Deductions',
-      type: FieldType.number,
-      list: true,
-    ),
-    FieldSpec('net_pay', 'Net', type: FieldType.number, list: true),
-    FieldSpec('days_worked', 'Days worked', type: FieldType.number, list: true),
-    FieldSpec(
-      'overtime_hours',
-      'Overtime hours',
-      type: FieldType.number,
-      list: true,
-    ),
-  ],
-);
-
-const _payslipLinesSpec = TableSpec(
-  table: 'payslip_lines',
-  title: 'Payslip lines',
-  singular: 'Payslip line',
-  orderBy: 'line_type',
-  branchScoped: false,
-  searchColumns: ['name', 'line_type'],
-  canCreate: false,
-  canEdit: false,
-  canDelete: false,
-  fields: [
-    FieldSpec(
-      'payslip_id',
-      'Payslip',
-      type: FieldType.lookup,
-      lookupTable: 'payslips',
-      lookupLabel: 'payslip_number',
-      list: true,
-    ),
-    FieldSpec('name', 'Component', list: true),
-    FieldSpec(
-      'line_type',
-      'Type',
-      type: FieldType.select,
-      list: true,
-      options: {'earning': 'Earning', 'deduction': 'Deduction'},
-    ),
-    FieldSpec('amount', 'Amount', type: FieldType.number, list: true),
-  ],
-);
-
-class _ApprovePayrollDialog extends StatefulWidget {
-  const _ApprovePayrollDialog({required this.run, required this.accounts});
-
-  final Map<String, dynamic> run;
-  final List<Map<String, dynamic>> accounts;
-
-  @override
-  State<_ApprovePayrollDialog> createState() => _ApprovePayrollDialogState();
-}
-
-class _ApprovePayrollDialogState extends State<_ApprovePayrollDialog> {
-  String _account = 'none';
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Approve payroll'),
-    content: SizedBox(
-      width: 460,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Net pay: ${formatMoney(widget.run['net_total'])}',
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Choose a cash account to mark the run paid, or approve it without payment.',
-          ),
-          const SizedBox(height: 12),
-          DropdownButtonFormField<String>(
-            initialValue: _account,
-            isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Pay from account'),
-            items: [
-              const DropdownMenuItem(
-                value: 'none',
-                child: Text('Approve without payment'),
-              ),
-              for (final account in widget.accounts)
-                DropdownMenuItem(
-                  value: account['id'] as String,
-                  child: Text(asText(account['name'])),
-                ),
-            ],
-            onChanged: (value) => setState(() => _account = value ?? 'none'),
-          ),
-        ],
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.of(context).pop(_account),
-        child: const Text('Approve'),
-      ),
-    ],
-  );
-}
-
-class _PayrollSettingsView extends StatefulWidget {
-  const _PayrollSettingsView();
-
-  @override
-  State<_PayrollSettingsView> createState() => _PayrollSettingsViewState();
-}
-
-class _PayrollSettingsViewState extends State<_PayrollSettingsView> {
-  final _pensionEmployee = TextEditingController();
-  final _pensionEmployer = TextEditingController();
-  final _incomeTax = TextEditingController();
-  final _overtime = TextEditingController();
-  final _monthlyHours = TextEditingController();
-  Future<void>? _loading;
-  bool _saving = false;
-  BranchRepository? _repo;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    if (branch != null) {
-      _repo = BranchRepository(session.client, branch.branchId);
-      _loading ??= _load();
-    }
-  }
-
-  Future<void> _load() async {
-    final row = await _repo!.first('payroll_settings');
-    if (!mounted) return;
-    if (row == null) {
-      _pensionEmployee.text = '7';
-      _pensionEmployer.text = '11';
-      _incomeTax.text = '15';
-      _overtime.text = '1.5';
-      _monthlyHours.text = '208';
-    } else {
-      _pensionEmployee.text = (asNum(row['pension_employee_rate']) * 100)
-          .toString();
-      _pensionEmployer.text = (asNum(row['pension_employer_rate']) * 100)
-          .toString();
-      _incomeTax.text = (asNum(row['income_tax_rate']) * 100).toString();
-      _overtime.text = asNum(row['overtime_multiplier']).toString();
-      _monthlyHours.text = asNum(row['standard_monthly_hours']).toString();
-    }
-    if (mounted) setState(() {});
-  }
-
-  @override
-  void dispose() {
-    _pensionEmployee.dispose();
-    _pensionEmployer.dispose();
-    _incomeTax.dispose();
-    _overtime.dispose();
-    _monthlyHours.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AsyncView<void>(
-    future: _loading ?? Future.value(),
-    onRetry: () async => setState(() => _loading = _load()),
-    builder: (context, _) => ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'Payroll settings',
-          child: Column(
-            children: [
-              Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  _number('Pension employee rate (%)', _pensionEmployee),
-                  _number('Pension employer rate (%)', _pensionEmployer),
-                  _number('Income tax rate (%)', _incomeTax),
-                  _number('Overtime multiplier', _overtime),
-                  _number('Standard monthly hours', _monthlyHours),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(_saving ? 'Saving…' : 'Save settings'),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-
-  Widget _number(String label, TextEditingController controller) => SizedBox(
-    width: 240,
-    child: TextField(
-      controller: controller,
-      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-      decoration: InputDecoration(labelText: label),
-    ),
-  );
-
-  Future<void> _save() async {
-    setState(() => _saving = true);
-    try {
-      final values = {
-        'pension_employee_rate': asNum(_pensionEmployee.text) / 100,
-        'pension_employer_rate': asNum(_pensionEmployer.text) / 100,
-        'income_tax_rate': asNum(_incomeTax.text) / 100,
-        'overtime_multiplier': asNum(_overtime.text),
-        'standard_monthly_hours': asNum(_monthlyHours.text),
-      };
-      final existing = await _repo!.first('payroll_settings');
-      if (existing == null) {
-        await _repo!.insert('payroll_settings', values);
-      } else {
-        await _repo!.update(
-          'payroll_settings',
-          existing['branch_id'],
-          values,
-          primaryKey: 'branch_id',
-        );
-      }
-      if (mounted) showSnack(context, 'Payroll settings saved.');
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
   }
 }

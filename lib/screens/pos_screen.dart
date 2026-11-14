@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
-import '../data/offline_queue.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../widgets/common.dart';
+import '../widgets/module_scaffold.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -23,24 +22,22 @@ class _PosScreenState extends State<PosScreen> {
   final _notes = TextEditingController();
   final _cart = <String, num>{};
   final _products = <String, Map<String, dynamic>>{};
-  final _customers = <Map<String, dynamic>>[];
-  late BranchRepository _repo;
-  Map<String, dynamic> _settings = const {};
-  bool _started = false;
+  List<Map<String, dynamic>> _customers = const [];
+  List<Map<String, dynamic>> _stores = const [];
+  List<Map<String, dynamic>> _accounts = const [];
+  String? _customerId;
+  String? _storeId;
+  String? _accountId;
+  String _method = 'cash';
+  String _query = '';
   bool _loading = true;
   bool _submitting = false;
   String? _error;
-  String? _customerId;
-  String _method = 'cash';
-  String _query = '';
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (!_started) {
-      _started = true;
-      _load();
-    }
+    if (_loading) _load();
   }
 
   @override
@@ -56,23 +53,30 @@ class _PosScreenState extends State<PosScreen> {
     final session = SessionScope.of(context);
     final branch = session.selectedBranch;
     if (branch == null) return;
-    _repo = BranchRepository(session.client, branch.branchId);
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    final repo = BranchRepository(session.client, branch.branchId);
     try {
-      final products = await _repo.list(
+      final products = await repo.list(
         'products',
         equals: {'is_active': true},
         orderBy: 'name',
+        branchScoped: false,
       );
-      final customers = await _repo.list(
+      final customers = await repo.list(
         'customers',
+        equals: {'is_active': true},
+        orderBy: 'full_name',
+        branchScoped: false,
+      );
+      final stores = await repo.list(
+        'stores',
         equals: {'is_active': true},
         orderBy: 'name',
       );
-      final settings = await _repo.settings();
+      final accounts = await repo.list(
+        'cash_accounts',
+        equals: {'is_active': true},
+        orderBy: 'name',
+      );
       if (!mounted) return;
       setState(() {
         _products
@@ -80,10 +84,11 @@ class _PosScreenState extends State<PosScreen> {
           ..addEntries(
             products.map((row) => MapEntry(row['id'] as String, row)),
           );
-        _customers
-          ..clear()
-          ..addAll(customers);
-        _settings = settings;
+        _customers = customers;
+        _stores = stores;
+        _accounts = accounts;
+        _storeId = stores.isEmpty ? null : stores.first['id'] as String;
+        _accountId = accounts.isEmpty ? null : accounts.first['id'] as String;
         _loading = false;
       });
       _setPaidToTotal();
@@ -97,50 +102,30 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  num get _subtotal {
-    var total = 0.0;
-    for (final entry in _cart.entries) {
-      final product = _products[entry.key];
-      if (product == null) continue;
-      total +=
-          ((asNum(product['selling_price']) * entry.value) * 100).round() / 100;
-    }
-    return total;
-  }
+  num get _subtotal => _cart.entries.fold(0, (sum, entry) {
+        final product = _products[entry.key];
+        return sum + asNum(product?['price']) * entry.value;
+      });
 
   num get _discountValue {
     final value = asNum(_discount.text);
     return value < 0 ? 0 : (value > _subtotal ? _subtotal : value);
   }
 
-  num get _serviceCharge {
-    final rate = asNum(_settings['service_charge_rate']);
-    return ((_subtotal - _discountValue) * rate * 100).round() / 100;
-  }
-
   num get _tax {
-    final rate = asNum(_settings['tax_rate']);
-    final inclusive = asBool(_settings['tax_inclusive']);
-    final base = _subtotal - _discountValue + _serviceCharge;
-    if (inclusive) {
-      return ((base - base / (1 + rate)) * 100).round() / 100;
+    var tax = 0.0;
+    for (final entry in _cart.entries) {
+      final product = _products[entry.key];
+      final rate = asNum(product?['tax_rate']);
+      tax += asNum(product?['price']) * entry.value * rate / 100;
     }
-    return (base * rate * 100).round() / 100;
+    return (tax * 100).round() / 100;
   }
 
-  num get _total {
-    if (asBool(_settings['tax_inclusive'])) {
-      return _subtotal - _discountValue + _serviceCharge;
-    }
-    return _subtotal - _discountValue + _serviceCharge + _tax;
-  }
+  num get _total => ((_subtotal - _discountValue + _tax) * 100).round() / 100;
 
   void _setPaidToTotal() {
-    if (_subtotal == 0) {
-      _paid.text = '';
-    } else {
-      _paid.text = _total.toStringAsFixed(2);
-    }
+    _paid.text = _subtotal == 0 ? '' : _total.toStringAsFixed(2);
   }
 
   void _add(Map<String, dynamic> product) {
@@ -149,7 +134,7 @@ class _PosScreenState extends State<PosScreen> {
     _setPaidToTotal();
   }
 
-  void _changeQuantity(String id, num delta) {
+  void _change(String id, num delta) {
     final next = (_cart[id] ?? 0) + delta;
     setState(() {
       if (next <= 0) {
@@ -172,25 +157,40 @@ class _PosScreenState extends State<PosScreen> {
     _setPaidToTotal();
   }
 
-  List<Map<String, dynamic>> get _paymentRows => [
-    {
-      'method': _method,
-      'amount': asNum(_paid.text) <= 0 ? _total : asNum(_paid.text),
-      'reference': '',
-    },
-  ];
+  Future<String> _nextReceipt() async {
+    final session = SessionScope.of(context);
+    try {
+      final value = await session.client.rpc(
+        'next_number',
+        params: {'p_prefix': 'SALE'},
+      );
+      final text = value?.toString() ?? '';
+      if (text.isNotEmpty) return text;
+    } catch (_) {
+      // Fall back to a timestamp receipt number if numbering is unavailable.
+    }
+    return 'SALE-${DateTime.now().millisecondsSinceEpoch}';
+  }
 
   Future<void> _complete() async {
     if (_cart.isEmpty) {
       showSnack(context, 'Add at least one product to the sale.');
       return;
     }
+    if (_storeId == null) {
+      showSnack(context, 'Create a store before selling.', error: true);
+      return;
+    }
+    if (_method != 'credit' && _accountId == null) {
+      showSnack(context, 'Create a cash account before selling.', error: true);
+      return;
+    }
     if (_method == 'credit' && _customerId == null) {
       showSnack(context, 'Choose a customer for a credit sale.', error: true);
       return;
     }
-    final paidAmount = asNum(_paid.text);
-    if (paidAmount + 0.001 < _total) {
+    final paid = asNum(_paid.text);
+    if (_method != 'credit' && paid + 0.001 < _total) {
       showSnack(context, 'Payment does not cover the total.', error: true);
       return;
     }
@@ -205,287 +205,260 @@ class _PosScreenState extends State<PosScreen> {
     final session = SessionScope.of(context);
     final branch = session.selectedBranch;
     if (branch == null) return;
-    final items = [
-      for (final entry in _cart.entries)
-        {'product_id': entry.key, 'quantity': entry.value},
-    ];
-    final payments = _paymentRows;
-    final discount = _discountValue;
-    final notes = _notes.text.trim();
     setState(() => _submitting = true);
     try {
-      final result = await session.client.rpc(
-        'complete_sale',
-        params: {
-          'target_branch': branch.branchId,
-          'sale_items': items,
-          'sale_payments': payments,
-          'target_customer': _customerId,
-          'sale_discount': discount,
-          'sale_notes': notes,
-          'p_client_id': const Uuid().v4(),
-        },
-      );
+      final receiptNo = await _nextReceipt();
+      final subtotal = _subtotal;
+      final discount = _discountValue;
+      final tax = _tax;
+      final total = _total;
+      final sale = await session.client
+          .from('sales')
+          .insert({
+            'receipt_no': receiptNo,
+            'branch_id': branch.branchId,
+            'store_id': _storeId,
+            'customer_id': _customerId,
+            'cashier_id': session.userId,
+            'sale_date': dateOnly(DateTime.now()),
+            'subtotal': subtotal,
+            'discount_amount': discount,
+            'tax_amount': tax,
+            'total_amount': total,
+            'paid_amount': paid,
+            'payment_status': paid >= total
+                ? 'paid'
+                : paid > 0
+                    ? 'partial'
+                    : _method == 'credit'
+                        ? 'credit'
+                        : 'unpaid',
+            'status': 'completed',
+            'notes': _notes.text.trim(),
+          })
+          .select()
+          .single();
+      final saleId = sale['id'] as String;
+      final items = <Map<String, dynamic>>[];
+      for (final entry in _cart.entries) {
+        final product = _products[entry.key]!;
+        final line = asNum(product['price']) * entry.value;
+        final lineTax = line * asNum(product['tax_rate']) / 100;
+        items.add({
+          'sale_id': saleId,
+          'product_id': entry.key,
+          'product_name': product['name'],
+          'quantity': entry.value,
+          'unit_price': asNum(product['price']),
+          'discount_amount': 0,
+          'tax_amount': (lineTax * 100).round() / 100,
+          'line_total': ((line + lineTax) * 100).round() / 100,
+        });
+      }
+      await session.client.from('sale_items').insert(items);
+      if (paid > 0) {
+        await session.client.from('sale_payments').insert({
+          'sale_id': saleId,
+          'cash_account_id': _accountId,
+          'method': _method,
+          'amount': paid,
+          'reference': const Uuid().v4().substring(0, 8),
+          'paid_at': nowIso(),
+          'received_by': session.userId,
+        });
+      }
       if (!mounted) return;
-      await _showReceipt(asMap(result));
+      await _showReceipt(
+        sale: Map<String, dynamic>.from(sale),
+        items: items,
+        paid: paid,
+      );
       _clear();
     } catch (error) {
-      final message = readableError(error);
-      final offlinePossible =
-          _method != 'credit' &&
-          (message.contains('Network') ||
-              message.contains('Socket') ||
-              message.contains('Failed host lookup') ||
-              message.contains('Connection'));
-      if (offlinePossible && mounted) {
-        final saveOffline = await confirmAction(
-          context,
-          title: 'Connection unavailable',
-          message:
-              'Save this sale in the offline queue and sync it when the connection returns?',
-          confirmLabel: 'Save offline',
-        );
-        if (saveOffline) {
-          final queue = await OfflineQueue.create();
-          await queue.enqueue(
-            branchId: branch.branchId,
-            items: items,
-            payments: payments,
-            customerId: _customerId,
-            discount: discount,
-            notes: notes,
-          );
-          if (mounted) {
-            showSnack(context, 'Sale saved offline. It will sync later.');
-            _clear();
-          }
-        }
-      } else if (mounted) {
-        showSnack(context, message, error: true);
-      }
+      if (mounted) showSnack(context, readableError(error), error: true);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
-  Future<void> _showReceipt(Map<String, dynamic> result) => showDialog<void>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Sale completed'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _receiptRow('Sale number', asText(result['sale_number'])),
-          _receiptRow('Receipt number', asText(result['receipt_number'])),
-          _receiptRow('Subtotal', formatMoney(result['subtotal'])),
-          _receiptRow('Discount', formatMoney(result['discount'])),
-          _receiptRow('Service charge', formatMoney(result['service_charge'])),
-          _receiptRow('Tax', formatMoney(result['tax_total'])),
-          const Divider(),
-          _receiptRow('Total', formatMoney(result['grand_total'])),
-          _receiptRow('Paid', formatMoney(result['paid_total'])),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Close'),
-        ),
-        OutlinedButton.icon(
-          onPressed: () => _shareReceipt(dialogContext, result),
-          icon: const Icon(Icons.picture_as_pdf_outlined),
-          label: const Text('PDF receipt'),
-        ),
-        FilledButton(
-          onPressed: () {
-            Navigator.of(dialogContext).pop();
-            _clear();
-          },
-          child: const Text('Next sale'),
-        ),
-      ],
-    ),
-  );
-
-  Future<void> _shareReceipt(
-    BuildContext dialogContext,
-    Map<String, dynamic> result,
-  ) async {
+  Future<void> _showReceipt({
+    required Map<String, dynamic> sale,
+    required List<Map<String, dynamic>> items,
+    required num paid,
+  }) async {
     final session = SessionScope.of(context);
     final branch = session.selectedBranch;
-    try {
-      final bytes = await BrandPdf.document(
-        title: 'Sales receipt',
-        documentNumber: asText(result['receipt_number']),
-        branchName: branch?.branchName ?? 'Main branch',
-        subtitle: 'Payment confirmation',
-        details: [
-          ('Sale', asText(result['sale_number'])),
-          ('Payment', _method.replaceAll('_', ' ').toUpperCase()),
-          ('Cashier', session.fullName ?? session.userEmail ?? ''),
+    final bytes = await BrandPdf.document(
+      title: 'Sales receipt',
+      documentNumber: asText(sale['receipt_no']),
+      branchName: branch?.branchName ?? 'Main branch',
+      subtitle: formatDate(sale['sale_date']),
+      details: [
+        ('Customer', _customerName()),
+        ('Cashier', session.fullName ?? session.userEmail ?? ''),
+        ('Payment method', prettyLabel(_method)),
+        ('Paid', formatMoney(paid)),
+        ('Balance', formatMoney(asNum(sale['total_amount']) - paid)),
+      ],
+      columns: const [
+        PdfColumn('Item', 'product_name'),
+        PdfColumn('Qty', 'quantity', numeric: true),
+        PdfColumn('Unit price', 'unit_price', numeric: true),
+        PdfColumn('Tax', 'tax_amount', numeric: true),
+        PdfColumn('Total', 'line_total', numeric: true),
+      ],
+      rows: items,
+      note: 'Thank you for choosing Brade and Cake House.',
+    );
+    if (!mounted) return;
+    await showDialog<void>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Sale completed'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _row('Receipt', asText(sale['receipt_no'])),
+            _row('Total', formatMoney(sale['total_amount'])),
+            _row('Paid', formatMoney(paid)),
+            _row(
+              'Balance',
+              formatMoney(asNum(sale['total_amount']) - paid),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(dialogContext).pop(),
+            child: const Text('Close'),
+          ),
+          FilledButton.icon(
+            onPressed: () => BrandPdf.share(
+              fileName: 'receipt_${sale['receipt_no']}',
+              bytes: bytes,
+              subject: 'Brade and Cake House receipt',
+            ),
+            icon: const Icon(Icons.print_outlined),
+            label: const Text('Receipt PDF'),
+          ),
         ],
-        columns: const [
-          PdfColumn('Item', 'item'),
-          PdfColumn('Qty', 'quantity', numeric: true),
-          PdfColumn('Unit price', 'unit_price', numeric: true),
-          PdfColumn('Line total', 'line_total', numeric: true),
-        ],
-        rows: [
-          for (final entry in _cart.entries)
-            if (_products[entry.key] != null)
-              {
-                'item': asText(_products[entry.key]!['name']),
-                'quantity': entry.value,
-                'unit_price': asNum(_products[entry.key]!['selling_price']),
-                'line_total':
-                    asNum(_products[entry.key]!['selling_price']) * entry.value,
-              },
-        ],
-        totals: [
-          ('Subtotal', formatMoney(result['subtotal'])),
-          ('Discount', formatMoney(result['discount'])),
-          ('Service charge', formatMoney(result['service_charge'])),
-          ('Tax', formatMoney(result['tax_total'])),
-          ('Total', formatMoney(result['grand_total'])),
-          ('Paid', formatMoney(result['paid_total'])),
-        ],
-        note: _notes.text.trim().isEmpty ? null : _notes.text.trim(),
-      );
-      await BrandPdf.share(
-        fileName: 'receipt_${asText(result['receipt_number'])}',
-        bytes: bytes,
-        subject: 'Receipt ${asText(result['receipt_number'])}',
-      );
-      if (dialogContext.mounted) {
-        showSnack(dialogContext, 'Receipt PDF ready to share.');
-      }
-    } catch (error) {
-      if (dialogContext.mounted) {
-        showSnack(dialogContext, readableError(error), error: true);
+      ),
+    );
+  }
+
+  String _customerName() {
+    for (final customer in _customers) {
+      if (customer['id'] == _customerId) {
+        return asText(customer['full_name']);
       }
     }
+    return 'Walk-in customer';
   }
 
-  Widget _receiptRow(String label, String value) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      children: [
-        Expanded(child: Text(label)),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-      ],
-    ),
-  );
-
-  List<Map<String, dynamic>> get _filteredProducts {
-    final needle = _query.trim().toLowerCase();
-    final rows = _products.values.toList()
-      ..sort((a, b) => asText(a['name']).compareTo(asText(b['name'])));
-    if (needle.isEmpty) return rows;
-    return rows
-        .where(
-          (product) =>
-              asText(product['name']).toLowerCase().contains(needle) ||
-              asText(product['sku']).toLowerCase().contains(needle),
-        )
-        .toList();
-  }
+  Widget _row(String label, String value) => Padding(
+        padding: const EdgeInsets.only(bottom: 6),
+        child: Row(
+          children: [
+            SizedBox(width: 90, child: Text(label)),
+            Expanded(
+              child: Text(value,
+                  style: const TextStyle(fontWeight: FontWeight.w600)),
+            ),
+          ],
+        ),
+      );
 
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
-    if (!session.can('sales.write')) {
-      return Scaffold(
-        appBar: AppBar(title: const Text('Point of sale')),
-        body: const EmptyView(
-          icon: Icons.lock_outline,
-          message: 'You do not have permission to take sales.',
+    final products = _products.values
+        .where(
+          (product) =>
+              _query.isEmpty ||
+              asText(product['name']).toLowerCase().contains(_query) ||
+              asText(product['sku']).toLowerCase().contains(_query),
+        )
+        .toList();
+    return ModuleScaffold(
+      title: 'Point of sale',
+      actions: [
+        IconButton(
+          tooltip: 'Clear cart',
+          onPressed: _cart.isEmpty ? null : _clear,
+          icon: const Icon(Icons.remove_shopping_cart_outlined),
         ),
-      );
-    }
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          tooltip: 'Back',
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () => context.go('/'),
-        ),
-        title: const Text('Point of sale'),
-        actions: [
-          IconButton(
-            tooltip: 'Refresh catalogue',
-            onPressed: _loading ? null : _load,
-            icon: const Icon(Icons.refresh),
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      ],
       body: _loading
-          ? const LoadingView()
+          ? const Center(child: CircularProgressIndicator())
           : _error != null
-          ? ErrorView(message: _error!, onRetry: _load)
-          : LayoutBuilder(
-              builder: (context, constraints) {
-                final wide = constraints.maxWidth >= 900;
-                if (wide) {
-                  return Row(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      Expanded(child: _productsPane()),
-                      SizedBox(width: 390, child: _cartPane(compact: false)),
-                    ],
-                  );
-                }
-                return Column(
-                  children: [
-                    Expanded(child: _productsPane()),
-                    _mobileCartBar(),
-                  ],
-                );
-              },
-            ),
+              ? ErrorView(message: _error!, onRetry: _load)
+              : LayoutBuilder(
+                  builder: (context, constraints) {
+                    final wide = constraints.maxWidth >= 980;
+                    final catalog = _catalog(products);
+                    final cart = _cartPanel(session);
+                    return wide
+                        ? Row(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              Expanded(flex: 3, child: catalog),
+                              SizedBox(width: 380, child: cart),
+                            ],
+                          )
+                        : DefaultTabController(
+                            length: 2,
+                            child: Column(
+                              children: [
+                                const TabBar(
+                                  tabs: [
+                                    Tab(text: 'Products'),
+                                    Tab(text: 'Cart'),
+                                  ],
+                                ),
+                                Expanded(
+                                  child: TabBarView(children: [catalog, cart]),
+                                ),
+                              ],
+                            ),
+                          );
+                  },
+                ),
     );
   }
 
-  Widget _productsPane() => Column(
-    children: [
-      Padding(
-        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-        child: TextField(
-          controller: _search,
-          decoration: const InputDecoration(
-            labelText: 'Search products',
-            prefixIcon: Icon(Icons.search),
+  Widget _catalog(List<Map<String, dynamic>> products) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+            child: TextField(
+              controller: _search,
+              decoration: const InputDecoration(
+                labelText: 'Search products',
+                prefixIcon: Icon(Icons.search),
+              ),
+              onChanged: (value) =>
+                  setState(() => _query = value.trim().toLowerCase()),
+            ),
           ),
-          onChanged: (value) => setState(() => _query = value),
-        ),
-      ),
-      Expanded(
-        child: _filteredProducts.isEmpty
-            ? const EmptyView(
-                icon: Icons.bakery_dining_outlined,
-                message: 'No active products found.',
-              )
-            : LayoutBuilder(
-                builder: (context, constraints) {
-                  final columns = constraints.maxWidth >= 1000
-                      ? 4
-                      : constraints.maxWidth >= 700
-                      ? 3
-                      : 2;
-                  return GridView.builder(
-                    padding: const EdgeInsets.all(16),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: columns,
+          Expanded(
+            child: products.isEmpty
+                ? const EmptyView(
+                    message: 'No active products. Add products in Production.',
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.all(12),
+                    gridDelegate:
+                        const SliverGridDelegateWithMaxCrossAxisExtent(
+                      maxCrossAxisExtent: 220,
+                      mainAxisExtent: 150,
                       crossAxisSpacing: 10,
                       mainAxisSpacing: 10,
-                      childAspectRatio: 1.5,
                     ),
-                    itemCount: _filteredProducts.length,
+                    itemCount: products.length,
                     itemBuilder: (context, index) {
-                      final product = _filteredProducts[index];
-                      final id = product['id'] as String;
-                      final inCart = _cart[id] ?? 0;
+                      final product = products[index];
+                      final qty = _cart[product['id']] ?? 0;
                       return Card(
                         clipBehavior: Clip.antiAlias,
                         child: InkWell(
@@ -502,34 +475,30 @@ class _PosScreenState extends State<PosScreen> {
                                         asText(product['name']),
                                         maxLines: 2,
                                         overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.titleSmall,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .titleSmall,
                                       ),
                                     ),
-                                    if (inCart > 0)
-                                      CircleAvatar(
-                                        radius: 13,
-                                        child: Text(
-                                          formatQuantity(inCart),
-                                          style: const TextStyle(fontSize: 12),
-                                        ),
-                                      ),
+                                    if (qty > 0) Badge(label: Text('$qty')),
                                   ],
                                 ),
                                 const Spacer(),
                                 Text(
-                                  formatMoney(product['selling_price']),
-                                  style: Theme.of(context).textTheme.titleMedium
-                                      ?.copyWith(
-                                        color: Theme.of(
-                                          context,
-                                        ).colorScheme.primary,
-                                      ),
-                                ),
-                                Text(
-                                  asText(product['unit'], fallback: 'piece'),
+                                  asText(product['sku']),
                                   style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  formatMoney(product['price']),
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .titleMedium
+                                      ?.copyWith(
+                                        color: Theme.of(context)
+                                            .colorScheme
+                                            .primary,
+                                      ),
                                 ),
                               ],
                             ),
@@ -537,258 +506,162 @@ class _PosScreenState extends State<PosScreen> {
                         ),
                       );
                     },
-                  );
-                },
-              ),
-      ),
-    ],
-  );
+                  ),
+          ),
+        ],
+      );
 
-  Widget _mobileCartBar() {
-    final itemCount = _cart.values.fold<num>(0, (sum, value) => sum + value);
-    return Material(
-      elevation: 8,
-      child: SafeArea(
-        top: false,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+  Widget _cartPanel(AuthController session) => ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          Text('Current sale', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 8),
+          if (_cart.isEmpty)
+            const Padding(
+              padding: EdgeInsets.symmetric(vertical: 24),
+              child: EmptyView(
+                icon: Icons.shopping_basket_outlined,
+                message: 'Tap a product to add it to the sale.',
+              ),
+            )
+          else
+            for (final entry in _cart.entries)
+              ListTile(
+                contentPadding: EdgeInsets.zero,
+                title: Text(asText(_products[entry.key]?['name'])),
+                subtitle: Text(
+                  '${formatMoney(_products[entry.key]?['price'])} × ${entry.value}',
+                ),
+                trailing: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      '$itemCount item(s) • ${formatMoney(_total)}',
-                      style: Theme.of(context).textTheme.titleMedium,
+                    IconButton(
+                      onPressed: () => _change(entry.key, -1),
+                      icon: const Icon(Icons.remove_circle_outline),
                     ),
-                    Text(
-                      'Tax ${formatMoney(_tax)}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                    Text('${entry.value}'),
+                    IconButton(
+                      onPressed: () => _change(entry.key, 1),
+                      icon: const Icon(Icons.add_circle_outline),
                     ),
                   ],
                 ),
               ),
-              FilledButton.icon(
-                onPressed: _cart.isEmpty
-                    ? null
-                    : () => showModalBottomSheet<void>(
-                        context: context,
-                        isScrollControlled: true,
-                        builder: (context) => DraggableScrollableSheet(
-                          expand: false,
-                          initialChildSize: 0.85,
-                          maxChildSize: 0.95,
-                          builder: (context, scrollController) => _cartPane(
-                            compact: true,
-                            scrollController: scrollController,
-                          ),
-                        ),
-                      ),
-                icon: const Icon(Icons.shopping_cart_outlined),
-                label: Text('Cart (${_cart.length})'),
-              ),
+          const Divider(),
+          DropdownButtonFormField<String?>(
+            initialValue: _customerId,
+            decoration: const InputDecoration(labelText: 'Customer'),
+            items: [
+              const DropdownMenuItem<String?>(
+                  value: null, child: Text('Walk-in')),
+              for (final customer in _customers)
+                DropdownMenuItem<String?>(
+                  value: customer['id'] as String,
+                  child: Text(asText(customer['full_name'])),
+                ),
             ],
+            onChanged: (value) => setState(() => _customerId = value),
           ),
-        ),
-      ),
-    );
-  }
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _storeId,
+            decoration: const InputDecoration(labelText: 'Store'),
+            items: [
+              for (final store in _stores)
+                DropdownMenuItem(
+                  value: store['id'] as String,
+                  child: Text(asText(store['name'])),
+                ),
+            ],
+            onChanged: (value) => setState(() => _storeId = value),
+          ),
+          const SizedBox(height: 8),
+          DropdownButtonFormField<String>(
+            initialValue: _method,
+            decoration: const InputDecoration(labelText: 'Payment method'),
+            items: const [
+              DropdownMenuItem(value: 'cash', child: Text('Cash')),
+              DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
+              DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
+              DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
+              DropdownMenuItem(
+                  value: 'mobile_money', child: Text('Mobile money')),
+              DropdownMenuItem(value: 'card', child: Text('Card')),
+              DropdownMenuItem(value: 'credit', child: Text('Credit')),
+            ],
+            onChanged: (value) => setState(() => _method = value ?? 'cash'),
+          ),
+          if (_method != 'credit') ...[
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _accountId,
+              decoration: const InputDecoration(labelText: 'Cash account'),
+              items: [
+                for (final account in _accounts)
+                  DropdownMenuItem(
+                    value: account['id'] as String,
+                    child: Text(asText(account['name'])),
+                  ),
+              ],
+              onChanged: (value) => setState(() => _accountId = value),
+            ),
+          ],
+          const SizedBox(height: 8),
+          TextField(
+            controller: _discount,
+            decoration: const InputDecoration(labelText: 'Discount (ETB)'),
+            keyboardType: TextInputType.number,
+            onChanged: (_) => setState(_setPaidToTotal),
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _paid,
+            decoration: const InputDecoration(labelText: 'Amount paid'),
+            keyboardType: TextInputType.number,
+          ),
+          const SizedBox(height: 8),
+          TextField(
+            controller: _notes,
+            decoration: const InputDecoration(labelText: 'Notes'),
+            maxLines: 2,
+          ),
+          const SizedBox(height: 12),
+          _totalRow('Subtotal', _subtotal),
+          _totalRow('Discount', -_discountValue),
+          _totalRow('Tax', _tax),
+          const Divider(),
+          _totalRow('Total', _total, bold: true),
+          const SizedBox(height: 12),
+          FilledButton.icon(
+            onPressed: _submitting ? null : _complete,
+            icon: _submitting
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(Icons.check_circle_outline),
+            label: Text(_submitting ? 'Completing…' : 'Complete sale'),
+          ),
+        ],
+      );
 
-  Widget _cartPane({
-    required bool compact,
-    ScrollController? scrollController,
-  }) {
-    final content = ListView(
-      controller: scrollController,
-      padding: const EdgeInsets.all(12),
-      children: [
-        Row(
+  Widget _totalRow(String label, num value, {bool bold = false}) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Row(
           children: [
             Expanded(
               child: Text(
-                'Current sale',
-                style: Theme.of(context).textTheme.titleLarge,
+                label,
+                style:
+                    bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
               ),
             ),
-            TextButton(
-              onPressed: _cart.isEmpty ? null : _clear,
-              child: const Text('Clear'),
+            Text(
+              formatMoney(value),
+              style: bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
             ),
           ],
         ),
-        if (_cart.isEmpty)
-          const Padding(
-            padding: EdgeInsets.symmetric(vertical: 32),
-            child: EmptyView(
-              icon: Icons.shopping_basket_outlined,
-              message: 'Tap a product to add it to the sale.',
-            ),
-          )
-        else
-          for (final entry in _cart.entries.toList())
-            _CartLine(
-              product: _products[entry.key]!,
-              quantity: entry.value,
-              onAdd: () => _add(_products[entry.key]!),
-              onRemove: () => _changeQuantity(entry.key, -1),
-              onDelete: () => setState(() => _cart.remove(entry.key)),
-            ),
-        const Divider(height: 28),
-        DropdownButtonFormField<String>(
-          initialValue: _customerId ?? '',
-          isExpanded: true,
-          decoration: const InputDecoration(labelText: 'Customer (optional)'),
-          items: [
-            const DropdownMenuItem(value: '', child: Text('Walk-in customer')),
-            for (final customer in _customers)
-              DropdownMenuItem(
-                value: customer['id'] as String,
-                child: Text(
-                  '${asText(customer['name'])}'
-                  '${asText(customer['phone']).isEmpty ? '' : ' • ${customer['phone']}'}',
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
-          ],
-          onChanged: (value) => setState(
-            () => _customerId = (value == null || value.isEmpty) ? null : value,
-          ),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _discount,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Discount (ETB)'),
-          onChanged: (_) {
-            setState(() {});
-            _setPaidToTotal();
-          },
-        ),
-        const SizedBox(height: 10),
-        DropdownButtonFormField<String>(
-          initialValue: _method,
-          decoration: const InputDecoration(labelText: 'Payment method'),
-          items: const [
-            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-            DropdownMenuItem(value: 'telebirr', child: Text('TeleBirr')),
-            DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-            DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-            DropdownMenuItem(value: 'credit', child: Text('Customer credit')),
-            DropdownMenuItem(value: 'other', child: Text('Other')),
-          ],
-          onChanged: (value) {
-            if (value == null) return;
-            setState(() => _method = value);
-          },
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _paid,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Amount paid (ETB)'),
-          onChanged: (_) => setState(() {}),
-        ),
-        const SizedBox(height: 10),
-        TextField(
-          controller: _notes,
-          decoration: const InputDecoration(labelText: 'Sale notes'),
-          maxLines: 2,
-        ),
-        const SizedBox(height: 14),
-        _totalRow('Subtotal', _subtotal),
-        _totalRow('Discount', -_discountValue),
-        _totalRow('Service charge', _serviceCharge),
-        _totalRow('Tax', _tax),
-        const Divider(),
-        _totalRow('Total', _total, strong: true),
-        if (asNum(_paid.text) > _total)
-          _totalRow('Change', asNum(_paid.text) - _total),
-        const SizedBox(height: 14),
-        FilledButton.icon(
-          onPressed: _submitting || _cart.isEmpty ? null : _complete,
-          icon: _submitting
-              ? const SizedBox(
-                  width: 16,
-                  height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                )
-              : const Icon(Icons.check_circle_outline),
-          label: Text(_submitting ? 'Completing…' : 'Complete sale'),
-        ),
-        if (compact) const SizedBox(height: 24),
-      ],
-    );
-    return compact
-        ? content
-        : Card(
-            margin: const EdgeInsets.fromLTRB(0, 12, 12, 12),
-            child: content,
-          );
-  }
-
-  Widget _totalRow(String label, num value, {bool strong = false}) => Padding(
-    padding: const EdgeInsets.symmetric(vertical: 3),
-    child: Row(
-      children: [
-        Expanded(
-          child: Text(
-            label,
-            style: strong ? const TextStyle(fontWeight: FontWeight.w600) : null,
-          ),
-        ),
-        Text(
-          formatMoney(value),
-          style: strong
-              ? const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)
-              : null,
-        ),
-      ],
-    ),
-  );
-}
-
-class _CartLine extends StatelessWidget {
-  const _CartLine({
-    required this.product,
-    required this.quantity,
-    required this.onAdd,
-    required this.onRemove,
-    required this.onDelete,
-  });
-
-  final Map<String, dynamic> product;
-  final num quantity;
-  final VoidCallback onAdd;
-  final VoidCallback onRemove;
-  final VoidCallback onDelete;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-    contentPadding: EdgeInsets.zero,
-    title: Text(asText(product['name'])),
-    subtitle: Text(formatMoney(product['selling_price'])),
-    trailing: Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          onPressed: onRemove,
-          icon: const Icon(Icons.remove_circle_outline),
-        ),
-        Text(formatQuantity(quantity)),
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          onPressed: onAdd,
-          icon: const Icon(Icons.add_circle_outline),
-        ),
-        IconButton(
-          visualDensity: VisualDensity.compact,
-          onPressed: onDelete,
-          icon: const Icon(Icons.delete_outline),
-        ),
-      ],
-    ),
-  );
+      );
 }

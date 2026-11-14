@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
-import '../l10n/app_localizations.dart';
+import '../data/repository.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 
@@ -15,7 +15,7 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  Future<Map<String, dynamic>>? _future;
+  Future<Map<String, dynamic>>? _kpis;
   bool _started = false;
 
   @override
@@ -29,67 +29,87 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _reload() {
     final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    if (branch == null) return;
-    _future = session.client
-        .rpc('report_dashboard', params: {'target_branch': branch.branchId})
-        .then(asMap);
+    if (session.isCustomer) return;
+    _kpis = session.client.from('v_dashboard_kpis').select().maybeSingle().then(
+        (row) =>
+            row == null ? <String, dynamic>{} : Map<String, dynamic>.from(row));
   }
 
   Future<void> _refresh() async {
     setState(_reload);
-    await _future;
+    await _kpis;
+  }
+
+  Future<void> _alerts() async {
+    final session = SessionScope.of(context);
+    try {
+      await session.client.rpc('fn_generate_alerts');
+      if (mounted) showSnack(context, 'Alerts generated.');
+    } catch (error) {
+      if (mounted) showSnack(context, readableError(error), error: true);
+    }
   }
 
   static const _modules = [
-    ('production', 'Production', Icons.bakery_dining, 'production.read'),
-    ('sales', 'Sales & POS', Icons.point_of_sale, 'sales.read'),
-    ('inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.read'),
+    ('pos', 'Point of sale', Icons.point_of_sale, 'pos.use'),
+    ('sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.view'),
+    ('production', 'Production', Icons.bakery_dining, 'production.manage'),
+    ('inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.view'),
     (
       'cash',
       'Cash & expenses',
       Icons.account_balance_wallet_outlined,
-      'cash.read',
+      'cash.view'
     ),
-    ('people', 'People & HR', Icons.groups_outlined, 'people.read'),
-    ('payroll', 'Payroll', Icons.receipt_long_outlined, 'payroll.read'),
-    ('rentals', 'Rentals', Icons.apartment_outlined, 'rentals.read'),
-    ('payables', 'Payables', Icons.request_quote_outlined, 'payables.read'),
-    ('reports', 'Reports', Icons.bar_chart, 'reports.read'),
+    ('people', 'People & HR', Icons.groups_outlined, 'hr.view'),
+    ('payroll', 'Payroll', Icons.receipt_long_outlined, 'payroll.manage'),
+    ('rentals', 'Rentals', Icons.apartment_outlined, 'rentals.manage'),
+    (
+      'credit',
+      'Credit control',
+      Icons.account_balance_outlined,
+      'credit.manage'
+    ),
+    ('approvals', 'Approvals', Icons.fact_check_outlined, 'expenses.approve'),
+    ('reports', 'Reports', Icons.bar_chart, 'reports.view'),
     ('settings', 'Settings', Icons.settings_outlined, 'settings.manage'),
   ];
 
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    if (session.isCustomer) return const _CustomerDashboard();
     final branch = session.selectedBranch;
     if (branch == null) {
       return const ModuleScaffold(
         title: 'Dashboard',
-        body: EmptyView(message: 'Select a branch to continue.'),
+        body: EmptyView(message: 'No branch is available.'),
       );
     }
-    final strings = AppLocalizations.of(context);
     return ModuleScaffold(
-      title: strings.dashboard,
+      title: 'Dashboard',
       showHome: false,
+      actions: [
+        IconButton(
+          tooltip: 'Generate alerts',
+          onPressed: _alerts,
+          icon: const Icon(Icons.notifications_active_outlined),
+        ),
+      ],
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
           padding: const EdgeInsets.only(bottom: 32),
           children: [
             _WelcomeHeader(session: session, branch: branch),
-            if (session.can('reports.read'))
-              AsyncView<Map<String, dynamic>>(
-                future: _future ?? Future.value(const {}),
-                onRetry: _refresh,
-                builder: (context, data) => _DashboardBody(data: data),
-              )
-            else
-              SectionCard(child: Text(strings.roleNoReports)),
-            PageHeader(
-              title: strings.workspace,
-              subtitle: strings.workspaceSubtitle,
+            AsyncView<Map<String, dynamic>>(
+              future: _kpis ?? Future.value(const {}),
+              onRetry: _refresh,
+              builder: (context, data) => _KpiGrid(data: data),
+            ),
+            const PageHeader(
+              title: 'Workspace',
+              subtitle: 'Open a module to manage the business.',
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -98,8 +118,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final columns = constraints.maxWidth >= 1000
                       ? 4
                       : constraints.maxWidth >= 620
-                      ? 3
-                      : 2;
+                          ? 3
+                          : 2;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -111,9 +131,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       for (final module in _modules)
                         if (session.can(module.$4))
                           _ModuleCard(
-                            label: _moduleLabel(strings, module.$1),
+                            label: module.$2,
                             icon: module.$3,
-                            onTap: () => context.go('/module/${module.$1}'),
+                            onTap: () => context.go(
+                              module.$1 == 'pos'
+                                  ? '/pos'
+                                  : '/module/${module.$1}',
+                            ),
                           ),
                     ],
                   );
@@ -127,21 +151,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-String _moduleLabel(AppLocalizations strings, String module) =>
-    switch (module) {
-      'production' => strings.productionModule,
-      'sales' => strings.salesModule,
-      'inventory' => strings.inventoryModule,
-      'cash' => strings.cashModule,
-      'people' => strings.peopleModule,
-      'payroll' => strings.payrollModule,
-      'rentals' => strings.rentalsModule,
-      'payables' => strings.payablesModule,
-      'reports' => strings.reportsModule,
-      'settings' => strings.settingsModule,
-      _ => module,
-    };
-
 class _WelcomeHeader extends StatelessWidget {
   const _WelcomeHeader({required this.session, required this.branch});
 
@@ -150,14 +159,11 @@ class _WelcomeHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
     final portal = branch.isAdmin
-        ? strings.adminPortal
-        : branch.roleSlugs.any(
-            (role) => role == 'manager' || role == 'supervisor',
-          )
-        ? strings.managerPortal
-        : strings.teamPortal;
+        ? 'Admin portal'
+        : branch.isManager
+            ? 'Manager portal'
+            : 'Staff portal';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Wrap(
@@ -172,38 +178,37 @@ class _WelcomeHeader extends StatelessWidget {
               Text(
                 portal,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                  color: Theme.of(context).colorScheme.secondary,
-                  fontWeight: FontWeight.w700,
-                ),
+                      color: Theme.of(context).colorScheme.secondary,
+                      fontWeight: FontWeight.w700,
+                    ),
               ),
               const SizedBox(height: 2),
               Text(
-                '${strings.welcome}${session.fullName == null ? '' : ', ${session.fullName}'}',
+                'Welcome${session.fullName == null ? '' : ', ${session.fullName}'}',
                 style: Theme.of(context).textTheme.headlineSmall,
               ),
               const SizedBox(height: 4),
               Text(
-                '${branch.branchName} • ${branch.roleSlugs.map(prettyLabel).join(', ')}'
-                ' • ${formatDate(DateTime.now())}',
+                '${branch.branchName} • ${branch.roleLabel} • ${formatDate(DateTime.now())}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
               ),
             ],
           ),
           Wrap(
             spacing: 8,
             children: [
-              if (session.can('sales.write'))
+              if (session.can('pos.use'))
                 FilledButton.icon(
                   onPressed: () => context.push('/pos'),
                   icon: const Icon(Icons.point_of_sale),
-                  label: Text(strings.newSale),
+                  label: const Text('New sale'),
                 ),
               OutlinedButton.icon(
                 onPressed: () => context.push('/notifications'),
-                icon: const Icon(Icons.notifications_active_outlined),
-                label: Text(strings.alerts),
+                icon: const Icon(Icons.notifications_outlined),
+                label: const Text('Alerts'),
               ),
             ],
           ),
@@ -213,111 +218,64 @@ class _WelcomeHeader extends StatelessWidget {
   }
 }
 
-class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.data});
+class _KpiGrid extends StatelessWidget {
+  const _KpiGrid({required this.data});
 
   final Map<String, dynamic> data;
 
   @override
   Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
     final cards = [
-      (strings.todaySales, formatMoney(data['today_sales']), Icons.today, null),
+      ('Today sales', formatMoney(data['today_sales']), Icons.today),
       (
-        strings.thisMonth,
-        formatMoney(data['month_sales']),
-        Icons.calendar_month,
-        null,
-      ),
-      (
-        strings.cashBalance,
+        'Cash balance',
         formatMoney(data['cash_balance']),
-        Icons.account_balance_wallet_outlined,
-        null,
+        Icons.account_balance_wallet_outlined
       ),
       (
-        strings.receivables,
-        formatMoney(data['receivables']),
-        Icons.person_search_outlined,
-        null,
-      ),
-      (
-        strings.payables,
-        formatMoney(data['payables']),
-        Icons.request_quote_outlined,
-        null,
-      ),
-      (
-        strings.rentOutstanding,
-        formatMoney(data['rent_outstanding']),
-        Icons.apartment_outlined,
-        null,
-      ),
-      (
-        strings.lowStock,
+        'Low stock',
         formatQuantity(data['low_stock_items']),
-        Icons.warning_amber_outlined,
-        Theme.of(context).colorScheme.error,
+        Icons.warning_amber_outlined
       ),
       (
-        strings.pendingExpenses,
-        formatQuantity(data['pending_expenses']),
-        Icons.pending_actions_outlined,
-        null,
+        'Overdue credit',
+        formatMoney(data['overdue_receivables']),
+        Icons.person_search_outlined
       ),
+      ('Rent due', formatMoney(data['rent_due']), Icons.apartment_outlined),
       (
-        strings.pendingLeave,
-        formatQuantity(data['pending_leave']),
-        Icons.event_busy_outlined,
-        null,
-      ),
-      (
-        strings.batchesToday,
-        formatQuantity(data['batches_today']),
-        Icons.bakery_dining_outlined,
-        null,
-      ),
-      (
-        strings.activeEmployees,
-        formatQuantity(data['active_employees']),
-        Icons.groups_outlined,
-        null,
-      ),
-      (
-        strings.revenueThisMonth,
-        formatMoney(data['revenue_this_month']),
-        Icons.trending_up,
-        null,
+        'Staff present',
+        formatQuantity(data['staff_present_today']),
+        Icons.groups_outlined
       ),
     ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 1100
-            ? 4
-            : constraints.maxWidth >= 700
-            ? 3
-            : 2;
-        return Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: GridView.count(
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 1000
+              ? 3
+              : constraints.maxWidth >= 620
+                  ? 2
+                  : 1;
+          return GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             crossAxisCount: columns,
             crossAxisSpacing: 12,
             mainAxisSpacing: 12,
-            childAspectRatio: columns >= 3 ? 2.0 : 1.55,
+            childAspectRatio: columns == 1 ? 3.2 : 2.4,
             children: [
               for (final card in cards)
                 StatCard(
                   label: card.$1,
                   value: card.$2,
                   icon: card.$3,
-                  color: card.$4,
                 ),
             ],
-          ),
-        );
-      },
+          );
+        },
+      ),
     );
   }
 }
@@ -335,26 +293,156 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 34, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(height: 10),
-            Text(
-              label,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.titleSmall,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon,
+                    size: 30, color: Theme.of(context).colorScheme.primary),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+}
+
+class _CustomerDashboard extends StatefulWidget {
+  const _CustomerDashboard();
+
+  @override
+  State<_CustomerDashboard> createState() => _CustomerDashboardState();
+}
+
+class _CustomerDashboardState extends State<_CustomerDashboard> {
+  bool _started = false;
+  Map<String, dynamic>? _customer;
+  List<Map<String, dynamic>> _orders = const [];
+  List<Map<String, dynamic>> _receivables = const [];
+  String? _error;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_started) {
+      _started = true;
+      _load();
+    }
+  }
+
+  Future<void> _load() async {
+    final session = SessionScope.of(context);
+    try {
+      final customer = await session.client
+          .from('customers')
+          .select()
+          .eq('user_id', session.userId ?? '')
+          .maybeSingle();
+      if (customer == null) {
+        setState(() => _error = 'No customer record is linked to this login.');
+        return;
+      }
+      final orders = await session.client
+          .from('cake_orders')
+          .select()
+          .eq('customer_id', customer['id'])
+          .order('created_at', ascending: false);
+      final receivables = await session.client
+          .from('receivables')
+          .select()
+          .eq('customer_id', customer['id'])
+          .order('due_date', ascending: false);
+      if (!mounted) return;
+      setState(() {
+        _customer = Map<String, dynamic>.from(customer);
+        _orders = (orders as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+        _receivables = (receivables as List)
+            .map((row) => Map<String, dynamic>.from(row as Map))
+            .toList();
+      });
+    } catch (error) {
+      if (mounted) setState(() => _error = readableError(error));
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final session = SessionScope.of(context);
+    return ModuleScaffold(
+      title: 'My account',
+      showHome: false,
+      body: ListView(
+        padding: const EdgeInsets.all(16),
+        children: [
+          SectionCard(
+            title: 'Customer profile',
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  asText(_customer?['full_name'],
+                      fallback: session.fullName ?? ''),
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                Text(asText(_customer?['phone'])),
+                Text(asText(_customer?['email'])),
+              ],
+            ),
+          ),
+          if (_error != null)
+            SectionCard(child: Text(_error!))
+          else ...[
+            SectionCard(
+              title: 'Cake orders',
+              child: _orders.isEmpty
+                  ? const EmptyView(message: 'No cake orders yet.')
+                  : Column(
+                      children: [
+                        for (final order in _orders)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(asText(order['order_no'])),
+                            subtitle: Text(
+                              '${formatDate(order['due_at'])} • ${prettyLabel(asText(order['status']))}',
+                            ),
+                            trailing: Text(formatMoney(order['total_amount'])),
+                          ),
+                      ],
+                    ),
+            ),
+            SectionCard(
+              title: 'Credit balance',
+              child: _receivables.isEmpty
+                  ? const EmptyView(message: 'No outstanding credit.')
+                  : Column(
+                      children: [
+                        for (final row in _receivables)
+                          ListTile(
+                            contentPadding: EdgeInsets.zero,
+                            title: Text(asText(row['description'],
+                                fallback: 'Receivable')),
+                            subtitle:
+                                Text('Due ${formatDate(row['due_date'])}'),
+                            trailing: Text(formatMoney(row['balance'])),
+                          ),
+                      ],
+                    ),
             ),
           ],
-        ),
+        ],
       ),
-    ),
-  );
+    );
+  }
 }

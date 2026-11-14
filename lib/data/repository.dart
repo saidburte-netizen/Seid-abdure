@@ -20,7 +20,9 @@ class BranchRepository {
     int limit = 500,
   }) async {
     dynamic query = client.from(table).select(columns);
-    if (branchScoped) query = query.eq('branch_id', branchId);
+    if (branchScoped && branchId.isNotEmpty) {
+      query = query.eq('branch_id', branchId);
+    }
     for (final entry in equals.entries) {
       query = query.eq(entry.key, entry.value);
     }
@@ -54,7 +56,9 @@ class BranchRepository {
     bool branchScoped = true,
   }) async {
     final payload = Map<String, dynamic>.from(values);
-    if (branchScoped) payload['branch_id'] = branchId;
+    if (branchScoped && branchId.isNotEmpty) {
+      payload['branch_id'] = branchId;
+    }
     final row = await client.from(table).insert(payload).select().single();
     return Map<String, dynamic>.from(row);
   }
@@ -85,35 +89,42 @@ class BranchRepository {
   Future<Object?> rpc(
     String function, [
     Map<String, Object?> params = const {},
-  ]) => client.rpc(function, params: params);
+  ]) =>
+      client.rpc(function, params: params);
 
   Future<List<Map<String, dynamic>>> lookup(
     String table, {
     String labelColumn = 'name',
     bool branchScoped = true,
     Map<String, Object?> equals = const {},
-  }) => list(
-    table,
-    columns: 'id,$labelColumn',
-    branchScoped: branchScoped,
-    equals: equals,
-    orderBy: labelColumn,
-    limit: 500,
-  );
+  }) =>
+      list(
+        table,
+        columns: 'id,$labelColumn',
+        branchScoped: branchScoped,
+        equals: equals,
+        orderBy: labelColumn,
+        limit: 500,
+      );
 
-  Future<Map<String, dynamic>> settings() async {
-    final existing = await first('branch_settings');
-    if (existing != null) return existing;
+  Future<Map<String, dynamic>> upsert(
+    String table,
+    Map<String, dynamic> values, {
+    String onConflict = 'id',
+  }) async {
     final row = await client
-        .from('branch_settings')
-        .insert({'branch_id': branchId})
+        .from(table)
+        .upsert(values, onConflict: onConflict)
         .select()
         .single();
     return Map<String, dynamic>.from(row);
   }
 
-  Future<Map<String, dynamic>?> organization() =>
-      first('organization_settings', branchScoped: false, equals: {'id': true});
+  Future<Map<String, dynamic>?> appSetting(String key) => first(
+        'app_settings',
+        branchScoped: false,
+        equals: {'key': key},
+      );
 }
 
 String readableError(Object error) {

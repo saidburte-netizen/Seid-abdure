@@ -253,8 +253,7 @@ class _CrudTabState extends State<CrudTab> {
               child: rows.isEmpty
                   ? EmptyView(
                       icon: Icons.table_rows_outlined,
-                      message:
-                          widget.emptyMessage ??
+                      message: widget.emptyMessage ??
                           'No ${widget.spec.title.toLowerCase()} found.',
                       action: _canWrite && widget.spec.canCreate
                           ? FilledButton(
@@ -328,68 +327,69 @@ class _CrudTabState extends State<CrudTab> {
     BuildContext context,
     _CrudSnapshot snapshot,
     List<Map<String, dynamic>> rows,
-  ) => ListView.separated(
-    padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-    itemCount: rows.length,
-    separatorBuilder: (_, __) => const SizedBox(height: 8),
-    itemBuilder: (context, index) {
-      final row = rows[index];
-      final titleKey = widget.spec.effectiveListColumns.isEmpty
-          ? widget.spec.fields.first.key
-          : widget.spec.effectiveListColumns.first;
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+  ) =>
+      ListView.separated(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+        itemCount: rows.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          final titleKey = widget.spec.effectiveListColumns.isEmpty
+              ? widget.spec.fields.first.key
+              : widget.spec.effectiveListColumns.first;
+          return Card(
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      _display(
-                        widget.spec.field(titleKey),
-                        row[titleKey],
-                        snapshot.lookups,
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  _actionsWidget(context, snapshot, row),
-                ],
-              ),
-              for (final key
-                  in widget.spec.effectiveListColumns.skip(1).take(4))
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      SizedBox(
-                        width: 120,
-                        child: Text(
-                          widget.spec.field(key)?.label ?? prettyLabel(key),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
                       Expanded(
-                        child: _valueWidget(
-                          context,
-                          widget.spec.field(key),
-                          row[key],
-                          snapshot.lookups,
+                        child: Text(
+                          _display(
+                            widget.spec.field(titleKey),
+                            row[titleKey],
+                            snapshot.lookups,
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
+                      _actionsWidget(context, snapshot, row),
                     ],
                   ),
-                ),
-            ],
-          ),
-        ),
+                  for (final key
+                      in widget.spec.effectiveListColumns.skip(1).take(4))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            child: Text(
+                              widget.spec.field(key)?.label ?? prettyLabel(key),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          Expanded(
+                            child: _valueWidget(
+                              context,
+                              widget.spec.field(key),
+                              row[key],
+                              snapshot.lookups,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       );
-    },
-  );
 
   Widget _valueWidget(
     BuildContext context,
@@ -455,7 +455,7 @@ class _CrudTabState extends State<CrudTab> {
     final session = SessionScope.of(context);
     final canEdit = _canWrite && widget.spec.canEdit;
     final canDelete = _canWrite && widget.spec.canDelete;
-    final canExport = session.can('reports.export');
+    final canExport = session.can('reports.view');
     if (custom.isEmpty && !canEdit && !canDelete && !canExport) {
       return const SizedBox.shrink();
     }
@@ -515,9 +515,8 @@ class _CrudTabState extends State<CrudTab> {
             child: ListTile(
               leading: Icon(
                 action.icon,
-                color: action.danger
-                    ? Theme.of(context).colorScheme.error
-                    : null,
+                color:
+                    action.danger ? Theme.of(context).colorScheme.error : null,
               ),
               title: Text(
                 action.label,
@@ -624,7 +623,7 @@ class _CrudTabState extends State<CrudTab> {
     final path = await saveCsvFile(widget.spec.table, csv);
     if (!context.mounted) return;
     final session = SessionScope.of(context);
-    if (path == null || !session.can('reports.export')) {
+    if (path == null || !session.can('reports.view')) {
       await copyText(context, csv, 'CSV');
       return;
     }
@@ -724,8 +723,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
               children: [
                 for (final field in widget.spec.fields)
                   SizedBox(
-                    width:
-                        field.width ??
+                    width: field.width ??
                         ((media.width > 720 ? 640 : media.width * 0.9) / 2) - 8,
                     child: _buildField(context, field),
                   ),
@@ -757,16 +755,19 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           onChanged: (value) => setState(() => _values[field.key] = value),
         );
       case FieldType.select:
+        final current = _controllers[field.key]?.text ?? '';
+        final options = Map<String, String>.from(field.options);
+        if (current.isNotEmpty && !options.containsKey(current)) {
+          options[current] = prettyLabel(current);
+        }
         return DropdownButtonFormField<String>(
-          initialValue: _controllers[field.key]?.text.isEmpty ?? true
-              ? null
-              : _controllers[field.key]!.text,
+          initialValue: current.isEmpty ? null : current,
           decoration: InputDecoration(
             labelText: field.label,
             hintText: field.hint,
           ),
           items: [
-            for (final entry in field.options.entries)
+            for (final entry in options.entries)
               DropdownMenuItem(value: entry.key, child: Text(entry.value)),
           ],
           validator: (value) =>
@@ -814,8 +815,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-              ? 'Required'
-              : null,
+                  ? 'Required'
+                  : null,
           onTap: () async {
             final now = DateTime.now();
             final selected = await showDatePicker(
@@ -870,8 +871,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-              ? 'Required'
-              : null,
+                  ? 'Required'
+                  : null,
         );
       case FieldType.text:
       case FieldType.time:
@@ -884,8 +885,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-              ? 'Required'
-              : null,
+                  ? 'Required'
+                  : null,
         );
     }
   }

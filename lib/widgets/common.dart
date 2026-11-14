@@ -21,34 +21,35 @@ class PageHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
-    child: Wrap(
-      alignment: WrapAlignment.spaceBetween,
-      crossAxisAlignment: WrapCrossAlignment.center,
-      spacing: 12,
-      runSpacing: 8,
-      children: [
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
+        child: Wrap(
+          alignment: WrapAlignment.spaceBetween,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          spacing: 12,
+          runSpacing: 8,
           children: [
-            Text(title, style: Theme.of(context).textTheme.headlineSmall),
-            if (subtitle != null)
-              Padding(
-                padding: const EdgeInsets.only(top: 4),
-                child: Text(
-                  subtitle!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Theme.of(context).colorScheme.onSurfaceVariant,
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.headlineSmall),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                            color:
+                                Theme.of(context).colorScheme.onSurfaceVariant,
+                          ),
+                    ),
                   ),
-                ),
-              ),
+              ],
+            ),
+            if (actions.isNotEmpty)
+              Wrap(spacing: 8, runSpacing: 8, children: actions),
           ],
         ),
-        if (actions.isNotEmpty)
-          Wrap(spacing: 8, runSpacing: 8, children: actions),
-      ],
-    ),
-  );
+      );
 }
 
 class SectionCard extends StatelessWidget {
@@ -67,33 +68,33 @@ class SectionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-    clipBehavior: Clip.antiAlias,
-    child: Padding(
-      padding: padding,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (title != null)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Text(
-                      title!,
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
+        margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        clipBehavior: Clip.antiAlias,
+        child: Padding(
+          padding: padding,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (title != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          title!,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                      ),
+                      if (trailing != null) trailing!,
+                    ],
                   ),
-                  if (trailing != null) trailing!,
-                ],
-              ),
-            ),
-          child,
-        ],
-      ),
-    ),
-  );
+                ),
+              child,
+            ],
+          ),
+        ),
+      );
 }
 
 class StatCard extends StatelessWidget {
@@ -147,9 +148,9 @@ class StatCard extends StatelessWidget {
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                  color: color ?? scheme.onSurface,
-                  fontWeight: FontWeight.w600,
-                ),
+                      color: color ?? scheme.onSurface,
+                      fontWeight: FontWeight.w600,
+                    ),
               ),
             ],
           ),
@@ -164,11 +165,11 @@ class LoadingView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Center(
-    child: Padding(
-      padding: EdgeInsets.all(32),
-      child: CircularProgressIndicator(),
-    ),
-  );
+        child: Padding(
+          padding: EdgeInsets.all(32),
+          child: CircularProgressIndicator(),
+        ),
+      );
 }
 
 class EmptyView extends StatelessWidget {
@@ -185,23 +186,24 @@ class EmptyView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 48, color: Theme.of(context).colorScheme.outline),
-          const SizedBox(height: 12),
-          Text(
-            message,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.bodyLarge,
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon,
+                  size: 48, color: Theme.of(context).colorScheme.outline),
+              const SizedBox(height: 12),
+              Text(
+                message,
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyLarge,
+              ),
+              if (action != null) ...[const SizedBox(height: 12), action!],
+            ],
           ),
-          if (action != null) ...[const SizedBox(height: 12), action!],
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class ErrorView extends StatelessWidget {
@@ -212,30 +214,30 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 42,
-            color: Theme.of(context).colorScheme.error,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(
+                Icons.error_outline,
+                size: 42,
+                color: Theme.of(context).colorScheme.error,
+              ),
+              const SizedBox(height: 12),
+              SelectableText(message, textAlign: TextAlign.center),
+              if (onRetry != null) ...[
+                const SizedBox(height: 16),
+                OutlinedButton.icon(
+                  onPressed: onRetry,
+                  icon: const Icon(Icons.refresh),
+                  label: const Text('Retry'),
+                ),
+              ],
+            ],
           ),
-          const SizedBox(height: 12),
-          SelectableText(message, textAlign: TextAlign.center),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
-            ),
-          ],
-        ],
-      ),
-    ),
-  );
+        ),
+      );
 }
 
 class AsyncView<T> extends StatelessWidget {
@@ -252,21 +254,21 @@ class AsyncView<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => FutureBuilder<T>(
-    future: future,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState == ConnectionState.waiting) {
-        return const LoadingView();
-      }
-      if (snapshot.hasError) {
-        return ErrorView(
-          message: readableError(snapshot.error!),
-          onRetry: onRetry,
-        );
-      }
-      if (!snapshot.hasData) return const EmptyView();
-      return builder(context, snapshot.data as T);
-    },
-  );
+        future: future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const LoadingView();
+          }
+          if (snapshot.hasError) {
+            return ErrorView(
+              message: readableError(snapshot.error!),
+              onRetry: onRetry,
+            );
+          }
+          if (!snapshot.hasData) return const EmptyView();
+          return builder(context, snapshot.data as T);
+        },
+      );
 }
 
 Future<bool> confirmAction(
@@ -311,26 +313,27 @@ Future<void> showInfoDialog(
   BuildContext context, {
   required String title,
   required Object? content,
-}) => showDialog<void>(
-  context: context,
-  builder: (context) => AlertDialog(
-    title: Text(title),
-    content: SizedBox(
-      width: 640,
-      child: SingleChildScrollView(
-        child: content is String
-            ? SelectableText(content)
-            : JsonView(value: content),
+}) =>
+    showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: SizedBox(
+          width: 640,
+          child: SingleChildScrollView(
+            child: content is String
+                ? SelectableText(content)
+                : JsonView(value: content),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
       ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Close'),
-      ),
-    ],
-  ),
-);
+    );
 
 class JsonView extends StatelessWidget {
   const JsonView({required this.value, super.key});

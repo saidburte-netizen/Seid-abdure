@@ -4,11 +4,8 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../brand/brand.dart';
 import '../data/formatting.dart';
-import '../data/offline_queue.dart';
-import '../data/repository.dart';
 import '../data/schema.dart';
 import '../l10n/app_localizations.dart';
-import 'common.dart';
 
 class ModuleScaffold extends StatelessWidget {
   const ModuleScaffold({
@@ -54,7 +51,6 @@ class ModuleScaffold extends StatelessWidget {
         ),
         actions: [
           ...actions,
-          const OfflineAction(),
           const NotificationAction(),
           _AccountMenu(session: session),
           const SizedBox(width: 4),
@@ -77,28 +73,39 @@ class _PortalDrawer extends StatelessWidget {
     final strings = AppLocalizations.of(context);
     final items = <(String, String, IconData, String?)>[
       ('/', 'Dashboard', Icons.dashboard_outlined, null),
-      ('/pos', 'New sale', Icons.point_of_sale_outlined, 'sales.write'),
-      ('/sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.read'),
+      ('/pos', 'New sale', Icons.point_of_sale_outlined, 'pos.use'),
+      ('/sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.view'),
       (
         '/production',
         'Production',
         Icons.bakery_dining_outlined,
-        'production.read',
+        'production.manage',
       ),
-      ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.read'),
+      ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.view'),
       (
         '/cash',
         'Cash & expenses',
         Icons.account_balance_wallet_outlined,
-        'cash.read',
+        'cash.view',
       ),
-      ('/people', 'People & HR', Icons.groups_outlined, 'people.read'),
-      ('/payroll', 'Payroll', Icons.payments_outlined, 'payroll.read'),
-      ('/rentals', 'Rentals', Icons.apartment_outlined, 'rentals.read'),
-      ('/payables', 'Payables', Icons.request_quote_outlined, 'payables.read'),
-      ('/reports', 'Reports', Icons.bar_chart_outlined, 'reports.read'),
+      ('/people', 'People & HR', Icons.groups_outlined, 'hr.view'),
+      ('/payroll', 'Payroll', Icons.payments_outlined, 'payroll.manage'),
+      ('/rentals', 'Rentals', Icons.apartment_outlined, 'rentals.manage'),
+      (
+        '/credit',
+        'Credit control',
+        Icons.account_balance_outlined,
+        'credit.manage'
+      ),
+      (
+        '/approvals',
+        'Approvals',
+        Icons.fact_check_outlined,
+        'expenses.approve'
+      ),
+      ('/reports', 'Reports', Icons.bar_chart_outlined, 'reports.view'),
       ('/notifications', 'Notifications', Icons.notifications_outlined, null),
-      ('/settings', 'Settings', Icons.settings_outlined, 'settings.manage'),
+      ('/settings', 'Settings', Icons.settings_outlined, null),
     ];
     return Drawer(
       child: ListView(
@@ -119,7 +126,9 @@ class _PortalDrawer extends StatelessWidget {
                         children: [
                           Text(
                             Brand.appName,
-                            style: Theme.of(context).textTheme.titleMedium
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium
                                 ?.copyWith(
                                   color: scheme.onPrimary,
                                   fontWeight: FontWeight.w800,
@@ -127,13 +136,13 @@ class _PortalDrawer extends StatelessWidget {
                           ),
                           Text(
                             Brand.slogan,
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color: scheme.onPrimary.withValues(
-                                    alpha: 0.8,
-                                  ),
-                                  fontStyle: FontStyle.italic,
-                                ),
+                            style:
+                                Theme.of(context).textTheme.bodySmall?.copyWith(
+                                      color: scheme.onPrimary.withValues(
+                                        alpha: 0.8,
+                                      ),
+                                      fontStyle: FontStyle.italic,
+                                    ),
                           ),
                         ],
                       ),
@@ -177,21 +186,22 @@ class _PortalDrawer extends StatelessWidget {
 }
 
 String _portalLabel(AppLocalizations strings, String route) => switch (route) {
-  '/' => strings.dashboard,
-  '/pos' => strings.newSale,
-  '/sales' => strings.salesModule,
-  '/production' => strings.productionModule,
-  '/inventory' => strings.inventoryModule,
-  '/cash' => strings.cashModule,
-  '/people' => strings.peopleModule,
-  '/payroll' => strings.payrollModule,
-  '/rentals' => strings.rentalsModule,
-  '/payables' => strings.payablesModule,
-  '/reports' => strings.reportsModule,
-  '/notifications' => strings.notificationsModule,
-  '/settings' => strings.settingsModule,
-  _ => route,
-};
+      '/' => strings.dashboard,
+      '/pos' => strings.newSale,
+      '/sales' => strings.salesModule,
+      '/production' => strings.productionModule,
+      '/inventory' => strings.inventoryModule,
+      '/cash' => strings.cashModule,
+      '/people' => strings.peopleModule,
+      '/payroll' => strings.payrollModule,
+      '/rentals' => strings.rentalsModule,
+      '/credit' => strings.payablesModule,
+      '/approvals' => 'Approvals',
+      '/reports' => strings.reportsModule,
+      '/notifications' => strings.notificationsModule,
+      '/settings' => strings.settingsModule,
+      _ => route,
+    };
 
 class _BranchSelector extends StatelessWidget {
   const _BranchSelector({required this.session});
@@ -230,87 +240,6 @@ class _BranchSelector extends StatelessWidget {
   }
 }
 
-class OfflineAction extends StatefulWidget {
-  const OfflineAction({super.key});
-
-  @override
-  State<OfflineAction> createState() => _OfflineActionState();
-}
-
-class _OfflineActionState extends State<OfflineAction> {
-  OfflineQueue? _queue;
-  int _count = 0;
-  bool _syncing = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    _reload();
-  }
-
-  Future<void> _reload() async {
-    final queue = _queue ?? await OfflineQueue.create();
-    if (!mounted) return;
-    final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    if (!mounted) return;
-    setState(() {
-      _queue = queue;
-      _count = branch == null ? 0 : queue.countForBranch(branch.branchId);
-    });
-  }
-
-  Future<void> _sync() async {
-    if (_syncing) return;
-    final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    final queue = _queue;
-    if (branch == null || queue == null) return;
-    if (_count == 0) {
-      showSnack(context, 'No offline sales waiting to sync.');
-      return;
-    }
-    setState(() => _syncing = true);
-    try {
-      final result = await queue.sync(session.client, branch.branchId);
-      if (!mounted) return;
-      showSnack(
-        context,
-        'Synced ${result.succeeded} sale(s).'
-        '${result.failed > 0 ? ' ${result.failed} failed: ${result.message}' : ''}',
-        error: result.failed > 0,
-      );
-      await _reload();
-    } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
-    } finally {
-      if (mounted) setState(() => _syncing = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final icon = _syncing
-        ? const SizedBox(
-            width: 18,
-            height: 18,
-            child: CircularProgressIndicator(strokeWidth: 2),
-          )
-        : Icon(
-            _count > 0
-                ? Icons.cloud_upload_outlined
-                : Icons.cloud_done_outlined,
-          );
-    return IconButton(
-      tooltip: _count > 0
-          ? '$_count offline sale(s) waiting to sync'
-          : 'Offline sales queue',
-      onPressed: _sync,
-      icon: _count > 0 ? Badge(label: Text('$_count'), child: icon) : icon,
-    );
-  }
-}
-
 class NotificationAction extends StatefulWidget {
   const NotificationAction({super.key});
 
@@ -333,28 +262,15 @@ class _NotificationActionState extends State<NotificationAction> {
 
   Future<void> _loadUnread() async {
     final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    if (branch == null) return;
     try {
       final notifications = await session.client
           .from('notifications')
-          .select('id')
-          .eq('branch_id', branch.branchId)
+          .select('id,is_read')
+          .eq('is_read', false)
           .order('created_at', ascending: false)
           .limit(100);
-      final reads = await session.client
-          .from('notification_reads')
-          .select('notification_id')
-          .eq('user_id', session.userId ?? '');
-      final readIds = {
-        for (final row in reads as List) row['notification_id'] as String,
-      };
       if (!mounted) return;
-      setState(() {
-        _unread = (notifications as List)
-            .where((row) => !readIds.contains(row['id']))
-            .length;
-      });
+      setState(() => _unread = (notifications as List).length);
     } catch (_) {
       // Notifications are non-critical; a failed badge must not break the app.
     }
@@ -362,18 +278,18 @@ class _NotificationActionState extends State<NotificationAction> {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Notifications',
-    onPressed: () async {
-      await context.push('/notifications');
-      await _loadUnread();
-    },
-    icon: _unread > 0
-        ? Badge(
-            label: Text(_unread > 99 ? '99+' : '$_unread'),
-            child: const Icon(Icons.notifications_outlined),
-          )
-        : const Icon(Icons.notifications_outlined),
-  );
+        tooltip: 'Notifications',
+        onPressed: () async {
+          await context.push('/notifications');
+          await _loadUnread();
+        },
+        icon: _unread > 0
+            ? Badge(
+                label: Text(_unread > 99 ? '99+' : '$_unread'),
+                child: const Icon(Icons.notifications_outlined),
+              )
+            : const Icon(Icons.notifications_outlined),
+      );
 }
 
 class _AccountMenu extends StatelessWidget {
@@ -564,11 +480,12 @@ Future<Map<String, dynamic>?> showInputDialog(
   required String title,
   required List<InputField> fields,
   String submitLabel = 'Submit',
-}) => showDialog<Map<String, dynamic>>(
-  context: context,
-  builder: (context) =>
-      _InputDialog(title: title, fields: fields, submitLabel: submitLabel),
-);
+}) =>
+    showDialog<Map<String, dynamic>>(
+      context: context,
+      builder: (context) =>
+          _InputDialog(title: title, fields: fields, submitLabel: submitLabel),
+    );
 
 class InputField {
   const InputField(
@@ -637,33 +554,33 @@ class _InputDialogState extends State<_InputDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.title),
-    content: SizedBox(
-      width: 520,
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final field in widget.fields)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _buildField(field),
-                ),
-            ],
+        title: Text(widget.title),
+        content: SizedBox(
+          width: 520,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  for (final field in widget.fields)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: _buildField(field),
+                    ),
+                ],
+              ),
+            ),
           ),
         ),
-      ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
-    ],
-  );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
+        ],
+      );
 
   Widget _buildField(InputField field) {
     if (field.type == FieldType.boolean) {
@@ -693,8 +610,8 @@ class _InputDialogState extends State<_InputDialog> {
       controller: _controllers[field.key],
       keyboardType:
           field.type == FieldType.number || field.type == FieldType.integer
-          ? const TextInputType.numberWithOptions(decimal: true)
-          : null,
+              ? const TextInputType.numberWithOptions(decimal: true)
+              : null,
       minLines: field.type == FieldType.multiline ? 2 : 1,
       maxLines: field.type == FieldType.multiline ? 4 : 1,
       decoration: InputDecoration(labelText: field.label, hintText: field.hint),
@@ -756,16 +673,16 @@ class DateRangePicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => OutlinedButton.icon(
-    onPressed: () async {
-      final selected = await showDateRangePicker(
-        context: context,
-        firstDate: DateTime(DateTime.now().year - 5),
-        lastDate: DateTime(DateTime.now().year + 2),
-        initialDateRange: range,
+        onPressed: () async {
+          final selected = await showDateRangePicker(
+            context: context,
+            firstDate: DateTime(DateTime.now().year - 5),
+            lastDate: DateTime(DateTime.now().year + 2),
+            initialDateRange: range,
+          );
+          if (selected != null) onChanged(selected);
+        },
+        icon: const Icon(Icons.date_range_outlined),
+        label: Text('${formatDate(range.start)} – ${formatDate(range.end)}'),
       );
-      if (selected != null) onChanged(selected);
-    },
-    icon: const Icon(Icons.date_range_outlined),
-    label: Text('${formatDate(range.start)} – ${formatDate(range.end)}'),
-  );
 }
