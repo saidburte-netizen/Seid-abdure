@@ -1,229 +1,291 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../brand/brand.dart';
 import '../core/logging/app_logger.dart';
-import '../data/schema.dart';
+import '../l10n/app_localizations.dart';
+import '../widgets/app_scaffold.dart';
 import '../widgets/common.dart';
-import '../widgets/crud_tab.dart';
-import '../widgets/module_scaffold.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final session = SessionScope.of(context);
-    final tabs = <(String, Widget)>[
-      ('Account', const _AccountTab()),
-      if (session.can('settings.manage'))
-        (
-          'App settings',
-          CrudTab(
-            spec: specFor('app_settings'),
-            readPermission: 'settings.manage',
-            writePermission: 'settings.manage',
-          ),
-        ),
-      if (session.can('branches.manage'))
-        (
-          'Branches',
-          CrudTab(
-            spec: specFor('branches'),
-            readPermission: 'branches.manage',
-            writePermission: 'branches.manage',
-          ),
-        ),
-      if (session.can('users.manage'))
-        (
-          'Users',
-          CrudTab(
-            spec: specFor('profiles'),
-            readPermission: 'users.manage',
-            writePermission: 'users.manage',
-          ),
-        ),
-      if (session.can('settings.manage')) ...[
-        (
-          'Roles',
-          CrudTab(
-            spec: specFor('roles'),
-            readPermission: 'settings.manage',
-            alwaysReadOnly: true,
-          ),
-        ),
-        (
-          'Permissions',
-          CrudTab(
-            spec: specFor('permissions'),
-            readPermission: 'settings.manage',
-            alwaysReadOnly: true,
-          ),
-        ),
-        (
-          'Role permissions',
-          CrudTab(
-            spec: specFor('role_permissions'),
-            readPermission: 'settings.manage',
-            alwaysReadOnly: true,
-          ),
-        ),
-      ],
-      if (session.can('audit.view'))
-        (
-          'Audit log',
-          CrudTab(
-            spec: specFor('audit_logs'),
-            readPermission: 'audit.view',
-            alwaysReadOnly: true,
-          ),
-        ),
-      if (session.can('settings.manage')) ('Storage', const _StorageTab()),
-      if (session.can('settings.manage')) ('Branding', const _BrandingTab()),
-    ];
-    return ModuleScaffold(
-      title: 'Settings & administration',
-      body: DefaultTabController(
-        length: tabs.length,
-        child: Column(
-          children: [
-            TabBar(
-              isScrollable: true,
-              tabAlignment: TabAlignment.start,
-              tabs: [for (final tab in tabs) Tab(text: tab.$1)],
-            ),
-            Expanded(
-              child: TabBarView(children: [for (final tab in tabs) tab.$2]),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
+  State<SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _AccountTab extends StatefulWidget {
-  const _AccountTab();
+class _SettingsScreenState extends State<SettingsScreen> {
+  bool _runningAlerts = false;
 
-  @override
-  State<_AccountTab> createState() => _AccountTabState();
-}
-
-class _AccountTabState extends State<_AccountTab> {
-  final _name = TextEditingController();
-  bool _loaded = false;
-  bool _saving = false;
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_loaded) {
-      final session = SessionScope.of(context);
-      _name.text = session.fullName ?? '';
-      _loaded = true;
-    }
-  }
-
-  @override
-  void dispose() {
-    _name.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    final session = SessionScope.of(context);
-    setState(() => _saving = true);
+  Future<void> _runAlerts() async {
+    final strings = AppLocalizations.of(context);
+    setState(() => _runningAlerts = true);
     try {
-      await session.updateProfileName(_name.text);
-      if (mounted) showSnack(context, 'Profile updated.');
+      await SessionScope.of(context).client.rpc('fn_generate_alerts');
+      if (!mounted) return;
+      showSnack(context, strings.alertsGenerated);
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     } finally {
-      if (mounted) setState(() => _saving = false);
+      if (mounted) setState(() => _runningAlerts = false);
+    }
+  }
+
+  Future<void> _setLanguage(String? value) async {
+    if (value == null) return;
+    try {
+      await SessionScope.of(context).setLocale(value);
+    } catch (error) {
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
-    final branch = session.selectedBranch;
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        SectionCard(
-          title: 'My profile',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _name,
-                decoration: const InputDecoration(labelText: 'Full name'),
-              ),
-              const SizedBox(height: 12),
-              Text('Email: ${session.userEmail ?? '—'}'),
-              Text('Role: ${branch?.roleLabel ?? '—'}'),
-              Text('Branch: ${branch?.branchName ?? '—'}'),
-              const SizedBox(height: 12),
-              Align(
-                alignment: Alignment.centerLeft,
-                child: FilledButton.icon(
-                  onPressed: _saving ? null : _save,
-                  icon: const Icon(Icons.save_outlined),
-                  label: Text(_saving ? 'Saving…' : 'Save profile'),
-                ),
-              ),
-            ],
+    final strings = AppLocalizations.of(context);
+    final isAdmin = session.selectedBranch?.isAdmin ?? false;
+    final canBusiness =
+        session.can('settings.manage') || session.can('branches.manage');
+    final canMasterData = [
+      'units.manage',
+      'categories.manage',
+      'expenses.manage',
+      'hr.manage',
+      'payroll.manage',
+    ].any(session.can);
+    return AppScaffold(
+      title: Text(strings.settings),
+      body: ListView(
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          _section(context, 'Account'),
+          _tile(
+            context,
+            icon: Icons.person_outline,
+            title: strings.profile,
+            subtitle: session.userEmail ?? '',
+            route: '/settings/profile',
           ),
-        ),
-        SectionCard(
-          title: 'Language & appearance',
-          child: Column(
-            children: [
-              DropdownButtonFormField<String>(
-                initialValue: session.locale?.languageCode ?? 'en',
-                decoration: const InputDecoration(labelText: 'Language'),
-                items: const [
-                  DropdownMenuItem(value: 'en', child: Text('English')),
-                  DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
-                  DropdownMenuItem(value: 'om', child: Text('Afaan Oromoo')),
-                ],
-                onChanged: (value) => session.setLocale(value),
-              ),
-              const SizedBox(height: 12),
-              DropdownButtonFormField<ThemeMode>(
-                initialValue: session.themeMode,
-                decoration: const InputDecoration(labelText: 'Theme'),
-                items: const [
-                  DropdownMenuItem(
-                    value: ThemeMode.system,
-                    child: Text('System'),
-                  ),
-                  DropdownMenuItem(
-                    value: ThemeMode.light,
-                    child: Text('Light'),
-                  ),
-                  DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
-                ],
-                onChanged: (value) {
-                  if (value != null) session.setThemeMode(value);
-                },
-              ),
-            ],
+          _tile(
+            context,
+            icon: Icons.lock_outline,
+            title: strings.security,
+            subtitle: strings.changePassword,
+            route: '/settings/security',
           ),
-        ),
-        SectionCard(
-          child: Align(
-            alignment: Alignment.centerLeft,
-            child: OutlinedButton.icon(
-              onPressed: session.signOut,
-              icon: const Icon(Icons.logout),
-              label: const Text('Sign out'),
+          _tile(
+            context,
+            icon: Icons.notifications_outlined,
+            title: strings.notificationCenter,
+            route: '/notifications',
+          ),
+          _tile(
+            context,
+            icon: Icons.tune_outlined,
+            title: strings.notificationPreferences,
+            route: '/notifications',
+          ),
+          _section(context, strings.languageAppearance),
+          ListTile(
+            leading: const Icon(Icons.language),
+            title: Text(strings.language),
+            subtitle: Text(switch (session.locale?.languageCode) {
+              'am' => 'አማርኛ',
+              'om' => 'Afaan Oromoo',
+              _ => 'English',
+            }),
+            trailing: DropdownButton<String>(
+              value: session.locale?.languageCode ?? 'en',
+              underline: const SizedBox.shrink(),
+              items: const [
+                DropdownMenuItem(value: 'en', child: Text('English')),
+                DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
+                DropdownMenuItem(value: 'om', child: Text('Afaan Oromoo')),
+              ],
+              onChanged: _setLanguage,
             ),
           ),
-        ),
-      ],
+          ListTile(
+            leading: const Icon(Icons.palette_outlined),
+            title: Text(strings.theme),
+            trailing: DropdownButton<ThemeMode>(
+              value: session.themeMode,
+              underline: const SizedBox.shrink(),
+              items: const [
+                DropdownMenuItem(
+                  value: ThemeMode.system,
+                  child: Text('System'),
+                ),
+                DropdownMenuItem(value: ThemeMode.light, child: Text('Light')),
+                DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
+              ],
+              onChanged: (value) {
+                if (value != null) session.setThemeMode(value);
+              },
+            ),
+          ),
+          if (canBusiness) ...[
+            _section(context, 'Business administration'),
+            if (session.can('settings.manage'))
+              _tile(
+                context,
+                icon: Icons.storefront_outlined,
+                title: strings.businessSettings,
+                subtitle: 'Name, slogan, currency, tax and default language',
+                route: '/settings/business',
+              ),
+            if (session.can('branches.manage'))
+              _tile(
+                context,
+                icon: Icons.account_tree_outlined,
+                title: 'Branches',
+                route: '/settings/branches',
+              ),
+            _tile(
+              context,
+              icon: Icons.savings_outlined,
+              title: 'Stores & cash accounts',
+              route: '/settings/accounts',
+            ),
+            if (isAdmin && session.can('users.manage'))
+              _tile(
+                context,
+                icon: Icons.manage_accounts_outlined,
+                title: 'Users & roles',
+                subtitle: 'Assign branch, role and active status',
+                route: '/settings/users',
+              ),
+            if (isAdmin)
+              _tile(
+                context,
+                icon: Icons.admin_panel_settings_outlined,
+                title: strings.rolePermissions,
+                route: '/settings/role-permissions',
+              ),
+            if (canMasterData)
+              _tile(
+                context,
+                icon: Icons.dataset_outlined,
+                title: strings.masterData,
+                subtitle: 'Units, categories, departments, shifts and tax',
+                route: '/settings/master-data',
+              ),
+            if (session.can('audit.view'))
+              _tile(
+                context,
+                icon: Icons.history,
+                title: strings.auditLog,
+                subtitle: 'Filter by table, user, action and date',
+                route: '/settings/audit',
+              ),
+            if (session.can('reports.view'))
+              _tile(
+                context,
+                icon: Icons.download_outlined,
+                title: strings.dataExport,
+                subtitle: 'PDF with logo, CSV with every visible column',
+                route: '/settings/export',
+              ),
+            if (session.can('settings.manage')) ...[
+              _tile(
+                context,
+                icon: Icons.storage_outlined,
+                title: 'Storage',
+                route: '/settings/storage',
+              ),
+              _tile(
+                context,
+                icon: Icons.workspace_premium_outlined,
+                title: 'Branding',
+                route: '/settings/branding',
+              ),
+              ListTile(
+                leading: const Icon(Icons.notification_add_outlined),
+                title: Text(strings.runAlerts),
+                subtitle: const Text(
+                  'Creates stock, credit and rent alerts now.',
+                ),
+                trailing: _runningAlerts
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.play_circle_outline),
+                enabled: !_runningAlerts,
+                onTap: _runAlerts,
+              ),
+            ],
+          ],
+          _section(context, 'Support'),
+          _tile(
+            context,
+            icon: Icons.info_outline,
+            title: strings.about,
+            subtitle: '${Brand.appName} • ${Brand.slogan}',
+            route: '/settings/about',
+          ),
+          _tile(
+            context,
+            icon: Icons.help_outline,
+            title: strings.helpContact,
+            route: '/settings/help',
+          ),
+          _tile(
+            context,
+            icon: Icons.privacy_tip_outlined,
+            title: strings.privacyPolicy,
+            route: '/settings/privacy',
+          ),
+        ],
+      ),
     );
   }
+
+  Widget _section(BuildContext context, String label) => Padding(
+    padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
+    child: Text(
+      label.toUpperCase(),
+      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+        color: Theme.of(context).colorScheme.primary,
+        letterSpacing: 1.1,
+      ),
+    ),
+  );
+
+  Widget _tile(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String route,
+    String? subtitle,
+  }) => ListTile(
+    leading: Icon(icon),
+    title: Text(title),
+    subtitle: subtitle == null || subtitle.isEmpty ? null : Text(subtitle),
+    trailing: const Icon(Icons.chevron_right),
+    onTap: () => context.push(route),
+  );
+}
+
+class BrandingScreen extends StatelessWidget {
+  const BrandingScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) => AppScaffold(
+    title: Text(AppLocalizations.of(context).about),
+    body: const _BrandingTab(),
+  );
+}
+
+class StorageScreen extends StatelessWidget {
+  const StorageScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) =>
+      const AppScaffold(title: Text('Storage'), body: _StorageTab());
 }
 
 class _BrandingTab extends StatelessWidget {
@@ -284,6 +346,7 @@ class _StorageTab extends StatefulWidget {
 class _StorageTabState extends State<_StorageTab> {
   static const _buckets = [
     ('product-images', 'Public product photos'),
+    ('avatars', 'Public profile photos'),
     ('branding', 'Public logo and brand assets'),
     ('receipts', 'Private sales receipt PDFs'),
     ('employee-documents', 'Private employee documents'),

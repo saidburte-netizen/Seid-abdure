@@ -293,6 +293,28 @@ class AsyncView<T> extends StatelessWidget {
   );
 }
 
+Future<bool> confirmDiscardChanges(BuildContext context) async {
+  final strings = AppLocalizations.of(context);
+  final result = await showDialog<bool>(
+    context: context,
+    builder: (dialogContext) => AlertDialog(
+      title: Text(strings.discardChangesTitle),
+      content: Text(strings.discardChangesMessage),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(dialogContext).pop(false),
+          child: Text(strings.keepEditing),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(dialogContext).pop(true),
+          child: Text(strings.discard),
+        ),
+      ],
+    ),
+  );
+  return result ?? false;
+}
+
 Future<bool> confirmAction(
   BuildContext context, {
   required String title,

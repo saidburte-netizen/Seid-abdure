@@ -370,4 +370,158 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get customerSignupDisabled => 'Customer sign-up is currently closed.';
+
+  @override
+  String get back => 'Back';
+
+  @override
+  String get pressBackAgainToExit => 'Press back again to exit';
+
+  @override
+  String get discardChangesTitle => 'Discard changes?';
+
+  @override
+  String get discardChangesMessage =>
+      'You have unsaved changes. Leave this form?';
+
+  @override
+  String get keepEditing => 'Keep editing';
+
+  @override
+  String get discard => 'Discard';
+
+  @override
+  String get profile => 'Profile';
+
+  @override
+  String get security => 'Security';
+
+  @override
+  String get changePassword => 'Change password';
+
+  @override
+  String get currentPassword => 'Current password';
+
+  @override
+  String get newPassword => 'New password';
+
+  @override
+  String get confirmNewPassword => 'Confirm new password';
+
+  @override
+  String get passwordUpdated => 'Password updated.';
+
+  @override
+  String get profileUpdated => 'Profile updated.';
+
+  @override
+  String get phone => 'Phone';
+
+  @override
+  String get avatar => 'Profile photo';
+
+  @override
+  String get uploadAvatar => 'Upload photo';
+
+  @override
+  String get about => 'About';
+
+  @override
+  String get helpContact => 'Help & contact';
+
+  @override
+  String get privacyPolicy => 'Privacy policy';
+
+  @override
+  String get notificationPreferences => 'Notification preferences';
+
+  @override
+  String get notificationCenter => 'Notification center';
+
+  @override
+  String get businessSettings => 'Business settings';
+
+  @override
+  String get masterData => 'Master data';
+
+  @override
+  String get rolePermissions => 'Roles & permissions';
+
+  @override
+  String get auditLog => 'Audit log';
+
+  @override
+  String get dataExport => 'Data export';
+
+  @override
+  String get runAlerts => 'Run alerts now';
+
+  @override
+  String get languageAppearance => 'Language & appearance';
+
+  @override
+  String get supportContact => 'Support contact';
+
+  @override
+  String get versionLabel => 'Version';
+
+  @override
+  String get businessName => 'Business name';
+
+  @override
+  String get slogan => 'Slogan';
+
+  @override
+  String get currency => 'Currency';
+
+  @override
+  String get vatRate => 'VAT rate (%)';
+
+  @override
+  String get totRate => 'TOT rate (%)';
+
+  @override
+  String get defaultLanguage => 'Default language';
+
+  @override
+  String get saved => 'Saved.';
+
+  @override
+  String get noPermissionForArea => 'You do not have permission for this area.';
+
+  @override
+  String get notificationsSaved => 'Notification preferences saved.';
+
+  @override
+  String get alertsGenerated => 'Alerts generated.';
+
+  @override
+  String get avatarUploaded => 'Profile photo updated.';
+
+  @override
+  String get emailReadOnly => 'Email cannot be changed here.';
+
+  @override
+  String get selectPhoto => 'Select photo';
+
+  @override
+  String get csvExport => 'CSV';
+
+  @override
+  String get pdfExport => 'PDF';
+
+  @override
+  String get excelExport => 'Excel';
+
+  @override
+  String get exportSaved => 'Export saved.';
+
+  @override
+  String get pressBackToReturn => 'Press back to return.';
+
+  @override
+  String get saving => 'Saving…';
+
+  @override
+  String get signOutConfirmation => 'Sign out of this account?';
 }

@@ -375,4 +375,158 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get customerSignupDisabled => 'Galmeen maamila yeroo ammaa cufaadha.';
+
+  @override
+  String get back => 'Deebi\'i';
+
+  @override
+  String get pressBackAgainToExit => 'Ba\'uuf deebi\'ii tuqi';
+
+  @override
+  String get discardChangesTitle => 'Jijjiirama haquu?';
+
+  @override
+  String get discardChangesMessage =>
+      'Jijjiiramni hin olkaa\'amne jira. Foormii kana dhiistuu?';
+
+  @override
+  String get keepEditing => 'Gulaaluu itti fufi';
+
+  @override
+  String get discard => 'Haqi';
+
+  @override
+  String get profile => 'Profaayilii';
+
+  @override
+  String get security => 'Nageenya';
+
+  @override
+  String get changePassword => 'Jecha darbii jijjiiri';
+
+  @override
+  String get currentPassword => 'Jecha darbii ammaa';
+
+  @override
+  String get newPassword => 'Jecha darbii haaraa';
+
+  @override
+  String get confirmNewPassword => 'Jecha darbii haaraa mirkaneessi';
+
+  @override
+  String get passwordUpdated => 'Jechi darbii jijjiirameera.';
+
+  @override
+  String get profileUpdated => 'Profaayiliin keessan olkaa\'ameera.';
+
+  @override
+  String get phone => 'Bilbila';
+
+  @override
+  String get avatar => 'Suuraa profaayilii';
+
+  @override
+  String get uploadAvatar => 'Suuraa fe\'i';
+
+  @override
+  String get about => 'Waa\'ee';
+
+  @override
+  String get helpContact => 'Gargaarsa fi qunnamtii';
+
+  @override
+  String get privacyPolicy => 'Imaammata dhuunfaa';
+
+  @override
+  String get notificationPreferences => 'Filannoo beeksisaa';
+
+  @override
+  String get notificationCenter => 'Wiirtuu beeksisaa';
+
+  @override
+  String get businessSettings => 'Qindaa\'ina daldalaa';
+
+  @override
+  String get masterData => 'Daataa bu\'uuraa';
+
+  @override
+  String get rolePermissions => 'Gahee fi hayyama';
+
+  @override
+  String get auditLog => 'Galmee oditii';
+
+  @override
+  String get dataExport => 'Daataa al-ergi';
+
+  @override
+  String get runAlerts => 'Akeekkachiisa amma siiqqeessi';
+
+  @override
+  String get languageAppearance => 'Afaan fi bifa';
+
+  @override
+  String get supportContact => 'Qunnamtii deeggarsaa';
+
+  @override
+  String get versionLabel => 'Vershinii';
+
+  @override
+  String get businessName => 'Maqaa daldalaa';
+
+  @override
+  String get slogan => 'Jecha beeksisaa';
+
+  @override
+  String get currency => 'Maallaqa';
+
+  @override
+  String get vatRate => 'VAT (%)';
+
+  @override
+  String get totRate => 'TOT (%)';
+
+  @override
+  String get defaultLanguage => 'Afaan durtii';
+
+  @override
+  String get saved => 'Olkaa\'ameera.';
+
+  @override
+  String get noPermissionForArea => 'Kutaa kanaaf hayyama hin qabdan.';
+
+  @override
+  String get notificationsSaved => 'Filannoon beeksisaa olkaa\'ameera.';
+
+  @override
+  String get alertsGenerated => 'Akeekkachiisni uumameera.';
+
+  @override
+  String get avatarUploaded => 'Suuraan profaayilii haaromfameera.';
+
+  @override
+  String get emailReadOnly => 'Imeeliin asitti hin jijjiiramu.';
+
+  @override
+  String get selectPhoto => 'Suuraa filadhu';
+
+  @override
+  String get csvExport => 'CSV';
+
+  @override
+  String get pdfExport => 'PDF';
+
+  @override
+  String get excelExport => 'Excel';
+
+  @override
+  String get exportSaved => 'Al-ergiin olkaa\'ameera.';
+
+  @override
+  String get pressBackToReturn => 'Deebi\'uuf deebi\'ii tuqi.';
+
+  @override
+  String get saving => 'Olkaa\'aa jira…';
+
+  @override
+  String get signOutConfirmation => 'Herrega kana irraa ba\'uu?';
 }

@@ -783,6 +783,312 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Customer sign-up is currently closed.'**
   String get customerSignupDisabled;
+
+  /// No description provided for @back.
+  ///
+  /// In en, this message translates to:
+  /// **'Back'**
+  String get back;
+
+  /// No description provided for @pressBackAgainToExit.
+  ///
+  /// In en, this message translates to:
+  /// **'Press back again to exit'**
+  String get pressBackAgainToExit;
+
+  /// No description provided for @discardChangesTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard changes?'**
+  String get discardChangesTitle;
+
+  /// No description provided for @discardChangesMessage.
+  ///
+  /// In en, this message translates to:
+  /// **'You have unsaved changes. Leave this form?'**
+  String get discardChangesMessage;
+
+  /// No description provided for @keepEditing.
+  ///
+  /// In en, this message translates to:
+  /// **'Keep editing'**
+  String get keepEditing;
+
+  /// No description provided for @discard.
+  ///
+  /// In en, this message translates to:
+  /// **'Discard'**
+  String get discard;
+
+  /// No description provided for @profile.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile'**
+  String get profile;
+
+  /// No description provided for @security.
+  ///
+  /// In en, this message translates to:
+  /// **'Security'**
+  String get security;
+
+  /// No description provided for @changePassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Change password'**
+  String get changePassword;
+
+  /// No description provided for @currentPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Current password'**
+  String get currentPassword;
+
+  /// No description provided for @newPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'New password'**
+  String get newPassword;
+
+  /// No description provided for @confirmNewPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm new password'**
+  String get confirmNewPassword;
+
+  /// No description provided for @passwordUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Password updated.'**
+  String get passwordUpdated;
+
+  /// No description provided for @profileUpdated.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile updated.'**
+  String get profileUpdated;
+
+  /// No description provided for @phone.
+  ///
+  /// In en, this message translates to:
+  /// **'Phone'**
+  String get phone;
+
+  /// No description provided for @avatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile photo'**
+  String get avatar;
+
+  /// No description provided for @uploadAvatar.
+  ///
+  /// In en, this message translates to:
+  /// **'Upload photo'**
+  String get uploadAvatar;
+
+  /// No description provided for @about.
+  ///
+  /// In en, this message translates to:
+  /// **'About'**
+  String get about;
+
+  /// No description provided for @helpContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Help & contact'**
+  String get helpContact;
+
+  /// No description provided for @privacyPolicy.
+  ///
+  /// In en, this message translates to:
+  /// **'Privacy policy'**
+  String get privacyPolicy;
+
+  /// No description provided for @notificationPreferences.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences'**
+  String get notificationPreferences;
+
+  /// No description provided for @notificationCenter.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification center'**
+  String get notificationCenter;
+
+  /// No description provided for @businessSettings.
+  ///
+  /// In en, this message translates to:
+  /// **'Business settings'**
+  String get businessSettings;
+
+  /// No description provided for @masterData.
+  ///
+  /// In en, this message translates to:
+  /// **'Master data'**
+  String get masterData;
+
+  /// No description provided for @rolePermissions.
+  ///
+  /// In en, this message translates to:
+  /// **'Roles & permissions'**
+  String get rolePermissions;
+
+  /// No description provided for @auditLog.
+  ///
+  /// In en, this message translates to:
+  /// **'Audit log'**
+  String get auditLog;
+
+  /// No description provided for @dataExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Data export'**
+  String get dataExport;
+
+  /// No description provided for @runAlerts.
+  ///
+  /// In en, this message translates to:
+  /// **'Run alerts now'**
+  String get runAlerts;
+
+  /// No description provided for @languageAppearance.
+  ///
+  /// In en, this message translates to:
+  /// **'Language & appearance'**
+  String get languageAppearance;
+
+  /// No description provided for @supportContact.
+  ///
+  /// In en, this message translates to:
+  /// **'Support contact'**
+  String get supportContact;
+
+  /// No description provided for @versionLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Version'**
+  String get versionLabel;
+
+  /// No description provided for @businessName.
+  ///
+  /// In en, this message translates to:
+  /// **'Business name'**
+  String get businessName;
+
+  /// No description provided for @slogan.
+  ///
+  /// In en, this message translates to:
+  /// **'Slogan'**
+  String get slogan;
+
+  /// No description provided for @currency.
+  ///
+  /// In en, this message translates to:
+  /// **'Currency'**
+  String get currency;
+
+  /// No description provided for @vatRate.
+  ///
+  /// In en, this message translates to:
+  /// **'VAT rate (%)'**
+  String get vatRate;
+
+  /// No description provided for @totRate.
+  ///
+  /// In en, this message translates to:
+  /// **'TOT rate (%)'**
+  String get totRate;
+
+  /// No description provided for @defaultLanguage.
+  ///
+  /// In en, this message translates to:
+  /// **'Default language'**
+  String get defaultLanguage;
+
+  /// No description provided for @saved.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved.'**
+  String get saved;
+
+  /// No description provided for @noPermissionForArea.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission for this area.'**
+  String get noPermissionForArea;
+
+  /// No description provided for @notificationsSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Notification preferences saved.'**
+  String get notificationsSaved;
+
+  /// No description provided for @alertsGenerated.
+  ///
+  /// In en, this message translates to:
+  /// **'Alerts generated.'**
+  String get alertsGenerated;
+
+  /// No description provided for @avatarUploaded.
+  ///
+  /// In en, this message translates to:
+  /// **'Profile photo updated.'**
+  String get avatarUploaded;
+
+  /// No description provided for @emailReadOnly.
+  ///
+  /// In en, this message translates to:
+  /// **'Email cannot be changed here.'**
+  String get emailReadOnly;
+
+  /// No description provided for @selectPhoto.
+  ///
+  /// In en, this message translates to:
+  /// **'Select photo'**
+  String get selectPhoto;
+
+  /// No description provided for @csvExport.
+  ///
+  /// In en, this message translates to:
+  /// **'CSV'**
+  String get csvExport;
+
+  /// No description provided for @pdfExport.
+  ///
+  /// In en, this message translates to:
+  /// **'PDF'**
+  String get pdfExport;
+
+  /// No description provided for @excelExport.
+  ///
+  /// In en, this message translates to:
+  /// **'Excel'**
+  String get excelExport;
+
+  /// No description provided for @exportSaved.
+  ///
+  /// In en, this message translates to:
+  /// **'Export saved.'**
+  String get exportSaved;
+
+  /// No description provided for @pressBackToReturn.
+  ///
+  /// In en, this message translates to:
+  /// **'Press back to return.'**
+  String get pressBackToReturn;
+
+  /// No description provided for @saving.
+  ///
+  /// In en, this message translates to:
+  /// **'Saving…'**
+  String get saving;
+
+  /// No description provided for @signOutConfirmation.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign out of this account?'**
+  String get signOutConfirmation;
 }
 
 class _AppLocalizationsDelegate

@@ -357,4 +357,157 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get customerSignupDisabled => 'የደንበኛ ምዝገባ በአሁኑ ጊዜ ተዘግቷል።';
+
+  @override
+  String get back => 'ተመለስ';
+
+  @override
+  String get pressBackAgainToExit => 'ለመውጣት እንደገና የተመለስ ቁልፍን ይጫኑ';
+
+  @override
+  String get discardChangesTitle => 'ለውጦችን ይሰርዙ?';
+
+  @override
+  String get discardChangesMessage => 'ያልተቀመጡ ለውጦች አሉ። ይህን ቅጽ ይተዉ?';
+
+  @override
+  String get keepEditing => 'መንካት ይቀጥሉ';
+
+  @override
+  String get discard => 'ሰርዝ';
+
+  @override
+  String get profile => 'መገለጫ';
+
+  @override
+  String get security => 'ደህንነት';
+
+  @override
+  String get changePassword => 'የይለፍ ቃል ይቀይሩ';
+
+  @override
+  String get currentPassword => 'የአሁኑ የይለፍ ቃል';
+
+  @override
+  String get newPassword => 'አዲስ የይለፍ ቃል';
+
+  @override
+  String get confirmNewPassword => 'አዲሱን የይለፍ ቃል ያረጋግጡ';
+
+  @override
+  String get passwordUpdated => 'የይለፍ ቃሉ ተቀይሯል።';
+
+  @override
+  String get profileUpdated => 'መገለጫዎ ተቀምጧል።';
+
+  @override
+  String get phone => 'ስልክ';
+
+  @override
+  String get avatar => 'የመገለጫ ፎቶ';
+
+  @override
+  String get uploadAvatar => 'ፎቶ ይጫኑ';
+
+  @override
+  String get about => 'ስለ መተግበሪያው';
+
+  @override
+  String get helpContact => 'እገዛ እና አግኙን';
+
+  @override
+  String get privacyPolicy => 'የግላዊነት መመሪያ';
+
+  @override
+  String get notificationPreferences => 'የማሳወቂያ ምርጫዎች';
+
+  @override
+  String get notificationCenter => 'የማሳወቂያ ማዕከል';
+
+  @override
+  String get businessSettings => 'የንግድ ቅንብሮች';
+
+  @override
+  String get masterData => 'መሠረታዊ መረጃ';
+
+  @override
+  String get rolePermissions => 'ሚናዎች እና ፈቃዶች';
+
+  @override
+  String get auditLog => 'የኦዲት መዝገብ';
+
+  @override
+  String get dataExport => 'ውሂብ ላክ';
+
+  @override
+  String get runAlerts => 'ማንቂያዎችን አሁን አስኪድ';
+
+  @override
+  String get languageAppearance => 'ቋንቋ እና ገጽታ';
+
+  @override
+  String get supportContact => 'የድጋፍ አድራሻ';
+
+  @override
+  String get versionLabel => 'ስሪት';
+
+  @override
+  String get businessName => 'የንግድ ስም';
+
+  @override
+  String get slogan => 'መሪ ሐረግ';
+
+  @override
+  String get currency => 'ገንዘብ';
+
+  @override
+  String get vatRate => 'ተ.እ.ታ (%)';
+
+  @override
+  String get totRate => 'ቶት (%)';
+
+  @override
+  String get defaultLanguage => 'ነባሪ ቋንቋ';
+
+  @override
+  String get saved => 'ተቀምጧል።';
+
+  @override
+  String get noPermissionForArea => 'ለዚህ ክፍል ፈቃድ የለዎትም።';
+
+  @override
+  String get notificationsSaved => 'የማሳወቂያ ምርጫዎች ተቀምጠዋል።';
+
+  @override
+  String get alertsGenerated => 'ማንቂያዎች ተፈጥረዋል።';
+
+  @override
+  String get avatarUploaded => 'የመገለጫ ፎቶ ተቀድሷል።';
+
+  @override
+  String get emailReadOnly => 'ኢሜይል እዚህ ሊቀየር አይችልም።';
+
+  @override
+  String get selectPhoto => 'ፎቶ ይምረጡ';
+
+  @override
+  String get csvExport => 'CSV';
+
+  @override
+  String get pdfExport => 'PDF';
+
+  @override
+  String get excelExport => 'Excel';
+
+  @override
+  String get exportSaved => 'ላኪው ተቀምጧል።';
+
+  @override
+  String get pressBackToReturn => 'ለመመለስ ተመለስ ይጫኑ።';
+
+  @override
+  String get saving => 'በመቀመጥ ላይ…';
+
+  @override
+  String get signOutConfirmation => 'ከዚህ መለያ ውጣ?';
 }

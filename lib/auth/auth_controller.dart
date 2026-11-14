@@ -61,6 +61,9 @@ class AuthController extends ChangeNotifier {
   String? userId;
   String? userEmail;
   String? fullName;
+  String? phone;
+  String? avatarUrl;
+  String? profileLanguage;
   String? roleCode;
   List<BranchAccess> branches = const [];
   String? selectedBranchId;
@@ -160,6 +163,9 @@ class AuthController extends ChangeNotifier {
       userId = null;
       userEmail = null;
       fullName = null;
+      phone = null;
+      avatarUrl = null;
+      profileLanguage = null;
       roleCode = null;
       branches = const [];
       selectedBranchId = null;
@@ -185,6 +191,9 @@ class AuthController extends ChangeNotifier {
         return;
       }
       fullName = profile['full_name'] as String?;
+      phone = profile['phone'] as String?;
+      avatarUrl = profile['avatar_url'] as String?;
+      profileLanguage = profile['language'] as String?;
       roleCode = profile['role_code'] as String? ?? 'staff';
 
       final permissionRows = await client
@@ -315,6 +324,21 @@ class AuthController extends ChangeNotifier {
     } else {
       await preferences.setString('locale', languageCode);
     }
+    if (userId == null) return;
+    try {
+      await client
+          .from('profiles')
+          .update({'language': languageCode ?? 'en'})
+          .eq('id', userId!);
+      profileLanguage = languageCode ?? 'en';
+    } catch (error, stack) {
+      AppLogger.error('Could not save the profile language', error, stack);
+      locale = const Locale('en');
+      profileLanguage = 'en';
+      await preferences.setString('locale', 'en');
+      _notify();
+      rethrow;
+    }
   }
 
   bool takeLocaleResetNotice() {
@@ -330,14 +354,28 @@ class AuthController extends ChangeNotifier {
     await preferences.setString('theme_mode', mode.name);
   }
 
-  Future<void> updateProfileName(String name) async {
+  Future<void> updateProfile({
+    String? fullName,
+    String? phone,
+    String? avatarUrl,
+  }) async {
     if (userId == null) return;
-    await client
-        .from('profiles')
-        .update({'full_name': name.trim()})
-        .eq('id', userId!);
-    fullName = name.trim();
+    final payload = <String, dynamic>{};
+    if (fullName != null) payload['full_name'] = fullName.trim();
+    if (phone != null) payload['phone'] = phone.trim();
+    if (avatarUrl != null) payload['avatar_url'] = avatarUrl;
+    if (payload.isEmpty) return;
+    await client.from('profiles').update(payload).eq('id', userId!);
+    if (payload.containsKey('full_name')) this.fullName = fullName!.trim();
+    if (payload.containsKey('phone')) this.phone = phone!.trim();
+    if (payload.containsKey('avatar_url')) this.avatarUrl = avatarUrl;
     _notify();
+  }
+
+  Future<void> updateProfileName(String name) => updateProfile(fullName: name);
+
+  Future<void> changePassword(String password) async {
+    await client.auth.updateUser(UserAttributes(password: password));
   }
 
   Future<void> signOut() => client.auth.signOut();

@@ -56,7 +56,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  static const _modules = [
+  static const List<(String, String, IconData, String?)> _modules = [
     ('pos', 'Point of sale', Icons.point_of_sale, 'pos.use'),
     ('sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.view'),
     ('production', 'Production', Icons.bakery_dining, 'production.manage'),
@@ -78,7 +78,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ),
     ('approvals', 'Approvals', Icons.fact_check_outlined, 'expenses.approve'),
     ('reports', 'Reports', Icons.bar_chart, 'reports.view'),
-    ('settings', 'Settings', Icons.settings_outlined, 'settings.manage'),
+    ('settings', 'Settings', Icons.settings_outlined, null),
   ];
 
   @override
@@ -89,12 +89,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
     if (branch == null) {
       return const ModuleScaffold(
         title: 'Dashboard',
+        isRoot: true,
         body: EmptyView(message: 'No branch is available.'),
       );
     }
     return ModuleScaffold(
       title: 'Dashboard',
-      showHome: false,
+      isRoot: true,
       actions: [
         IconButton(
           tooltip: 'Generate alerts',
@@ -135,11 +136,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     childAspectRatio: columns >= 3 ? 1.55 : 1.25,
                     children: [
                       for (final module in _modules)
-                        if (session.can(module.$4))
+                        if (module.$4 == null || session.can(module.$4!))
                           _ModuleCard(
                             label: module.$2,
                             icon: module.$3,
-                            onTap: () => context.go(
+                            onTap: () => context.push(
                               module.$1 == 'pos'
                                   ? '/pos'
                                   : '/module/${module.$1}',
@@ -383,7 +384,7 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
     final session = SessionScope.of(context);
     return ModuleScaffold(
       title: 'My account',
-      showHome: false,
+      isRoot: true,
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [

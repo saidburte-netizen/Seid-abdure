@@ -6,6 +6,8 @@ import '../brand/brand.dart';
 import '../data/formatting.dart';
 import '../data/schema.dart';
 import '../l10n/app_localizations.dart';
+import 'app_scaffold.dart';
+import 'common.dart';
 
 class ModuleScaffold extends StatelessWidget {
   const ModuleScaffold({
@@ -14,6 +16,7 @@ class ModuleScaffold extends StatelessWidget {
     this.actions = const [],
     this.floatingActionButton,
     this.showHome = true,
+    this.isRoot = false,
     super.key,
   });
 
@@ -21,41 +24,35 @@ class ModuleScaffold extends StatelessWidget {
   final Widget body;
   final List<Widget> actions;
   final Widget? floatingActionButton;
+
+  /// Kept for source compatibility. [isRoot] is the navigation switch.
   final bool showHome;
+
+  /// The home dashboard is the only screen without a back arrow.
+  final bool isRoot;
 
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
-    return Scaffold(
+    return AppScaffold(
+      isRoot: isRoot,
       drawer: _PortalDrawer(session: session),
-      appBar: AppBar(
-        leading: Builder(
-          builder: (context) => IconButton(
-            tooltip: AppLocalizations.of(context).menu,
-            icon: const Icon(Icons.menu),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: InkWell(
-          onTap: () => context.go('/'),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Image.asset(Brand.logoAsset, width: 34, height: 34),
-              const SizedBox(width: 10),
-              Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
-              const SizedBox(width: 12),
-              _BranchSelector(session: session),
-            ],
-          ),
-        ),
-        actions: [
-          ...actions,
-          const NotificationAction(),
-          _AccountMenu(session: session),
-          const SizedBox(width: 4),
+      title: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Image.asset(Brand.logoAsset, width: 34, height: 34),
+          const SizedBox(width: 10),
+          Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
+          const SizedBox(width: 12),
+          _BranchSelector(session: session),
         ],
       ),
+      actions: [
+        ...actions,
+        const NotificationAction(),
+        _AccountMenu(session: session),
+        const SizedBox(width: 4),
+      ],
       body: body,
       floatingActionButton: floatingActionButton,
     );
@@ -165,7 +162,7 @@ class _PortalDrawer extends StatelessWidget {
                 title: Text(_portalLabel(strings, item.$1)),
                 onTap: () {
                   Navigator.of(context).pop();
-                  context.go(item.$1);
+                  context.push(item.$1);
                 },
               ),
           const Divider(),
@@ -315,7 +312,7 @@ class _AccountMenu extends StatelessWidget {
           case 'profile':
             await _editProfile(context);
           case 'settings':
-            context.go('/settings');
+            await context.push('/settings');
           case 'light':
             await session.setThemeMode(ThemeMode.light);
           case 'dark':
@@ -489,6 +486,7 @@ Future<Map<String, dynamic>?> showInputDialog(
   String submitLabel = 'Submit',
 }) => showDialog<Map<String, dynamic>>(
   context: context,
+  barrierDismissible: false,
   builder: (context) =>
       _InputDialog(title: title, fields: fields, submitLabel: submitLabel),
 );
@@ -536,6 +534,7 @@ class _InputDialogState extends State<_InputDialog> {
   final _formKey = GlobalKey<FormState>();
   final _controllers = <String, TextEditingController>{};
   final _booleans = <String, bool>{};
+  bool _dirty = false;
 
   @override
   void initState() {
@@ -558,34 +557,45 @@ class _InputDialogState extends State<_InputDialog> {
     super.dispose();
   }
 
+  Future<void> _cancel() async {
+    if (_dirty && !await confirmDiscardChanges(context)) return;
+    if (mounted) Navigator.of(context).pop();
+  }
+
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.title),
-    content: SizedBox(
-      width: 520,
-      child: Form(
-        key: _formKey,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final field in widget.fields)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: _buildField(field),
-                ),
-            ],
+  Widget build(BuildContext context) => PopScope(
+    canPop: !_dirty,
+    onPopInvokedWithResult: (didPop, _) async {
+      if (didPop) return;
+      if (!await confirmDiscardChanges(context)) return;
+      _dirty = false;
+      if (context.mounted) Navigator.of(context).pop();
+    },
+    child: AlertDialog(
+      title: Text(widget.title),
+      content: SizedBox(
+        width: 520,
+        child: Form(
+          key: _formKey,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                for (final field in widget.fields)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 10),
+                    child: _buildField(field),
+                  ),
+              ],
+            ),
           ),
         ),
       ),
+      actions: [
+        TextButton(onPressed: _cancel, child: const Text('Cancel')),
+        FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
+      ],
     ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
-      ),
-      FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
-    ],
   );
 
   Widget _buildField(InputField field) {
@@ -594,7 +604,10 @@ class _InputDialogState extends State<_InputDialog> {
         contentPadding: EdgeInsets.zero,
         title: Text(field.label),
         value: _booleans[field.key] ?? false,
-        onChanged: (value) => setState(() => _booleans[field.key] = value),
+        onChanged: (value) => setState(() {
+          _dirty = true;
+          _booleans[field.key] = value;
+        }),
       );
     }
     if (field.type == FieldType.select) {
@@ -609,7 +622,10 @@ class _InputDialogState extends State<_InputDialog> {
         ],
         validator: (value) =>
             field.required && value == null ? 'Required' : null,
-        onChanged: (value) => _controllers[field.key]!.text = value ?? '',
+        onChanged: (value) {
+          _dirty = true;
+          _controllers[field.key]!.text = value ?? '';
+        },
       );
     }
     return TextFormField(
@@ -621,6 +637,7 @@ class _InputDialogState extends State<_InputDialog> {
       minLines: field.type == FieldType.multiline ? 2 : 1,
       maxLines: field.type == FieldType.multiline ? 4 : 1,
       decoration: InputDecoration(labelText: field.label, hintText: field.hint),
+      onChanged: (_) => _dirty = true,
       validator: (value) {
         if (field.required && (value == null || value.trim().isEmpty)) {
           return 'Required';

@@ -581,6 +581,7 @@ class _CrudTabState extends State<CrudTab> {
   ) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
+      barrierDismissible: false,
       builder: (context) => _CrudFormDialog(
         spec: widget.spec,
         row: row,
@@ -668,6 +669,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
   final _controllers = <String, TextEditingController>{};
   final _values = <String, Object?>{};
   bool _saving = false;
+  bool _dirty = false;
 
   @override
   void initState() {
@@ -707,44 +709,60 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
   @override
   Widget build(BuildContext context) {
     final media = MediaQuery.sizeOf(context);
-    return AlertDialog(
-      title: Text(
-        widget.row == null
-            ? 'New ${widget.spec.singular.toLowerCase()}'
-            : 'Edit ${widget.spec.singular.toLowerCase()}',
-      ),
-      content: SizedBox(
-        width: media.width > 720 ? 640 : media.width * 0.9,
-        child: Form(
-          key: _formKey,
-          child: SingleChildScrollView(
-            child: Wrap(
-              spacing: 12,
-              runSpacing: 12,
-              children: [
-                for (final field in widget.spec.fields)
-                  SizedBox(
-                    width:
-                        field.width ??
-                        ((media.width > 720 ? 640 : media.width * 0.9) / 2) - 8,
-                    child: _buildField(context, field),
-                  ),
-              ],
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (!await confirmDiscardChanges(context)) return;
+        _dirty = false;
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      child: AlertDialog(
+        title: Text(
+          widget.row == null
+              ? 'New ${widget.spec.singular.toLowerCase()}'
+              : 'Edit ${widget.spec.singular.toLowerCase()}',
+        ),
+        content: SizedBox(
+          width: media.width > 720 ? 640 : media.width * 0.9,
+          child: Form(
+            key: _formKey,
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 12,
+                runSpacing: 12,
+                children: [
+                  for (final field in widget.spec.fields)
+                    SizedBox(
+                      width:
+                          field.width ??
+                          ((media.width > 720 ? 640 : media.width * 0.9) / 2) -
+                              8,
+                      child: _buildField(context, field),
+                    ),
+                ],
+              ),
             ),
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _close,
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _saving ? null : _submit,
+            child: Text(_saving ? 'Saving…' : 'Save'),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _saving ? null : () => Navigator.of(context).pop(),
-          child: const Text('Cancel'),
-        ),
-        FilledButton(
-          onPressed: _saving ? null : _submit,
-          child: Text(_saving ? 'Saving…' : 'Save'),
-        ),
-      ],
     );
+  }
+
+  Future<void> _close() async {
+    if (_dirty && !await confirmDiscardChanges(context)) return;
+    if (!mounted) return;
+    Navigator.of(context).pop();
   }
 
   Widget _buildField(BuildContext context, FieldSpec field) {
@@ -754,7 +772,10 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           contentPadding: EdgeInsets.zero,
           title: Text(field.label),
           value: _values[field.key] == true,
-          onChanged: (value) => setState(() => _values[field.key] = value),
+          onChanged: (value) => setState(() {
+            _dirty = true;
+            _values[field.key] = value;
+          }),
         );
       case FieldType.select:
         final current = _controllers[field.key]?.text ?? '';
@@ -776,7 +797,10 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
               field.required && value == null ? 'Required' : null,
           onChanged: (value) {
             _controllers[field.key]?.text = value ?? '';
-            _values[field.key] = value;
+            setState(() {
+              _dirty = true;
+              _values[field.key] = value;
+            });
           },
         );
       case FieldType.lookup:
@@ -803,7 +827,10 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           onChanged: (value) {
             _controllers[field.key]?.text = value ?? '';
-            _values[field.key] = value;
+            setState(() {
+              _dirty = true;
+              _values[field.key] = value;
+            });
           },
         );
       case FieldType.date:
@@ -829,6 +856,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             );
             if (selected != null) {
               setState(() {
+                _dirty = true;
                 _values[field.key] = selected;
                 _controllers[field.key]!.text = dateOnly(selected);
               });
@@ -846,6 +874,9 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             labelText: field.label,
             hintText: field.hint,
           ),
+          onChanged: (_) {
+            if (!_dirty) setState(() => _dirty = true);
+          },
           validator: (value) {
             if (field.required && (value == null || value.trim().isEmpty)) {
               return 'Required';
@@ -871,6 +902,9 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             labelText: field.label,
             hintText: field.hint,
           ),
+          onChanged: (_) {
+            if (!_dirty) setState(() => _dirty = true);
+          },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
               ? 'Required'
@@ -885,6 +919,9 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             hintText:
                 field.hint ?? (field.type == FieldType.time ? 'HH:MM' : null),
           ),
+          onChanged: (_) {
+            if (!_dirty) setState(() => _dirty = true);
+          },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
               ? 'Required'
@@ -921,6 +958,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           break;
       }
     }
+    _dirty = false;
     if (mounted) Navigator.of(context).pop(payload);
   }
 }

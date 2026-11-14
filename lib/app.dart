@@ -24,6 +24,11 @@ import 'screens/production_screen.dart';
 import 'screens/rentals_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/sales_screen.dart';
+import 'screens/settings/admin_settings_screen.dart';
+import 'screens/settings/business_settings_screen.dart';
+import 'screens/settings/info_screens.dart';
+import 'screens/settings/profile_screen.dart';
+import 'screens/settings/security_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/common.dart';
@@ -98,7 +103,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
     'approvals': 'expenses.approve',
     'reports': 'reports.view',
     'notifications': null,
-    'settings': 'settings.manage',
+    'settings': null,
     'audit': 'audit.view',
     'media': 'products.manage',
   };
@@ -215,6 +220,79 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         GoRoute(
           path: '/settings',
           builder: (context, state) => const SettingsScreen(),
+          routes: [
+            GoRoute(
+              path: 'profile',
+              builder: (context, state) => const ProfileScreen(),
+            ),
+            GoRoute(
+              path: 'security',
+              builder: (context, state) => const SecurityScreen(),
+            ),
+            GoRoute(
+              path: 'business',
+              builder: (context, state) => const BusinessSettingsScreen(),
+            ),
+            GoRoute(
+              path: 'branches',
+              builder: (context, state) => const SettingsTableScreen(
+                title: 'Branches',
+                table: 'branches',
+                readPermission: 'branches.manage',
+                writePermission: 'branches.manage',
+              ),
+            ),
+            GoRoute(
+              path: 'accounts',
+              builder: (context, state) => const AccountsSettingsScreen(),
+            ),
+            GoRoute(
+              path: 'users',
+              builder: (context, state) => const SettingsTableScreen(
+                title: 'Users & roles',
+                table: 'profiles',
+                readPermission: 'users.manage',
+                writePermission: 'users.manage',
+                adminOnly: true,
+              ),
+            ),
+            GoRoute(
+              path: 'role-permissions',
+              builder: (context, state) => const RolePermissionsScreen(),
+            ),
+            GoRoute(
+              path: 'master-data',
+              builder: (context, state) => const MasterDataScreen(),
+            ),
+            GoRoute(
+              path: 'audit',
+              builder: (context, state) => const AuditLogScreen(),
+            ),
+            GoRoute(
+              path: 'export',
+              builder: (context, state) => const DataExportScreen(),
+            ),
+            GoRoute(
+              path: 'storage',
+              builder: (context, state) => const StorageScreen(),
+            ),
+            GoRoute(
+              path: 'branding',
+              builder: (context, state) => const BrandingScreen(),
+            ),
+            GoRoute(
+              path: 'about',
+              builder: (context, state) => const AboutScreen(),
+            ),
+            GoRoute(
+              path: 'help',
+              builder: (context, state) => const HelpScreen(),
+            ),
+            GoRoute(
+              path: 'privacy',
+              builder: (context, state) => const PrivacyScreen(),
+            ),
+          ],
         ),
         GoRoute(
           path: '/sign-in',
@@ -721,7 +799,17 @@ class _SignUpDialogState extends State<_SignUpDialog> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   bool _submitting = false;
+  bool _dirty = false;
   Object? _error;
+
+  void _markDirty() {
+    if (!_dirty) setState(() => _dirty = true);
+  }
+
+  Future<void> _cancel() async {
+    if (_dirty && !await confirmDiscardChanges(context)) return;
+    if (mounted) Navigator.of(context).pop();
+  }
 
   @override
   void dispose() {
@@ -759,110 +847,123 @@ class _SignUpDialogState extends State<_SignUpDialog> {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return AlertDialog(
-      title: Text(
-        widget.firstAdmin
-            ? strings.signUpFirstTitle
-            : strings.signUpCustomerTitle,
-      ),
-      content: SizedBox(
-        width: 420,
-        child: SingleChildScrollView(
-          child: Form(
-            key: _formKey,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextFormField(
-                  controller: _name,
-                  decoration: InputDecoration(labelText: strings.fullName),
-                  textCapitalization: TextCapitalization.words,
-                  autofillHints: const [AutofillHints.name],
-                  validator: (value) => value == null || value.trim().isEmpty
-                      ? strings.requiredField
-                      : null,
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _email,
-                  decoration: InputDecoration(labelText: strings.email),
-                  keyboardType: TextInputType.emailAddress,
-                  autofillHints: const [AutofillHints.email],
-                  validator: (value) {
-                    final email = value?.trim() ?? '';
-                    if (email.isEmpty) return strings.requiredField;
-                    if (!_emailPattern.hasMatch(email)) {
-                      return strings.errorInvalidEmail;
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _password,
-                  decoration: InputDecoration(labelText: strings.password),
-                  obscureText: true,
-                  autofillHints: const [AutofillHints.newPassword],
-                  validator: (value) => value == null || value.length < 8
-                      ? strings.errorPasswordMin8
-                      : null,
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: _confirm,
-                  decoration: InputDecoration(
-                    labelText: strings.confirmPassword,
+    return PopScope(
+      canPop: !_dirty,
+      onPopInvokedWithResult: (didPop, _) async {
+        if (didPop) return;
+        if (!await confirmDiscardChanges(context)) return;
+        _dirty = false;
+        if (context.mounted) Navigator.of(context).pop();
+      },
+      child: AlertDialog(
+        title: Text(
+          widget.firstAdmin
+              ? strings.signUpFirstTitle
+              : strings.signUpCustomerTitle,
+        ),
+        content: SizedBox(
+          width: 420,
+          child: SingleChildScrollView(
+            child: Form(
+              key: _formKey,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextFormField(
+                    controller: _name,
+                    decoration: InputDecoration(labelText: strings.fullName),
+                    textCapitalization: TextCapitalization.words,
+                    autofillHints: const [AutofillHints.name],
+                    onChanged: (_) => _markDirty(),
+                    validator: (value) => value == null || value.trim().isEmpty
+                        ? strings.requiredField
+                        : null,
                   ),
-                  obscureText: true,
-                  autofillHints: const [AutofillHints.newPassword],
-                  validator: (value) => value != _password.text
-                      ? strings.errorPasswordsDoNotMatch
-                      : null,
-                  onFieldSubmitted: (_) => _submit(),
-                ),
-                if (_error != null) ...[
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _email,
+                    decoration: InputDecoration(labelText: strings.email),
+                    keyboardType: TextInputType.emailAddress,
+                    autofillHints: const [AutofillHints.email],
+                    onChanged: (_) => _markDirty(),
+                    validator: (value) {
+                      final email = value?.trim() ?? '';
+                      if (email.isEmpty) return strings.requiredField;
+                      if (!_emailPattern.hasMatch(email)) {
+                        return strings.errorInvalidEmail;
+                      }
+                      return null;
+                    },
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _password,
+                    decoration: InputDecoration(labelText: strings.password),
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.newPassword],
+                    onChanged: (_) => _markDirty(),
+                    validator: (value) => value == null || value.length < 8
+                        ? strings.errorPasswordMin8
+                        : null,
+                  ),
+                  const SizedBox(height: 10),
+                  TextFormField(
+                    controller: _confirm,
+                    decoration: InputDecoration(
+                      labelText: strings.confirmPassword,
+                    ),
+                    obscureText: true,
+                    autofillHints: const [AutofillHints.newPassword],
+                    onChanged: (_) => _markDirty(),
+                    validator: (value) => value != _password.text
+                        ? strings.errorPasswordsDoNotMatch
+                        : null,
+                    onFieldSubmitted: (_) => _submit(),
+                  ),
+                  if (_error != null) ...[
+                    const SizedBox(height: 12),
+                    FriendlyErrorBox(error: _error!),
+                  ],
                   const SizedBox(height: 12),
-                  FriendlyErrorBox(error: _error!),
+                  Text(
+                    widget.firstAdmin
+                        ? strings.signUpFirstHelp
+                        : strings.signUpCustomerHelp,
+                    style: const TextStyle(fontSize: 12),
+                  ),
                 ],
-                const SizedBox(height: 12),
-                Text(
-                  widget.firstAdmin
-                      ? strings.signUpFirstHelp
-                      : strings.signUpCustomerHelp,
-                  style: const TextStyle(fontSize: 12),
-                ),
-              ],
+              ),
             ),
           ),
         ),
+        actions: [
+          TextButton(
+            onPressed: _submitting ? null : _cancel,
+            child: Text(strings.cancel),
+          ),
+          FilledButton(
+            onPressed: _submitting ? null : _submit,
+            child: _submitting
+                ? Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 8),
+                      Text(strings.creatingAccount),
+                    ],
+                  )
+                : Text(
+                    widget.firstAdmin
+                        ? strings.createFirstAccount
+                        : strings.createAccount,
+                  ),
+          ),
+        ],
       ),
-      actions: [
-        TextButton(
-          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
-          child: Text(strings.cancel),
-        ),
-        FilledButton(
-          onPressed: _submitting ? null : _submit,
-          child: _submitting
-              ? Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                    const SizedBox(width: 8),
-                    Text(strings.creatingAccount),
-                  ],
-                )
-              : Text(
-                  widget.firstAdmin
-                      ? strings.createFirstAccount
-                      : strings.createAccount,
-                ),
-        ),
-      ],
     );
   }
 }
