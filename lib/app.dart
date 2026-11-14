@@ -543,12 +543,8 @@ class _SignInScreenState extends State<SignInScreen> {
       }
       var allowCustomerSignup = false;
       try {
-        final row = await widget.client
-            .from('app_settings')
-            .select('value')
-            .eq('key', 'allow_customer_signup')
-            .maybeSingle();
-        allowCustomerSignup = _readSettingBool(row?['value']);
+        final signupResult = await widget.client.rpc('customer_signup_allowed');
+        allowCustomerSignup = _readBool(signupResult) ?? false;
       } catch (error, stack) {
         AppLogger.error('Could not read sign-up setting', error, stack);
       }
@@ -1036,25 +1032,6 @@ bool? _readBool(Object? value) {
   }
   if (value is List && value.isNotEmpty) return _readBool(value.first);
   return null;
-}
-
-bool _readSettingBool(Object? value) {
-  if (value is Map) {
-    for (final key in const [
-      'enabled',
-      'allow',
-      'allow_customer_signup',
-      'signup',
-      'value',
-    ]) {
-      if (value.containsKey(key)) {
-        final parsed = _readBool(value[key]);
-        if (parsed != null) return parsed;
-      }
-    }
-    return false;
-  }
-  return _readBool(value) ?? false;
 }
 
 class LoadingScreen extends StatelessWidget {

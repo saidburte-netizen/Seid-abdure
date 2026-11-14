@@ -65,6 +65,7 @@ LIVE_RPCS = {
     "fn_generate_rent_invoices",
     "next_number",
     "has_admin",
+    "customer_signup_allowed",
 }
 
 IDENT = r"[a-z_][a-z0-9_]*"

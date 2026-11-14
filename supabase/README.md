@@ -38,8 +38,10 @@ project, and never replay the legacy files.
 ### One-time sign-in SQL
 
 The sign-in screen calls `has_admin()` to decide whether the business still
-needs its first administrator, and reads the `allow_customer_signup` setting
-before offering customer self-service sign-up.
+needs its first administrator, and calls `customer_signup_allowed()` before
+offering customer self-service sign-up. Both functions are security-definer
+RPCs that anonymous visitors may execute. The app never reads `app_settings`
+before sign-in, because anonymous SELECT on that table is blocked by RLS.
 
 Install both one-time scripts once:
 
@@ -48,9 +50,9 @@ supabase db execute --file supabase/sql/has_admin.sql
 supabase db execute --file supabase/sql/allow_customer_signup.sql
 ```
 
-If `app_settings` anonymous SELECT is blocked by RLS, customer sign-up stays
-hidden and the app asks visitors to contact an administrator instead. That is
-intentional and safe; do not grant public access to the whole settings table.
+If `customer_signup_allowed()` is unavailable or returns false, customer
+sign-up stays hidden and the app asks visitors to contact an administrator.
+Do not grant public SELECT on the whole settings table.
 
 ## Required build variables
 
