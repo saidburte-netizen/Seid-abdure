@@ -48,15 +48,7 @@ jobs:
           name: brade-cake-house-web
           if-no-files-found: error
           path: brade-cake-house-web.zip
-      - name: Attach web ZIP to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: Brade and Cake House ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          files: brade-cake-house-web.zip
+
 
   deploy-pages:
     if: vars.ENABLE_PAGES == 'true'

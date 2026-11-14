@@ -80,6 +80,24 @@ jobs:
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           cp build/app/outputs/bundle/release/app-release.aab brade-cake-house.aab
 
+      - name: Build the web admin portal for the same release
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          flutter build web --release \
+            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          test -f build/web/index.html
+          (cd build/web && zip -r ../../brade-cake-house-web.zip .)
+          test -f brade-cake-house-web.zip
+          unzip -l brade-cake-house-web.zip | tee web-files.txt
+          grep -q "index.html" web-files.txt
+          grep -q "main.dart.js" web-files.txt
+          grep -q "assets/branding/logo.png" web-files.txt
+          echo "WEB_ZIP_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s brade-cake-house-web.zip)/1048576}") MB"
+
       - name: Verify the APK is a real installable app
         run: |
           set -euo pipefail
@@ -103,13 +121,18 @@ jobs:
           grep -q "application-label:'Brade and Cake House'" apk-badging.txt
           unzip -l "$APK" | tee apk-files.txt
           grep -q "assets/flutter_assets/assets/branding/logo.png" apk-files.txt
+          grep -q "assets/flutter_assets/assets/branding/icon_foreground.png" apk-files.txt
+          grep -q "assets/flutter_assets/assets/branding/notification_icon.png" apk-files.txt
           grep -q "assets/flutter_assets/AssetManifest" apk-files.txt
           grep -q "libapp.so" apk-files.txt
+          grep -q "res/mipmap" apk-files.txt
           echo "PACKAGE_NAME=net.bradeandcake.brade_and_cake_house"
           echo "APP_LABEL=Brade and Cake House"
           echo "SIGNING_MODE=${SIGNING_MODE}"
           echo "Bundled logo: assets/flutter_assets/assets/branding/logo.png"
-          echo "Bundled translations are compiled into libapp.so by flutter gen-l10n."
+          echo "Bundled icon foreground: assets/flutter_assets/assets/branding/icon_foreground.png"
+          echo "Bundled notification icon: assets/flutter_assets/assets/branding/notification_icon.png"
+          echo "Translations: en, am, om (compiled into libapp.so by flutter gen-l10n)."
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -125,6 +148,13 @@ jobs:
           if-no-files-found: error
           path: brade-cake-house.aab
 
+      - name: Upload web ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: brade-cake-house-web-release
+          if-no-files-found: error
+          path: brade-cake-house-web.zip
+
       - name: Attach Android files to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -137,3 +167,4 @@ jobs:
           files: |
             brade-cake-house.apk
             brade-cake-house.aab
+            brade-cake-house-web.zip
