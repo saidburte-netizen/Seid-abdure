@@ -153,7 +153,7 @@ friendly offline error box.
    without a live-schema dump. The category matrix in `docs/WIRING.md` is the
    acceptance checklist; the Flutter widget/static suite is the executable gate
    in this environment.
-4. **Release publication** - The `v1.0.3` release is published with APK, AAB,
+4. **Release publication** - The `v1.0.4` release is published with APK, AAB,
    web ZIP and `sha256sums.txt`. The Android artifact is debug-signed because
    signing secrets are not configured, so it is not Play-Store ready.
 
@@ -161,27 +161,27 @@ friendly offline error box.
 
 | Item | Value |
 | --- | --- |
-| Release | https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.3 |
-| Tag workflow (Android) | https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43615503813 |
-| Tag workflow (Web) | https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43615503811 |
-| Main CI | https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43614885744 |
-| APK | `brade-cake-house.apk` (82,052,266 bytes, 78.25 MB) |
-| AAB | `brade-cake-house.aab` (67,502,595 bytes) |
-| Web ZIP | `brade-cake-house-web.zip` (17,699,879 bytes) |
+| Release | https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.4 |
+| Tag workflow (Android) | https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43623460051 |
+| Tag workflow (Web) | https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43623460027 |
+| Main CI | https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43622746536 |
+| APK | `brade-cake-house.apk` (82,101,418 bytes, 78.30 MB) |
+| AAB | `brade-cake-house.aab` (67,573,143 bytes) |
+| Web ZIP | `brade-cake-house-web.zip` (17,710,823 bytes) |
 
 Published SHA-256 checksums:
 
 ```text
-c54db2d8cf0cde235561697d6c609581b3b8474779cc3ed2c690acf3f38fac4c  brade-cake-house.apk
-54b78c8e5314bae7f53d55c6bf955692b0217609f4fd95cca072e613024c5a0a  brade-cake-house.aab
-47c6099246d45a2a4d25c7a9ea52fa843ae064c752f56e2d5dd9ff5e3994650f  brade-cake-house-web.zip
+c6bad9edacac7155f84b4cd98dc942cc05e1c7c7231a37b213e559a938ced4e0  brade-cake-house.apk
+1697ce9a864193d2af35e2df9bee81a8c5fbeb6dea0e00642a28f81f6b4de41e  brade-cake-house.aab
+119ca0cf92b8d1e9cc13c4786d759518187951f654fc9703503afcb107fe8a79  brade-cake-house-web.zip
 ```
 
 Workflow verification output:
 
 ```text
-APK_SIZE_BYTES=82052266
-APK_SIZE_MB=78.25 MB
+APK_SIZE_BYTES=82101418
+APK_SIZE_MB=78.30 MB
 PACKAGE_NAME=net.bradeandcake.brade_and_cake_house
 APP_LABEL=Brade and Cake House
 SIGNING_MODE=debug
@@ -190,10 +190,10 @@ Bundled logo: assets/flutter_assets/assets/branding/logo.png
 
 ## Release checklist
 
-- [x] Version bumped to `1.0.3+3`
+- [x] Version bumped to `1.0.4+4`
 - [x] Fresh-checkout workflow runs `flutter clean`, `pub get`, `gen-l10n`
 - [x] Schema, format, placeholder, analyze and full-test gates wired into CI
 - [x] APK/AAB/web build and APK content verification in workflow
 - [x] SHA-256 checksums generated and attached
-- [x] Tag `v1.0.3` pushed and release verified
+- [x] Tag `v1.0.4` pushed and release verified
 - [ ] Android signing secrets configured (release signing)
