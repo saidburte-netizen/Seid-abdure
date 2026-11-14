@@ -30,8 +30,12 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Clean any stale build output
+        run: flutter clean
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Validate Dart Supabase usage against the schema snapshot
+        run: python3 tool/check_schema.py
       - name: Verify the main Android manifest allows network access
         run: |
           set -euo pipefail
@@ -103,6 +107,14 @@ jobs:
           grep -q "assets/branding/logo.png" web-files.txt
           echo "WEB_ZIP_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s brade-cake-house-web.zip)/1048576}") MB"
 
+      - name: Generate SHA-256 checksums
+        run: |
+          set -euo pipefail
+          sha256sum \
+            brade-cake-house.apk \
+            brade-cake-house.aab \
+            brade-cake-house-web.zip | tee sha256sums.txt
+
       - name: Verify the APK is a real installable app
         run: |
           set -euo pipefail
@@ -162,6 +174,13 @@ jobs:
           if-no-files-found: error
           path: brade-cake-house-web.zip
 
+      - name: Upload SHA-256 checksums
+        uses: actions/upload-artifact@v4
+        with:
+          name: brade-cake-house-checksums
+          if-no-files-found: error
+          path: sha256sums.txt
+
       - name: Attach Android files to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
@@ -175,3 +194,4 @@ jobs:
             brade-cake-house.apk
             brade-cake-house.aab
             brade-cake-house-web.zip
+            sha256sums.txt

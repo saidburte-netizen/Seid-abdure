@@ -21,6 +21,8 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Validate Dart Supabase usage against the schema snapshot
+        run: python3 tool/check_schema.py
       - name: Verify the main Android manifest allows network access
         run: |
           set -euo pipefail

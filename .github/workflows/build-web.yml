@@ -19,8 +19,12 @@ jobs:
           flutter-version: "3.35.4"
           channel: stable
           cache: true
+      - name: Clean any stale build output
+        run: flutter clean
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Validate Dart Supabase usage against the schema snapshot
+        run: python3 tool/check_schema.py
       - run: flutter analyze
       - run: flutter test
       - name: Build web admin portal
