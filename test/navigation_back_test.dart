@@ -135,7 +135,13 @@ void main() {
         initialLocation: '/settings',
       ),
     );
-    await tester.pump(const Duration(milliseconds: 400));
+    await tester.pump(const Duration(milliseconds: 800));
+    await tester.scrollUntilVisible(
+      find.byIcon(Icons.language),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pump();
 
     final tiles = tester.widgetList<ListTile>(find.byType(ListTile));
     expect(tiles, isNotEmpty);
