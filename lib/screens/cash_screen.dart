@@ -25,7 +25,7 @@ class CashScreen extends StatelessWidget {
         'paid_amount': bill['paid_amount'] ?? 0,
         'balance': asNum(bill['amount']) - asNum(bill['paid_amount']),
         'due_date': bill['due_date'],
-        'status': 'unpaid',
+        'status': 'open',
         'created_by': session.userId,
       });
       if (context.mounted) showSnack(context, 'Payable created from bill.');

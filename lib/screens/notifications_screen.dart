@@ -31,11 +31,16 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       _error = null;
     });
     try {
-      final rows = await session.client
-          .from('notifications')
-          .select()
-          .order('created_at', ascending: false)
-          .limit(200);
+      final uid = session.userId;
+      if (uid == null) return;
+      var query = session.client.from('notifications').select();
+      final role = session.roleCode;
+      if (role != null) {
+        query = query.or('user_id.eq.$uid,role_code.eq.$role');
+      } else {
+        query = query.eq('user_id', uid);
+      }
+      final rows = await query.order('created_at', ascending: false).limit(200);
       if (!mounted) return;
       setState(() {
         _notifications = (rows as List)
@@ -65,9 +70,18 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markAllRead() async {
     final session = SessionScope.of(context);
     try {
-      await session.client
+      final uid = session.userId;
+      if (uid == null) return;
+      var query = session.client
           .from('notifications')
           .update({'is_read': true, 'read_at': nowIso()}).eq('is_read', false);
+      final role = session.roleCode;
+      if (role != null) {
+        query = query.or('user_id.eq.$uid,role_code.eq.$role');
+      } else {
+        query = query.eq('user_id', uid);
+      }
+      await query;
       await _load();
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
@@ -253,10 +267,15 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
     current[field] = value;
     setState(() => _rows[type] = current);
     try {
-      await session.client.from('notification_settings').upsert(
-            current,
-            onConflict: 'user_id,notification_type',
-          );
+      final id = current['id'];
+      if (id == null) {
+        await session.client.from('notification_settings').insert(current);
+      } else {
+        await session.client
+            .from('notification_settings')
+            .update(current)
+            .eq('id', id);
+      }
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
     }

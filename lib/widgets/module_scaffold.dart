@@ -263,12 +263,20 @@ class _NotificationActionState extends State<NotificationAction> {
   Future<void> _loadUnread() async {
     final session = SessionScope.of(context);
     try {
-      final notifications = await session.client
+      final uid = session.userId;
+      if (uid == null) return;
+      var query = session.client
           .from('notifications')
           .select('id,is_read')
-          .eq('is_read', false)
-          .order('created_at', ascending: false)
-          .limit(100);
+          .eq('is_read', false);
+      final role = session.roleCode;
+      if (role != null) {
+        query = query.or('user_id.eq.$uid,role_code.eq.$role');
+      } else {
+        query = query.eq('user_id', uid);
+      }
+      final notifications =
+          await query.order('created_at', ascending: false).limit(100);
       if (!mounted) return;
       setState(() => _unread = (notifications as List).length);
     } catch (_) {

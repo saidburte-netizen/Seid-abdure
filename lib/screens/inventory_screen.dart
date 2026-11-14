@@ -90,10 +90,13 @@ class _InventoryScreenState extends State<InventoryScreen> {
           .select()
           .single();
       final items = <Map<String, dynamic>>[];
+      final receivedTotals = <String, num>{};
       for (final raw in (lines as List)) {
         final line = Map<String, dynamic>.from(raw as Map);
-        final remaining =
-            asNum(line['quantity_ordered']) - asNum(line['quantity_received']);
+        final lineId = asText(line['id']);
+        final already = asNum(line['quantity_received']);
+        final remaining = asNum(line['quantity_ordered']) - already;
+        receivedTotals[lineId] = already + (remaining > 0 ? remaining : 0);
         if (remaining <= 0) continue;
         items.add({
           'receipt_id': receipt['id'],
@@ -107,9 +110,19 @@ class _InventoryScreenState extends State<InventoryScreen> {
       if (items.isNotEmpty) {
         await session.client.from('goods_receipt_items').insert(items);
       }
-      await session.client
-          .from('purchase_orders')
-          .update({'status': 'received'}).eq('id', order['id']);
+      for (final entry in receivedTotals.entries) {
+        await session.client
+            .from('purchase_order_items')
+            .update({'quantity_received': entry.value}).eq('id', entry.key);
+      }
+      final fullyReceived = (lines as List).every((raw) {
+        final line = Map<String, dynamic>.from(raw as Map);
+        return (receivedTotals[asText(line['id'])] ?? 0) + 0.001 >=
+            asNum(line['quantity_ordered']);
+      });
+      await session.client.from('purchase_orders').update({
+        'status': fullyReceived ? 'received' : 'partial',
+      }).eq('id', order['id']);
       if (mounted) showSnack(context, 'Goods received as $receiptNo.');
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
