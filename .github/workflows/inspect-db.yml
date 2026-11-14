@@ -22,6 +22,16 @@ jobs:
             -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
             -H "Accept: application/openapi+json" \
             -o openapi.json
+          for table in permissions roles role_permissions app_settings; do
+            curl -fsS "$SUPABASE_URL/rest/v1/$table?select=*" \
+              -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+              -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+              -o "data-$table.json"
+          done
+          curl -fsS "$SUPABASE_URL/storage/v1/bucket" \
+            -H "apikey: $SUPABASE_SERVICE_ROLE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_SERVICE_ROLE_KEY" \
+            -o data-buckets.json || true
           python3 - <<'PY'
           import json
           from pathlib import Path
@@ -46,3 +56,4 @@ jobs:
           path: |
             openapi.json
             schema-summary.txt
+            data-*.json
