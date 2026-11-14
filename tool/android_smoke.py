@@ -174,13 +174,13 @@ def main() -> None:
     screenshot("01-login-en.png")
     assert_no_raw_errors(root)
 
-    choose_language("አማርኛ", "ኢሜይል")
+    choose_language("አማርኛ", "ግባ")
     screenshot("02-login-am.png")
 
-    choose_language("Afaan Oromoo", "Imeelii")
+    choose_language("Afaan Oromoo", "Seeni")
     screenshot("03-login-om.png")
 
-    choose_language("English", "Email")
+    choose_language("English", "Sign in")
     screenshot("04-login-en-again.png")
     assert_no_raw_errors(dump_xml())
 

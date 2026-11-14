@@ -57,7 +57,7 @@ values ('11111111-1111-1111-1111-111111111111', 'TEST', 'Test Branch', true);
 insert into public.stores (id, branch_id, name, store_type, is_active)
 values
   ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Test Store', 'main', true),
-  ('23232323-2323-2323-2323-232323232323', '11111111-1111-1111-1111-111111111111', 'Test Branch Store', 'branch', true);
+  ('23232323-2323-2323-2323-232323232323', '11111111-1111-1111-1111-111111111111', 'Test Branch Store', 'shop', true);
 
 insert into public.units (id, code, name, name_am, name_om)
 values ('33333333-3333-3333-3333-333333333333', 'test_pcs', 'Test piece', 'የሙከራ ቁራጭ', 'Qaama qorannoo');
