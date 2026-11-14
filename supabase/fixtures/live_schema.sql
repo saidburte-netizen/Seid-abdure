@@ -9,10 +9,7 @@ create extension if not exists "pgcrypto" with schema "extensions";
 create extension if not exists "supabase_vault" with schema "vault";
 create extension if not exists "uuid-ossp" with schema "extensions";
 
--- Table defaults call next_number() before the real body is created below.
--- The real CREATE OR REPLACE later keeps this same function OID.
-create or replace function public.next_number(p_prefix text)
-returns text language sql as $$ select p_prefix || '-000001'; $$;
+create or replace function public.next_number(p_prefix text) returns text language sql as $$ select p_prefix || '-000001'; $$;
 
 create table if not exists "public"."app_settings" (
   "key" text not null,
@@ -830,51 +827,80 @@ create table if not exists "public"."write_offs" (
 
 alter table "public"."app_settings" add constraint "app_settings_pkey" PRIMARY KEY (key);
 alter table "public"."approvals" add constraint "approvals_pkey" PRIMARY KEY (id);
+alter table "public"."attendance" add constraint "attendance_employee_id_work_date_key" UNIQUE (employee_id, work_date);
 alter table "public"."attendance" add constraint "attendance_pkey" PRIMARY KEY (id);
 alter table "public"."audit_logs" add constraint "audit_logs_pkey" PRIMARY KEY (id);
+alter table "public"."bills" add constraint "bills_bill_no_key" UNIQUE (bill_no);
 alter table "public"."bills" add constraint "bills_pkey" PRIMARY KEY (id);
+alter table "public"."branches" add constraint "branches_code_key" UNIQUE (code);
 alter table "public"."branches" add constraint "branches_pkey" PRIMARY KEY (id);
+alter table "public"."cake_orders" add constraint "cake_orders_order_no_key" UNIQUE (order_no);
 alter table "public"."cake_orders" add constraint "cake_orders_pkey" PRIMARY KEY (id);
+alter table "public"."cash_accounts" add constraint "cash_accounts_branch_id_name_key" UNIQUE (branch_id, name);
 alter table "public"."cash_accounts" add constraint "cash_accounts_pkey" PRIMARY KEY (id);
 alter table "public"."cash_transactions" add constraint "cash_transactions_pkey" PRIMARY KEY (id);
 alter table "public"."cash_transfers" add constraint "cash_transfers_pkey" PRIMARY KEY (id);
+alter table "public"."categories" add constraint "categories_kind_name_key" UNIQUE (kind, name);
 alter table "public"."categories" add constraint "categories_pkey" PRIMARY KEY (id);
+alter table "public"."customers" add constraint "customers_code_key" UNIQUE (code);
 alter table "public"."customers" add constraint "customers_pkey" PRIMARY KEY (id);
+alter table "public"."customers" add constraint "customers_user_id_key" UNIQUE (user_id);
+alter table "public"."daily_closings" add constraint "daily_closings_branch_id_closing_date_key" UNIQUE (branch_id, closing_date);
 alter table "public"."daily_closings" add constraint "daily_closings_pkey" PRIMARY KEY (id);
+alter table "public"."departments" add constraint "departments_name_key" UNIQUE (name);
 alter table "public"."departments" add constraint "departments_pkey" PRIMARY KEY (id);
 alter table "public"."device_tokens" add constraint "device_tokens_pkey" PRIMARY KEY (id);
+alter table "public"."device_tokens" add constraint "device_tokens_token_key" UNIQUE (token);
 alter table "public"."employee_advances" add constraint "employee_advances_pkey" PRIMARY KEY (id);
 alter table "public"."employee_documents" add constraint "employee_documents_pkey" PRIMARY KEY (id);
+alter table "public"."employee_shifts" add constraint "employee_shifts_employee_id_work_date_key" UNIQUE (employee_id, work_date);
 alter table "public"."employee_shifts" add constraint "employee_shifts_pkey" PRIMARY KEY (id);
+alter table "public"."employees" add constraint "employees_employee_no_key" UNIQUE (employee_no);
 alter table "public"."employees" add constraint "employees_pkey" PRIMARY KEY (id);
+alter table "public"."employees" add constraint "employees_profile_id_key" UNIQUE (profile_id);
+alter table "public"."expense_categories" add constraint "expense_categories_name_key" UNIQUE (name);
 alter table "public"."expense_categories" add constraint "expense_categories_pkey" PRIMARY KEY (id);
 alter table "public"."goods_receipt_items" add constraint "goods_receipt_items_pkey" PRIMARY KEY (id);
 alter table "public"."goods_receipts" add constraint "goods_receipts_pkey" PRIMARY KEY (id);
+alter table "public"."goods_receipts" add constraint "goods_receipts_receipt_no_key" UNIQUE (receipt_no);
 alter table "public"."hr_notes" add constraint "hr_notes_pkey" PRIMARY KEY (id);
 alter table "public"."items" add constraint "items_pkey" PRIMARY KEY (id);
+alter table "public"."items" add constraint "items_sku_key" UNIQUE (sku);
+alter table "public"."leases" add constraint "leases_lease_no_key" UNIQUE (lease_no);
 alter table "public"."leases" add constraint "leases_pkey" PRIMARY KEY (id);
 alter table "public"."leave_requests" add constraint "leave_requests_pkey" PRIMARY KEY (id);
+alter table "public"."leave_types" add constraint "leave_types_name_key" UNIQUE (name);
 alter table "public"."leave_types" add constraint "leave_types_pkey" PRIMARY KEY (id);
 alter table "public"."ledger_entries" add constraint "ledger_entries_pkey" PRIMARY KEY (id);
 alter table "public"."maintenance_requests" add constraint "maintenance_requests_pkey" PRIMARY KEY (id);
 alter table "public"."notification_settings" add constraint "notification_settings_pkey" PRIMARY KEY (id);
+alter table "public"."notification_settings" add constraint "notification_settings_user_id_notification_type_key" UNIQUE (user_id, notification_type);
 alter table "public"."notifications" add constraint "notifications_pkey" PRIMARY KEY (id);
 alter table "public"."number_sequences" add constraint "number_sequences_pkey" PRIMARY KEY (prefix);
 alter table "public"."payable_payments" add constraint "payable_payments_pkey" PRIMARY KEY (id);
 alter table "public"."payables" add constraint "payables_pkey" PRIMARY KEY (id);
+alter table "public"."payroll_runs" add constraint "payroll_runs_period_month_branch_id_key" UNIQUE (period_month, branch_id);
 alter table "public"."payroll_runs" add constraint "payroll_runs_pkey" PRIMARY KEY (id);
+alter table "public"."payslips" add constraint "payslips_payroll_run_id_employee_id_key" UNIQUE (payroll_run_id, employee_id);
 alter table "public"."payslips" add constraint "payslips_pkey" PRIMARY KEY (id);
 alter table "public"."permissions" add constraint "permissions_pkey" PRIMARY KEY (code);
+alter table "public"."production_batches" add constraint "production_batches_batch_no_key" UNIQUE (batch_no);
 alter table "public"."production_batches" add constraint "production_batches_pkey" PRIMARY KEY (id);
 alter table "public"."products" add constraint "products_pkey" PRIMARY KEY (id);
+alter table "public"."products" add constraint "products_sku_key" UNIQUE (sku);
 alter table "public"."profiles" add constraint "profiles_pkey" PRIMARY KEY (id);
+alter table "public"."properties" add constraint "properties_code_key" UNIQUE (code);
 alter table "public"."properties" add constraint "properties_pkey" PRIMARY KEY (id);
 alter table "public"."purchase_order_items" add constraint "purchase_order_items_pkey" PRIMARY KEY (id);
 alter table "public"."purchase_orders" add constraint "purchase_orders_pkey" PRIMARY KEY (id);
+alter table "public"."purchase_orders" add constraint "purchase_orders_po_number_key" UNIQUE (po_number);
 alter table "public"."receivable_payments" add constraint "receivable_payments_pkey" PRIMARY KEY (id);
 alter table "public"."receivables" add constraint "receivables_pkey" PRIMARY KEY (id);
 alter table "public"."recipe_items" add constraint "recipe_items_pkey" PRIMARY KEY (id);
+alter table "public"."recipe_items" add constraint "recipe_items_recipe_id_item_id_key" UNIQUE (recipe_id, item_id);
 alter table "public"."recipes" add constraint "recipes_pkey" PRIMARY KEY (id);
+alter table "public"."rent_invoices" add constraint "rent_invoices_invoice_no_key" UNIQUE (invoice_no);
+alter table "public"."rent_invoices" add constraint "rent_invoices_lease_id_period_start_key" UNIQUE (lease_id, period_start);
 alter table "public"."rent_invoices" add constraint "rent_invoices_pkey" PRIMARY KEY (id);
 alter table "public"."rent_payments" add constraint "rent_payments_pkey" PRIMARY KEY (id);
 alter table "public"."role_permissions" add constraint "role_permissions_pkey" PRIMARY KEY (role_code, permission_code);
@@ -883,56 +909,27 @@ alter table "public"."sale_items" add constraint "sale_items_pkey" PRIMARY KEY (
 alter table "public"."sale_payments" add constraint "sale_payments_pkey" PRIMARY KEY (id);
 alter table "public"."sale_return_items" add constraint "sale_return_items_pkey" PRIMARY KEY (id);
 alter table "public"."sale_returns" add constraint "sale_returns_pkey" PRIMARY KEY (id);
+alter table "public"."sale_returns" add constraint "sale_returns_return_no_key" UNIQUE (return_no);
 alter table "public"."sales" add constraint "sales_pkey" PRIMARY KEY (id);
+alter table "public"."sales" add constraint "sales_receipt_no_key" UNIQUE (receipt_no);
+alter table "public"."shifts" add constraint "shifts_name_key" UNIQUE (name);
 alter table "public"."shifts" add constraint "shifts_pkey" PRIMARY KEY (id);
+alter table "public"."stock_count_items" add constraint "stock_count_items_count_id_item_id_key" UNIQUE (count_id, item_id);
 alter table "public"."stock_count_items" add constraint "stock_count_items_pkey" PRIMARY KEY (id);
 alter table "public"."stock_counts" add constraint "stock_counts_pkey" PRIMARY KEY (id);
 alter table "public"."stock_levels" add constraint "stock_levels_pkey" PRIMARY KEY (store_id, item_id);
 alter table "public"."stock_movements" add constraint "stock_movements_pkey" PRIMARY KEY (id);
 alter table "public"."stock_transfers" add constraint "stock_transfers_pkey" PRIMARY KEY (id);
-alter table "public"."stores" add constraint "stores_pkey" PRIMARY KEY (id);
-alter table "public"."suppliers" add constraint "suppliers_pkey" PRIMARY KEY (id);
-alter table "public"."tax_brackets" add constraint "tax_brackets_pkey" PRIMARY KEY (id);
-alter table "public"."tenants" add constraint "tenants_pkey" PRIMARY KEY (id);
-alter table "public"."units" add constraint "units_pkey" PRIMARY KEY (id);
-alter table "public"."write_offs" add constraint "write_offs_pkey" PRIMARY KEY (id);
-alter table "public"."attendance" add constraint "attendance_employee_id_work_date_key" UNIQUE (employee_id, work_date);
-alter table "public"."bills" add constraint "bills_bill_no_key" UNIQUE (bill_no);
-alter table "public"."branches" add constraint "branches_code_key" UNIQUE (code);
-alter table "public"."cake_orders" add constraint "cake_orders_order_no_key" UNIQUE (order_no);
-alter table "public"."cash_accounts" add constraint "cash_accounts_branch_id_name_key" UNIQUE (branch_id, name);
-alter table "public"."categories" add constraint "categories_kind_name_key" UNIQUE (kind, name);
-alter table "public"."customers" add constraint "customers_code_key" UNIQUE (code);
-alter table "public"."customers" add constraint "customers_user_id_key" UNIQUE (user_id);
-alter table "public"."daily_closings" add constraint "daily_closings_branch_id_closing_date_key" UNIQUE (branch_id, closing_date);
-alter table "public"."departments" add constraint "departments_name_key" UNIQUE (name);
-alter table "public"."device_tokens" add constraint "device_tokens_token_key" UNIQUE (token);
-alter table "public"."employee_shifts" add constraint "employee_shifts_employee_id_work_date_key" UNIQUE (employee_id, work_date);
-alter table "public"."employees" add constraint "employees_employee_no_key" UNIQUE (employee_no);
-alter table "public"."employees" add constraint "employees_profile_id_key" UNIQUE (profile_id);
-alter table "public"."expense_categories" add constraint "expense_categories_name_key" UNIQUE (name);
-alter table "public"."goods_receipts" add constraint "goods_receipts_receipt_no_key" UNIQUE (receipt_no);
-alter table "public"."items" add constraint "items_sku_key" UNIQUE (sku);
-alter table "public"."leases" add constraint "leases_lease_no_key" UNIQUE (lease_no);
-alter table "public"."leave_types" add constraint "leave_types_name_key" UNIQUE (name);
-alter table "public"."notification_settings" add constraint "notification_settings_user_id_notification_type_key" UNIQUE (user_id, notification_type);
-alter table "public"."payroll_runs" add constraint "payroll_runs_period_month_branch_id_key" UNIQUE (period_month, branch_id);
-alter table "public"."payslips" add constraint "payslips_payroll_run_id_employee_id_key" UNIQUE (payroll_run_id, employee_id);
-alter table "public"."production_batches" add constraint "production_batches_batch_no_key" UNIQUE (batch_no);
-alter table "public"."products" add constraint "products_sku_key" UNIQUE (sku);
-alter table "public"."properties" add constraint "properties_code_key" UNIQUE (code);
-alter table "public"."purchase_orders" add constraint "purchase_orders_po_number_key" UNIQUE (po_number);
-alter table "public"."recipe_items" add constraint "recipe_items_recipe_id_item_id_key" UNIQUE (recipe_id, item_id);
-alter table "public"."rent_invoices" add constraint "rent_invoices_invoice_no_key" UNIQUE (invoice_no);
-alter table "public"."rent_invoices" add constraint "rent_invoices_lease_id_period_start_key" UNIQUE (lease_id, period_start);
-alter table "public"."sale_returns" add constraint "sale_returns_return_no_key" UNIQUE (return_no);
-alter table "public"."sales" add constraint "sales_receipt_no_key" UNIQUE (receipt_no);
-alter table "public"."shifts" add constraint "shifts_name_key" UNIQUE (name);
-alter table "public"."stock_count_items" add constraint "stock_count_items_count_id_item_id_key" UNIQUE (count_id, item_id);
 alter table "public"."stock_transfers" add constraint "stock_transfers_transfer_no_key" UNIQUE (transfer_no);
 alter table "public"."stores" add constraint "stores_branch_id_name_key" UNIQUE (branch_id, name);
+alter table "public"."stores" add constraint "stores_pkey" PRIMARY KEY (id);
+alter table "public"."suppliers" add constraint "suppliers_pkey" PRIMARY KEY (id);
 alter table "public"."tax_brackets" add constraint "tax_brackets_min_amount_key" UNIQUE (min_amount);
+alter table "public"."tax_brackets" add constraint "tax_brackets_pkey" PRIMARY KEY (id);
+alter table "public"."tenants" add constraint "tenants_pkey" PRIMARY KEY (id);
 alter table "public"."units" add constraint "units_code_key" UNIQUE (code);
+alter table "public"."units" add constraint "units_pkey" PRIMARY KEY (id);
+alter table "public"."write_offs" add constraint "write_offs_pkey" PRIMARY KEY (id);
 alter table "public"."approvals" add constraint "approvals_status_check" CHECK ((status = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text])));
 alter table "public"."attendance" add constraint "attendance_status_check" CHECK ((status = ANY (ARRAY['present'::text, 'absent'::text, 'late'::text, 'leave'::text, 'holiday'::text])));
 alter table "public"."audit_logs" add constraint "audit_logs_action_check" CHECK ((action = ANY (ARRAY['INSERT'::text, 'UPDATE'::text, 'DELETE'::text])));
@@ -2021,23 +2018,6 @@ create or replace view public."v_daily_sales" as
    FROM sales s
   WHERE (status = 'completed'::text)
   GROUP BY (((sale_date AT TIME ZONE 'Africa/Addis_Ababa'::text))::date), branch_id;
-create or replace view public."v_dashboard_kpis" as
- SELECT ( SELECT COALESCE(sum(sales.total_amount), (0)::numeric) AS "coalesce"
-           FROM sales
-          WHERE ((sales.status = 'completed'::text) AND (((sales.sale_date AT TIME ZONE 'Africa/Addis_Ababa'::text))::date = ((now() AT TIME ZONE 'Africa/Addis_Ababa'::text))::date))) AS today_sales,
-    ( SELECT COALESCE(sum(v_cash_account_balances.balance), (0)::numeric) AS "coalesce"
-           FROM v_cash_account_balances) AS cash_balance,
-    ( SELECT count(*) AS count
-           FROM v_low_stock) AS low_stock_items,
-    ( SELECT COALESCE(sum(receivables.balance), (0)::numeric) AS "coalesce"
-           FROM receivables
-          WHERE ((receivables.status = ANY (ARRAY['open'::text, 'partial'::text])) AND (receivables.due_date < CURRENT_DATE))) AS overdue_receivables,
-    ( SELECT COALESCE(sum((rent_invoices.amount - rent_invoices.paid_amount)), (0)::numeric) AS "coalesce"
-           FROM rent_invoices
-          WHERE ((rent_invoices.status = ANY (ARRAY['unpaid'::text, 'partial'::text, 'overdue'::text])) AND (rent_invoices.due_date <= (CURRENT_DATE + 7)))) AS rent_due,
-    ( SELECT count(*) AS count
-           FROM attendance
-          WHERE ((attendance.work_date = CURRENT_DATE) AND (attendance.status = ANY (ARRAY['present'::text, 'late'::text])))) AS staff_present_today;
 create or replace view public."v_expense_summary" as
  SELECT (date_trunc('month'::text, (t.txn_date)::timestamp with time zone))::date AS month,
     COALESCE(c.name, 'Uncategorized'::text) AS category,
@@ -2141,6 +2121,23 @@ create or replace view public."v_supplier_balances" as
    FROM (suppliers s
      LEFT JOIN ledger_entries l ON ((l.supplier_id = s.id)))
   GROUP BY s.id;
+create or replace view public."v_dashboard_kpis" as
+ SELECT ( SELECT COALESCE(sum(sales.total_amount), (0)::numeric) AS "coalesce"
+           FROM sales
+          WHERE ((sales.status = 'completed'::text) AND (((sales.sale_date AT TIME ZONE 'Africa/Addis_Ababa'::text))::date = ((now() AT TIME ZONE 'Africa/Addis_Ababa'::text))::date))) AS today_sales,
+    ( SELECT COALESCE(sum(v_cash_account_balances.balance), (0)::numeric) AS "coalesce"
+           FROM v_cash_account_balances) AS cash_balance,
+    ( SELECT count(*) AS count
+           FROM v_low_stock) AS low_stock_items,
+    ( SELECT COALESCE(sum(receivables.balance), (0)::numeric) AS "coalesce"
+           FROM receivables
+          WHERE ((receivables.status = ANY (ARRAY['open'::text, 'partial'::text])) AND (receivables.due_date < CURRENT_DATE))) AS overdue_receivables,
+    ( SELECT COALESCE(sum((rent_invoices.amount - rent_invoices.paid_amount)), (0)::numeric) AS "coalesce"
+           FROM rent_invoices
+          WHERE ((rent_invoices.status = ANY (ARRAY['unpaid'::text, 'partial'::text, 'overdue'::text])) AND (rent_invoices.due_date <= (CURRENT_DATE + 7)))) AS rent_due,
+    ( SELECT count(*) AS count
+           FROM attendance
+          WHERE ((attendance.work_date = CURRENT_DATE) AND (attendance.status = ANY (ARRAY['present'::text, 'late'::text])))) AS staff_present_today;
 
 CREATE TRIGGER on_auth_user_created AFTER INSERT ON auth.users FOR EACH ROW EXECUTE FUNCTION handle_new_user();
 CREATE TRIGGER trg_app_settings_audit AFTER INSERT OR DELETE OR UPDATE ON public.app_settings FOR EACH ROW EXECUTE FUNCTION fn_audit();
@@ -2597,6 +2594,11 @@ grant usage on schema public to anon, authenticated;
 grant all on all tables in schema public to anon, authenticated;
 grant all on all sequences in schema public to anon, authenticated;
 grant execute on all functions in schema public to anon, authenticated;
+-- Local storage grants. The hosted project already has the equivalent
+-- grants; these keep the disposable local stack faithful to it.
+grant usage on schema storage to anon, authenticated;
+grant select on storage.buckets to anon, authenticated;
+grant select, insert, update, delete on storage.objects to anon, authenticated;
 
 insert into public.roles ("code", "name", "description") values ('admin', 'Administrator', 'Full system access') on conflict do nothing;
 insert into public.roles ("code", "name", "description") values ('manager', 'Manager', 'Branch and shop management') on conflict do nothing;
