@@ -11,45 +11,37 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
-      - name: Dump live public schema
+      - name: Download PostgREST OpenAPI schema
         env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           set -euo pipefail
-          ref=$(printf '%s' "$SUPABASE_URL" | sed -E 's#https://([^.]+)\.supabase\.co.*#\1#')
-          test -n "$ref"
-          echo "Inspecting project $ref"
-          region=$(curl -fsS -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            https://api.supabase.com/v1/projects \
-            | jq -r --arg ref "$ref" '.[] | select(.id == $ref) | .region' | head -1)
-          echo "Region: ${region:-unknown}"
-          encoded=$(python3 -c 'import os,urllib.parse; print(urllib.parse.quote(os.environ["SUPABASE_DB_PASSWORD"], safe=""))')
-          dump_ok=0
-          for target in "db.${ref}.supabase.co|postgres|5432" "aws-0-${region}.pooler.supabase.com|postgres.${ref}|5432" "aws-1-${region}.pooler.supabase.com|postgres.${ref}|5432"; do
-            host=${target%%|*}; rest=${target#*|}; user=${rest%%|*}; port=${rest##*|}
-            echo "Trying $host as $user"
-            if PGPASSWORD="$SUPABASE_DB_PASSWORD" pg_dump \
-              --host="$host" --port="$port" --username="$user" --dbname=postgres \
-              --schema-only --no-owner --no-privileges --schema=public \
-              --file=schema-public.sql; then
-              dump_ok=1
-              break
-            fi
-          done
-          test "$dump_ok" = "1"
-          PGPASSWORD="$SUPABASE_DB_PASSWORD" pg_dump \
-            --host="$host" --port="$port" --username="$user" --dbname=postgres \
-            --schema-only --no-owner --no-privileges --schema=storage \
-            --file=schema-storage.sql || true
-          wc -l schema-public.sql schema-storage.sql
+          curl -fsS "$SUPABASE_URL/rest/v1/?apikey=$SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            -H "Accept: application/openapi+json" \
+            -o openapi.json
+          python3 - <<'PY'
+          import json
+          from pathlib import Path
+          d = json.loads(Path('openapi.json').read_text())
+          paths = d.get('paths', {})
+          defs = d.get('definitions', {})
+          print('paths', len(paths), 'definitions', len(defs))
+          with Path('schema-summary.txt').open('w') as f:
+              for name in sorted(defs):
+                  props = defs[name].get('properties', {})
+                  f.write(f'{name}: ' + ', '.join(f'{k}:{v.get("type", v.get("format", "?"))}' for k, v in props.items()) + '\n')
+              f.write('\nRPC PATHS\n')
+              for path in sorted(paths):
+                  if path.startswith('/rpc/'):
+                      f.write(path + '\n')
+          print(Path('schema-summary.txt').read_text()[:4000])
+          PY
       - uses: actions/upload-artifact@v4
         with:
           name: live-db-schema
           if-no-files-found: error
           path: |
-            schema-public.sql
-            schema-storage.sql
+            openapi.json
+            schema-summary.txt
