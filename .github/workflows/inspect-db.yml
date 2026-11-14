@@ -1,0 +1,37 @@
+name: Inspect live database schema
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Dump live public schema
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+        run: |
+          set -euo pipefail
+          ref=$(printf '%s' "$SUPABASE_URL" | sed -E 's#https://([^.]+)\.supabase\.co.*#\1#')
+          test -n "$ref"
+          echo "Inspecting project $ref"
+          supabase link --project-ref "$ref" --password "$SUPABASE_DB_PASSWORD" --yes
+          supabase db dump --schema public --file schema-public.sql
+          supabase db dump --schema storage --file schema-storage.sql || true
+          wc -l schema-public.sql schema-storage.sql
+      - uses: actions/upload-artifact@v4
+        with:
+          name: live-db-schema
+          if-no-files-found: error
+          path: |
+            schema-public.sql
+            schema-storage.sql
