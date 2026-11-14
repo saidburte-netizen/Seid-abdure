@@ -33,6 +33,7 @@ import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_scaffold.dart';
 import 'widgets/common.dart';
+import 'l10n/ui_text.dart';
 
 class BakeryApp extends StatelessWidget {
   const BakeryApp({
@@ -240,8 +241,8 @@ class _BakeryRouterState extends State<_BakeryRouter> {
             ),
             GoRoute(
               path: 'branches',
-              builder: (context, state) => const SettingsTableScreen(
-                title: 'Branches',
+              builder: (context, state) => SettingsTableScreen(
+                title: uiText(context, 'Branches'),
                 table: 'branches',
                 readPermission: 'branches.manage',
                 writePermission: 'branches.manage',
@@ -253,8 +254,8 @@ class _BakeryRouterState extends State<_BakeryRouter> {
             ),
             GoRoute(
               path: 'users',
-              builder: (context, state) => const SettingsTableScreen(
-                title: 'Users & roles',
+              builder: (context, state) => SettingsTableScreen(
+                title: uiText(context, 'Users & roles'),
                 table: 'profiles',
                 readPermission: 'users.manage',
                 writePermission: 'users.manage',

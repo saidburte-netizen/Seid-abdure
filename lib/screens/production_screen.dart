@@ -6,6 +6,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class ProductionScreen extends StatelessWidget {
   const ProductionScreen({super.key});
@@ -17,9 +18,11 @@ class ProductionScreen extends StatelessWidget {
   ) async {
     final confirmed = await confirmAction(
       context,
-      title: 'Complete production batch?',
-      message:
-          'The database trigger will consume ingredients and add finished stock.',
+      title: uiText(context, 'Complete production batch?'),
+      message: uiText(
+        context,
+        'The database trigger will consume ingredients and add finished stock.',
+      ),
       confirmLabel: 'Complete',
     );
     if (!confirmed) return;
@@ -56,7 +59,12 @@ class ProductionScreen extends StatelessWidget {
           .update({'status': next})
           .eq('id', order['id']);
       if (context.mounted) {
-        showSnack(context, 'Cake order marked ${prettyLabel(next)}.');
+        showSnack(
+          context,
+          uiTextFormat(context, 'cakeOrderMarked', {
+            'status': uiText(context, prettyLabel(next)),
+          }),
+        );
       }
     } catch (error) {
       if (context.mounted) {
@@ -69,7 +77,7 @@ class ProductionScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Production & catalog',
+      title: uiText(context, 'Production & catalog'),
       body: DefaultTabController(
         length: 8,
         child: Column(
@@ -129,7 +137,7 @@ class ProductionScreen extends StatelessWidget {
                         ? const []
                         : [
                             CrudRowAction(
-                              label: 'Complete batch',
+                              label: uiText(context, 'Complete batch'),
                               icon: Icons.check_circle_outline,
                               onPressed: (row) =>
                                   _completeBatch(context, session, row),
@@ -147,7 +155,7 @@ class ProductionScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Advance status',
+                          label: uiText(context, 'Advance status'),
                           icon: Icons.arrow_forward,
                           onPressed: (row) =>
                               _advanceCakeOrder(context, session, row),

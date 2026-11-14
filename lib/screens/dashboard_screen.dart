@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/brand_ui.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
@@ -393,7 +394,7 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'My account',
+      title: uiText(context, 'My account'),
       isRoot: true,
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -404,7 +405,7 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                 padding: const EdgeInsets.all(16),
                 children: [
                   SectionCard(
-                    title: 'Customer profile',
+                    title: uiText(context, 'Customer profile'),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -424,9 +425,11 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                     ErrorView(message: _error!, onRetry: _load)
                   else ...[
                     SectionCard(
-                      title: 'Cake orders',
+                      title: uiText(context, 'Cake orders'),
                       child: _orders.isEmpty
-                          ? const EmptyView(message: 'No cake orders yet.')
+                          ? EmptyView(
+                              message: uiText(context, 'No cake orders yet.'),
+                            )
                           : Column(
                               children: [
                                 for (final order in _orders)
@@ -444,9 +447,14 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                             ),
                     ),
                     SectionCard(
-                      title: 'Credit balance',
+                      title: uiText(context, 'Credit balance'),
                       child: _receivables.isEmpty
-                          ? const EmptyView(message: 'No outstanding credit.')
+                          ? EmptyView(
+                              message: uiText(
+                                context,
+                                'No outstanding credit.',
+                              ),
+                            )
                           : Column(
                               children: [
                                 for (final row in _receivables)

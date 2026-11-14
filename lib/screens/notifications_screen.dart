@@ -5,6 +5,7 @@ import '../data/formatting.dart';
 import '../data/repository.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key, this.initialTab = 0});
@@ -104,7 +105,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
-    title: 'Notifications',
+    title: uiText(context, 'Notifications'),
     body: DefaultTabController(
       length: 2,
       initialIndex: widget.initialTab.clamp(0, 1),
@@ -139,7 +140,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               FilledButton.icon(
                 onPressed: _refreshAlerts,
                 icon: const Icon(Icons.notifications_active_outlined),
-                label: const Text('Generate alerts'),
+                label: const LText('Generate alerts'),
               ),
               OutlinedButton.icon(
                 onPressed: unread == 0 ? null : _markAllRead,
@@ -147,7 +148,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 label: Text('Mark all read ($unread)'),
               ),
               IconButton(
-                tooltip: 'Reload',
+                tooltip: uiText(context, 'Reload'),
                 onPressed: _load,
                 icon: const Icon(Icons.refresh),
               ),
@@ -160,8 +161,11 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               : _error != null
               ? ErrorView(message: _error!, onRetry: _load)
               : _notifications.isEmpty
-              ? const EmptyView(
-                  message: 'No notifications yet. Generate alerts to refresh.',
+              ? EmptyView(
+                  message: uiText(
+                    context,
+                    'No notifications yet. Generate alerts to refresh.',
+                  ),
                 )
               : RefreshIndicator(
                   onRefresh: _load,
@@ -191,7 +195,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                           trailing: read
                               ? null
                               : IconButton(
-                                  tooltip: 'Mark read',
+                                  tooltip: uiText(context, 'Mark read'),
                                   onPressed: () => _markRead(notification),
                                   icon: const Icon(Icons.done),
                                 ),
@@ -317,7 +321,7 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      prettyLabel(type),
+                      uiText(context, prettyLabel(type)),
                       style: Theme.of(context).textTheme.titleMedium,
                     ),
                     Wrap(
@@ -325,7 +329,7 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
                       children: [
                         for (final field in ['in_app', 'push', 'sms', 'email'])
                           FilterChip(
-                            label: Text(prettyLabel(field)),
+                            label: Text(uiText(context, prettyLabel(field))),
                             selected:
                                 (_rows[type]?[field] as bool?) ??
                                 field == 'in_app',

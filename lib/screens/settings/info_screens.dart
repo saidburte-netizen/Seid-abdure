@@ -5,6 +5,7 @@ import '../../brand/brand.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/common.dart';
+import '../../l10n/ui_text.dart';
 
 class AboutScreen extends StatelessWidget {
   const AboutScreen({super.key});
@@ -73,26 +74,26 @@ class HelpScreen extends StatelessWidget {
       title: Text(strings.helpContact),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
+        children: [
           SectionCard(
-            title: 'Getting help',
-            child: Text(
+            title: uiText(context, 'Getting help'),
+            child: const Text(
               'For account access, role changes, or a correction to a business '
               'record, contact your branch administrator or the business owner. '
               'Administrators can manage users in Settings → Users.',
             ),
           ),
           SectionCard(
-            title: 'Before you report a problem',
-            child: Text(
+            title: uiText(context, 'Before you report a problem'),
+            child: const Text(
               'Check that the device has internet access, then pull down to '
               'refresh the screen. The app never shows technical error text; '
               'the message on screen is safe to share with your administrator.',
             ),
           ),
           SectionCard(
-            title: 'Support information to include',
-            child: Text(
+            title: uiText(context, 'Support information to include'),
+            child: const Text(
               'Tell your administrator what you were doing, the screen name, '
               'the exact friendly message shown, and the time it happened.',
             ),
@@ -113,10 +114,10 @@ class PrivacyScreen extends StatelessWidget {
       title: Text(strings.privacyPolicy),
       body: ListView(
         padding: const EdgeInsets.all(16),
-        children: const [
+        children: [
           SectionCard(
-            title: 'What we store',
-            child: Text(
+            title: uiText(context, 'What we store'),
+            child: const Text(
               'The app stores the business records you enter: sales, stock, '
               'cash, staff, payroll, rentals, credit, customers, suppliers and '
               'settings. Account email, name, phone, avatar, role and language '
@@ -124,23 +125,23 @@ class PrivacyScreen extends StatelessWidget {
             ),
           ),
           SectionCard(
-            title: 'Who can see it',
-            child: Text(
+            title: uiText(context, 'Who can see it'),
+            child: const Text(
               'Access follows the role and branch permissions configured by '
               'your administrator. Sensitive operations are restricted to the '
               'roles that need them.',
             ),
           ),
           SectionCard(
-            title: 'Device storage',
-            child: Text(
+            title: uiText(context, 'Device storage'),
+            child: const Text(
               'The device stores only your selected language, theme and branch. '
               'Business records remain in the organization database.',
             ),
           ),
           SectionCard(
-            title: 'Your choices',
-            child: Text(
+            title: uiText(context, 'Your choices'),
+            child: const Text(
               'You can change your profile, password, language and notification '
               'preferences in Settings. Ask an administrator to deactivate an '
               'account that should no longer have access.',

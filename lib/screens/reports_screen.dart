@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../data/schema.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
@@ -33,7 +34,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
-    title: 'Reports & analytics',
+    title: uiText(context, 'Reports & analytics'),
     body: Column(
       children: [
         Padding(
@@ -44,9 +45,9 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 child: DropdownButtonFormField<String>(
                   initialValue: _selected,
                   isExpanded: true,
-                  decoration: const InputDecoration(
-                    labelText: 'Report view',
-                    prefixIcon: Icon(Icons.analytics_outlined),
+                  decoration: InputDecoration(
+                    labelText: uiText(context, 'Report view'),
+                    prefixIcon: const Icon(Icons.analytics_outlined),
                   ),
                   items: [
                     for (final entry in _reports.entries)
@@ -64,7 +65,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               OutlinedButton.icon(
                 onPressed: () => setState(() => _refreshSeed++),
                 icon: const Icon(Icons.refresh),
-                label: const Text('Refresh'),
+                label: const LText('Refresh'),
               ),
             ],
           ),

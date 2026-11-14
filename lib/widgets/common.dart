@@ -9,6 +9,7 @@ import '../data/repository.dart';
 import '../l10n/app_localizations.dart';
 import '../theme/app_theme.dart';
 import 'brand_ui.dart';
+import '../l10n/ui_text.dart';
 
 export '../core/errors/error_ui.dart';
 
@@ -282,7 +283,7 @@ Future<bool> confirmAction(
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(false),
-          child: const Text('Cancel'),
+          child: const LText('Cancel'),
         ),
         FilledButton(
           onPressed: () => Navigator.of(context).pop(true),
@@ -341,7 +342,7 @@ Future<void> showInfoDialog(
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Close'),
+        child: const LText('Close'),
       ),
     ],
   ),
@@ -372,7 +373,9 @@ class ReportTable extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (rows.isEmpty) return const EmptyView(message: 'No rows returned.');
+    if (rows.isEmpty) {
+      return EmptyView(message: uiText(context, 'No rows returned.'));
+    }
     final keys =
         columns ?? (rows.expand((row) => row.keys).toSet().toList()..sort());
     return SingleChildScrollView(
@@ -383,7 +386,8 @@ class ReportTable extends StatelessWidget {
         dataRowMinHeight: 36,
         dataRowMaxHeight: 60,
         columns: [
-          for (final key in keys) DataColumn(label: Text(prettyLabel(key))),
+          for (final key in keys)
+            DataColumn(label: Text(uiText(context, prettyLabel(key)))),
         ],
         rows: [
           for (final row in rows)
@@ -451,9 +455,9 @@ class PermissionGate extends StatelessWidget {
     final session = SessionScope.of(context);
     if (session.can(permission)) return child;
     return fallback ??
-        const EmptyView(
+        EmptyView(
           icon: Icons.lock_outline,
-          message: 'You do not have permission for this area.',
+          message: uiText(context, 'You do not have permission for this area.'),
         );
   }
 }

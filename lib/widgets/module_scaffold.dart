@@ -8,6 +8,7 @@ import '../data/schema.dart';
 import '../l10n/app_localizations.dart';
 import 'app_scaffold.dart';
 import 'common.dart';
+import '../l10n/ui_text.dart';
 
 class ModuleScaffold extends StatelessWidget {
   const ModuleScaffold({
@@ -300,7 +301,7 @@ class _NotificationActionState extends State<NotificationAction> {
 
   @override
   Widget build(BuildContext context) => IconButton(
-    tooltip: 'Notifications',
+    tooltip: uiText(context, 'Notifications'),
     onPressed: () async {
       await context.push('/notifications');
       await _loadUnread();
@@ -448,7 +449,7 @@ class _AccountMenu extends StatelessWidget {
                   ? Icons.radio_button_checked
                   : Icons.radio_button_unchecked,
             ),
-            title: const Text('Afaan Oromoo'),
+            title: const LText('Afaan Oromoo'),
           ),
         ),
         const PopupMenuDivider(),
@@ -610,7 +611,7 @@ class _InputDialogState extends State<_InputDialog> {
         ),
       ),
       actions: [
-        TextButton(onPressed: _cancel, child: const Text('Cancel')),
+        TextButton(onPressed: _cancel, child: const LText('Cancel')),
         FilledButton(onPressed: _submit, child: Text(widget.submitLabel)),
       ],
     ),
@@ -620,7 +621,7 @@ class _InputDialogState extends State<_InputDialog> {
     if (field.type == FieldType.boolean) {
       return SwitchListTile(
         contentPadding: EdgeInsets.zero,
-        title: Text(field.label),
+        title: LText(field.label),
         value: _booleans[field.key] ?? false,
         onChanged: (value) => setState(() {
           _dirty = true;
@@ -633,7 +634,7 @@ class _InputDialogState extends State<_InputDialog> {
         initialValue: _controllers[field.key]!.text.isEmpty
             ? null
             : _controllers[field.key]!.text,
-        decoration: InputDecoration(labelText: field.label),
+        decoration: InputDecoration(labelText: uiText(context, field.label)),
         items: [
           for (final option in field.options.entries)
             DropdownMenuItem(value: option.key, child: Text(option.value)),
@@ -654,7 +655,10 @@ class _InputDialogState extends State<_InputDialog> {
           : null,
       minLines: field.type == FieldType.multiline ? 2 : 1,
       maxLines: field.type == FieldType.multiline ? 4 : 1,
-      decoration: InputDecoration(labelText: field.label, hintText: field.hint),
+      decoration: InputDecoration(
+        labelText: uiText(context, field.label),
+        hintText: field.hint == null ? null : uiText(context, field.hint!),
+      ),
       onChanged: (_) => _dirty = true,
       validator: (value) {
         if (field.required && (value == null || value.trim().isEmpty)) {

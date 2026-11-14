@@ -6,6 +6,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class ApprovalsScreen extends StatelessWidget {
   const ApprovalsScreen({super.key});
@@ -54,7 +55,7 @@ class ApprovalsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Approvals',
+      title: uiText(context, 'Approvals'),
       body: CrudTab(
         spec: specFor('approvals'),
         readPermission: 'expenses.approve',
@@ -65,12 +66,12 @@ class ApprovalsScreen extends StatelessWidget {
           }
           return [
             CrudRowAction(
-              label: 'Approve',
+              label: uiText(context, 'Approve'),
               icon: Icons.check_circle_outline,
               onPressed: (row) => _decide(context, session, row, true),
             ),
             CrudRowAction(
-              label: 'Reject',
+              label: uiText(context, 'Reject'),
               icon: Icons.cancel_outlined,
               danger: true,
               onPressed: (row) => _decide(context, session, row, false),

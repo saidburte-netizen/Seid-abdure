@@ -1,4 +1,4 @@
-# QA report - Brade and Cake House 1.0.3+3
+# QA report - Brade and Cake House 1.0.4+4
 
 ## Environment
 
@@ -8,7 +8,7 @@
 | Dart | 3.9.2 |
 | Test surface | 390 x 844 logical pixels, light theme |
 | Live Supabase project | `nmrpmypgkljmtnsvmcfn` |
-| Build version | `1.0.3+3` |
+| Build version | `1.0.4+4` |
 
 ## Gate results
 
@@ -18,9 +18,10 @@
 | Placeholder/empty-handler scan | `bash tool/check_placeholders.sh` | PASS |
 | Schema consistency | `python3 tool/check_schema.py` | PASS |
 | Static analysis | `flutter analyze` | PASS, 0 issues |
-| Full Flutter suite | `flutter test` | PASS, 83 tests |
+| Full Flutter suite | `flutter test` | PASS, 86 tests |
 | Colour-balance suite | `flutter test test/colour_probe_test.dart` | PASS, 51 routes |
 | Offline evidence test | `flutter test test/airplane_mode_evidence_test.dart` | PASS |
+| Translation coverage | `flutter test test/ui_text_coverage_test.dart` | PASS, 3 tests |
 
 ### Schema check summary
 
@@ -101,6 +102,13 @@ green pixels with `g > r * 1.18 && g > b * 1.12 && g > 25`, and fails outside
   every English key and identical placeholder sets.
 - `test/all_routes_localization_test.dart` builds every portal route in `en`,
   `am` and `om`, and switches language live in both directions.
+- `lib/l10n/ui_text.dart` localizes 148 screen/widget phrases, all 81 schema
+  table titles, all 277 distinct field labels, and 16 dynamic templates.
+  Unknown words fall back to a 280-word Amharic/Oromo dictionary; technical
+  tokens such as SKU, TIN, URL and PDF stay unchanged by design.
+- `test/ui_text_coverage_test.dart` parses `lib/data/schema.dart` and fails if
+  any table title, field label, UI phrase or template lacks an Amharic/Oromo
+  translation or loses a placeholder.
 - Newly translated auth/settings strings: `loading`, `branchSetup`,
   `noActiveBranch`, `createMainBranch`, `creating`, `generateInvoices`.
 - No technical exception text is rendered to users; the offline path is covered

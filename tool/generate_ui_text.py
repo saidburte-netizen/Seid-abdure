@@ -1,0 +1,444 @@
+#!/usr/bin/env python3
+"""Generate lib/l10n/ui_text.dart from the translation tables below.
+
+This is a development tool.  The generated Dart file is committed and is the
+runtime source of truth.  Run this script after editing a translation.
+"""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+from word_translations import TECHNICAL, WORDS
+
+ROOT = Path(__file__).resolve().parents[1]
+
+# English source -> (Amharic, Afaan Oromoo)
+UI: dict[str, tuple[str, str]] = {
+    "Branches": ("ቅርንጫፎች", "Dameewwan"),
+    "Users & roles": ("ተጠቃሚዎች እና ሚናዎች", "Fayyadamtoota fi gaheewwan"),
+    "Assign branch, role and active status": (
+        "ቅርንጫፍ፣ ሚና እና ንቁ ሁኔታ ይመድቡ",
+        "Damee, gahee fi haala socho'aa ramadi",
+    ),
+    "Try again": ("እንደገና ሞክር", "Irra deebi'ii yaali"),
+    "Reset language": ("ቋንቋ ዳግም አስጀምር", "Afaan irra deebi'i"),
+    "Approvals": ("ማጽደቆች", "Mirkaneessaa"),
+    "Approve": ("አጽድቅ", "Mirkaneessi"),
+    "Reject": ("ውድቅ አድርግ", "Didi"),
+    "Pay payable": ("የሚከፈል ክፈል", "Kaffaltii kaffali"),
+    "Cash & expenses": ("ገንዘብ እና ወጪዎች", "Maallaqa fi baasii"),
+    "Create payable": ("የሚከፈል ፍጠር", "Kaffaltii uumi"),
+    "Cash account": ("የገንዘብ ሂሳብ", "Herrega maallaqaa"),
+    "Amount": ("መጠን", "Hamma"),
+    "Method": ("ዘዴ", "Mala"),
+    "Reference": ("ማጣቀሻ", "Wabii"),
+    "Approve write-off?": ("ስረዛን አጽድቅ?", "Haqaa mirkaneessaa?"),
+    "The database trigger will reduce the receivable balance.": (
+        "የውሂብ ጎታ ተንቀሳቃሽ የሚቀበሉትን ቀሪ ሂሳብ ይቀንሳል።",
+        "Kakaasaa daataa haftee fudhatamuu hir'isa.",
+    ),
+    "Credit & debit control": ("ብድር እና ዴቢት ቁጥጥር", "To'annoo liqii fi deebitii"),
+    "Receive payment": ("ክፍያ ተቀበል", "Kaffaltii fudhadhu"),
+    "Pay supplier": ("አቅራቢን ክፈል", "Dhiyeessaa kaffali"),
+    "Approve write-off": ("ስረዛ አጽድቅ", "Haqaa mirkaneessi"),
+    "My account": ("የእኔ መለያ", "Herrega koo"),
+    "Customer profile": ("የደንበኛ መገለጫ", "Profaayilii maamilaa"),
+    "Cake orders": ("የኬክ ትዕዛዞች", "Ajajoota keekii"),
+    "No cake orders yet.": ("እስካሁን የኬክ ትዕዛዞች የሉም።", "Ajajoota keekii hin jiran."),
+    "Credit balance": ("የብድር ቀሪ ሂሳብ", "Haftee liqii"),
+    "No outstanding credit.": ("ያልተከፈለ ብድር የለም።", "Liqii hafe hin jiru."),
+    "Receiving store": ("መቀበያ መጋዘን", "Kuusaa fudhatamaa"),
+    "Approve stock count?": ("የክምችት ቆጠራን አጽድቅ?", "Lakkoofsa kuusaa mirkaneessaa?"),
+    "The database trigger will post counted variances to stock.": (
+        "የውሂብ ጎታ ተንቀሳቃሽ የተቆጠሩ ልዩነቶችን ወደ ክምችት ይመዘግባል።",
+        "Kakaasaa daataa garaagarummaa lakkaa'ame gara kuusaatti galmeessa.",
+    ),
+    "Inventory & purchasing": ("ክምችት እና ግዢ", "Kuusaa fi bittaa"),
+    "Receive goods": ("ዕቃ ተቀበል", "Meeshaa fudhadhu"),
+    "Approve count": ("ቆጠራ አጽድቅ", "Lakkoofsa mirkaneessi"),
+    "Notifications": ("ማሳወቂያዎች", "Beeksisota"),
+    "Generate alerts": ("ማንቂያዎችን ፍጠር", "Akeekkachiisa uumi"),
+    "Reload": ("እንደገና ጫን", "Irra deebi'ii fe'i"),
+    "No notifications yet. Generate alerts to refresh.": (
+        "እስካሁን ማሳወቂያዎች የሉም። ለማደስ ማንቂያዎችን ፍጠር።",
+        "Beeksisota hin jiran. Haaromsuuf akeekkachiisa uumi.",
+    ),
+    "Mark read": ("እንደተነበበ ምልክት አድርግ", "Dubbatame godhi"),
+    "Generate payslips?": ("የደመወዝ ደረሰኞችን ፍጠር?", "Nagahee mindaa uumaa?"),
+    "The database will calculate gross pay, tax, pension, advances and net pay.": (
+        "የውሂብ ጎታ ጠቅላላ ክፍያ፣ ታክስ፣ ጡረታ፣ ቅድሚያ ክፍያዎች እና የተጣራ ክፍያን ያሰላል።",
+        "Daataan mindaa waliigalaa, taaksii, soorama, dursee kaffaltii fi mindaa qulqulluu shallaga.",
+    ),
+    "This updates the payroll run and lets the database apply its totals.": (
+        "ይህ የደመወዝ ክፍያ ሩጫን ያዘምናል እና የውሂብ ጎታው ድምሮቹን እንዲተገበር ያደርጋል።",
+        "Kun fiigii kaffaltii mindaa haaromsa, daataan waliigala isaa hojiirra oolcha.",
+    ),
+    "Payslip": ("የደመወዝ ደረሰኝ", "Nagahee mindaa"),
+    "Payroll": ("የደመወዝ ክፍያ", "Kaffaltii mindaa"),
+    "Generate payslips": ("የደመወዝ ደረሰኞችን ፍጠር", "Nagahee mindaa uumi"),
+    "Approve run": ("ሩጫ አጽድቅ", "Fiigii mirkaneessi"),
+    "Mark paid": ("እንደተከፈለ ምልክት አድርግ", "Kaffalame godhi"),
+    "Payslip PDF": ("የደመወዝ ደረሰኝ PDF", "Nagahee mindaa PDF"),
+    "People & HR": ("ሰው ኃይል እና HR", "Hojjettoota fi HR"),
+    "Approve leave": ("ፈቃድ አጽድቅ", "Boqonnaa mirkaneessi"),
+    "Reject leave": ("ፈቃድ ውድቅ አድርግ", "Boqonnaa didi"),
+    "Complete sale": ("ሽያጭ ጨርስ", "Gurgurtaa xumuri"),
+    "Sales receipt": ("የሽያጭ ደረሰኝ", "Nagahee gurgurtaa"),
+    "Sale completed": ("ሽያጭ ተጠናቅቋል", "Gurgurtaan xumurame"),
+    "Receipt PDF": ("ደረሰኝ PDF", "Nagahee PDF"),
+    "Point of sale": ("የሽያጭ ነጥብ", "Iddoo gurgurtaa"),
+    "Clear cart": ("ጋሪ አጽዳ", "Gaarii haqi"),
+    "Search products": ("ምርቶችን ፈልግ", "Oomishaalee barbaadi"),
+    "No active products. Add products in Production.": (
+        "ንቁ ምርቶች የሉም። በምርት ክፍል ውስጥ ምርቶችን ያክሉ።",
+        "Oomishaalee socho'aa hin jiran. Oomishaalee kutaa Oomishaatti dabali.",
+    ),
+    "Tap a product to add it to the sale.": (
+        "ሽያጩ ላይ ለመጨመር ምርትን ይንኩ።",
+        "Gurgurtaa keessatti dabaluuf oomisha tuqi.",
+    ),
+    "Customer": ("ደንበኛ", "Maamila"),
+    "Store": ("መጋዘን", "Kuusaa"),
+    "Payment method": ("የክፍያ ዘዴ", "Mala kaffaltii"),
+    "Discount (ETB)": ("ቅናሽ (ETB)", "Hir'isa (ETB)"),
+    "Amount paid": ("የተከፈለ መጠን", "Hamma kaffalame"),
+    "Notes": ("ማስታወሻዎች", "Yaadannoo"),
+    "Complete production batch?": ("የምርት ስብስብ ጨርስ?", "Baachii oomishaa xumuraa?"),
+    "The database trigger will consume ingredients and add finished stock.": (
+        "የውሂብ ጎታ ተንቀሳቃሽ ግብዓቶችን ይጠቀማል እና የተጠናቀቀ ክምችት ይጨምራል።",
+        "Kakaasaa daataa qalqalloo fayyadama, kuusaa xumurame dabala.",
+    ),
+    "Production & catalog": ("ምርት እና ካታሎግ", "Oomisha fi kaataloogii"),
+    "Complete batch": ("ስብስብ ጨርስ", "Baachii xumuri"),
+    "Advance status": ("ሁኔታ አራምድ", "Haala dursi"),
+    "Generate rent invoices?": ("የኪራይ ደረሰኞችን ፍጠር?", "Nagahee kiraa uumaa?"),
+    "The database will create invoices for active leases for today.": (
+        "የውሂብ ጎታ ለዛሬ ንቁ ውሎች ደረሰኞችን ይፈጥራል።",
+        "Daataan waliigaltee socho'aa har'aaf nagahee uuma.",
+    ),
+    "Rentals": ("ኪራይ", "Kiraa"),
+    "Record rent": ("ኪራይ መዝግብ", "Kiraa galmeessi"),
+    "Reports & analytics": ("ሪፖርቶች እና ትንታኔ", "Gabaasa fi xiinxala"),
+    "Report view": ("የሪፖርት እይታ", "Ilaalcha gabaasaa"),
+    "Refresh": ("አድስ", "Haaromsi"),
+    "Void this sale?": ("ይህን ሽያጭ ሰርዝ?", "Gurgurtaa kana haqi?"),
+    "The database restores stock, cash and credit for this sale. This cannot be undone.": (
+        "የውሂብ ጎታ ለዚህ ሽያጭ ክምችት፣ ገንዘብ እና ብድርን ይመልሳል። ይህ ሊቀለበስ አይችልም።",
+        "Daataan kuusaa, maallaqa fi liqii gurgurtaa kanaaf deebisa. Kun hin duubatti deebi'u.",
+    ),
+    "Sales & returns": ("ሽያጭ እና መመለሻ", "Gurgurtaa fi deebii"),
+    "New sale": ("አዲስ ሽያጭ", "Gurgurtaa haaraa"),
+    "Print receipt": ("ደረሰኝ አትም", "Nagahee maxxansi"),
+    "Record return": ("መመለሻ መዝግብ", "Deebii galmeessi"),
+    "Void sale": ("ሽያጭ ሰርዝ", "Gurgurtaa haqi"),
+    "Close today": ("ዛሬን ዝጋ", "Har'a cufi"),
+    "Reason": ("ምክንያት", "Sababa"),
+    "Return qty": ("የመመለሻ ብዛት", "Baay'ina deebii"),
+    "Close business day": ("የንግድ ቀን ዝጋ", "Guyyaa daldalaa cufi"),
+    "Counted cash": ("የተቆጠረ ገንዘብ", "Maallaqa lakkaa'ame"),
+    "Table": ("ሠንጠረዥ", "Gabatee"),
+    "User ID": ("የተጠቃሚ ID", "ID fayyadamaa"),
+    "Action": ("እርምጃ", "Gocha"),
+    "No audit entries match these filters.": (
+        "ከእነዚህ ማጣሪያዎች ጋር የሚዛመድ የኦዲት መዝገብ የለም።",
+        "Galmeen oditii filtaroota kanaan hin walsu.",
+    ),
+    "Report": ("ሪፖርት", "Gabaasa"),
+    "This report returned no rows.": (
+        "ይህ ሪፖርት ምንም ረድፎች አልመለሰም።",
+        "Gabaasni kun tarree hin deebisne.",
+    ),
+    "Stores & cash accounts": ("መጋዘኖች እና የገንዘብ ሂሳቦች", "Kuusaa fi herrega maallaqaa"),
+    "Code": ("ኮድ", "Koodii"),
+    "Symbol": ("ምልክት", "Mallattoo"),
+    "Tax rates": ("የታክስ መጠኖች", "Safartuu taaksii"),
+    "Getting help": ("እርዳታ ማግኘት", "Gargaarsa argachuu"),
+    "Before you report a problem": ("ችግር ከመግለጽዎ በፊት", "Rakkoo gabaasuu kee dura"),
+    "Support information to include": (
+        "የሚያካትቱት የድጋፍ መረጃ",
+        "Odeeffannoo deeggarsaa dabaluu qabdu",
+    ),
+    "What we store": ("ምን እናከማቻለን", "Maal kuusna"),
+    "Who can see it": ("ማን ማየት ይችላል", "Eenyu ilaaluu danda'a"),
+    "Device storage": ("የመሣሪያ ማከማቻ", "Kuusaa meeshaa"),
+    "Your choices": ("ምርጫዎችዎ", "Filannoo kee"),
+    "Name, slogan, currency, tax and default language": (
+        "ስም፣ መፈክር, ገንዘብ, ታክስ እና ነባሪ ቋንቋ",
+        "Maqaa, moojoo, maallaqa, taaksii fi afaan durtii",
+    ),
+    "Units, categories, departments, shifts and tax": (
+        "ክፍሎች፣ ምድቦች፣ ክፍሎች፣ ፈረቃዎች እና ታክስ",
+        "Yuunitiiwwan, ramaddiiwwan, dipartimentiiwwan, shiftaawwan fi taaksii",
+    ),
+    "Filter by table, user, action and date": (
+        "በሠንጠረዥ፣ በተጠቃሚ፣ በእርምጃ እና በቀን አጣራ",
+        "Gabatee, fayyadamaa, gocha fi guyyaan filtarii",
+    ),
+    "PDF with logo, CSV with every visible column": (
+        "ከአርማ ጋር PDF፣ ከሁሉም የሚታዩ አምዶች ጋር CSV",
+        "PDF mallattoo waliin, CSV kolommii mul'atu hunda waliin",
+    ),
+    "Storage": ("ማከማቻ", "Kuusaa"),
+    "Branding": ("የምርት ስም", "Mallattoo"),
+    "Creates stock, credit and rent alerts now.": (
+        "አሁን የክምችት፣ የብድር እና የኪራይ ማንቂያዎችን ይፈጥራል።",
+        "Amma akeekkachiisa kuusaa, liqii fi kiraa uuma.",
+    ),
+    "Official brand": ("ይፋዊ የምርት ስም", "Mallattoo idilee"),
+    "Brand assets": ("የምርት ስም ንብረቶች", "Qabeenya mallattoo"),
+    "No rows returned.": ("ምንም ረድፎች አልተመለሱም።", "Tarreen hin deebine."),
+    "You do not have permission for this area.": (
+        "ለዚህ አካባቢ ፈቃድ የለዎትም።",
+        "Afaan kanaaf hayyama hin qabdu.",
+    ),
+    "You do not have permission to view this list.": (
+        "ይህን ዝርዝር ለማየት ፈቃድ የለዎትም።",
+        "Tarree kana ilaaluuf hayyama hin qabdu.",
+    ),
+    "Clear search": ("ፍለጋ አጽዳ", "Barbaadi haqi"),
+    "CSV": ("CSV", "CSV"),
+    "PDF": ("PDF", "PDF"),
+    "Actions": ("እርምጃዎች", "Gochoota"),
+    "Row actions": ("የረድፍ እርምጃዎች", "Gochoota tarree"),
+    "Edit": ("አርትዕ", "Gulaali"),
+    "Copy row": ("ረድፍ ቅዳ", "Tarree waraabi"),
+    "Delete": ("አጥፋ", "Haqi"),
+    "This permanently removes the record. Records referenced by transactions cannot be deleted.": (
+        "ይህ መዝገቡን ለዘላለም ያስወግዳል። በግብይቶች የተጠቀሱ መዝገቦች ሊጠፉ አይችሉም።",
+        "Kun galmee dhaabbii haqa. Galmeen transakshiniiwwaniin wabifame haqamuu hin danda'u.",
+    ),
+    "YYYY-MM-DD": ("YYYY-MM-DD", "YYYY-MM-DD"),
+    "Afaan Oromoo": ("Afaan Oromoo", "Afaan Oromoo"),
+    "Copy CSV": ("CSV ቅዳ", "CSV waraabi"),
+    "Done": ("ተጠናቅቋል", "Xumurame"),
+    "Required": ("ያስፈልጋል", "Barbaachisa"),
+    "Enter a number": ("ቁጥር ያስገቡ", "Lakkoofsa galchi"),
+    "Saving…": ("በማስቀመጥ ላይ…", "Olkaa'aa jira…"),
+    "Save": ("አስቀምጥ", "Olkaa'i"),
+    "Cancel": ("ሰርዝ", "Haqi"),
+    "Yes": ("አዎ", "Eeyyee"),
+    "No": ("አይ", "Lakki"),
+    "Search": ("ፈልግ", "Barbaadi"),
+    "New": ("አዲስ", "Haaraa"),
+    "Create": ("ፍጠር", "Uumi"),
+    "Close": ("ዝጋ", "Cufi"),
+    "Add": ("ጨምር", "Dabali"),
+    "Export": ("ላክ", "Al-ergi"),
+    "Delete record?": ("መዝገብ አጥፋ?", "Galmee haqi?"),
+    "Saved.": ("ተቀምጧል።", "Olkaa'ame."),
+    "Deleted.": ("ጠፍቷል።", "Haqame."),
+    "PDF exported.": ("PDF ተልኳል።", "PDF al-ergame."),
+}
+
+TEMPLATE_SOURCES: dict[str, str] = {
+    "newRecord": "New {name}",
+    "editRecord": "Edit {name}",
+    "deleteRecord": "Delete {name}?",
+    "noRecords": "No {name} found.",
+    "createRecord": "Create {name}",
+    "searchRecords": "Search {name}",
+    "recordDeleted": "{name} deleted.",
+    "recordSaved": "{name} saved.",
+    "recordExported": "{name} exported",
+    "rowsExported": "{count} rows exported from Brade and Cake House",
+    "savedTo": "Saved to:\n{path}\n\n{count} rows.",
+    "mustBeAtLeast": "Must be at least {min}",
+    "mustBeAtMost": "Must be at most {max}",
+    "cakeOrderMarked": "Cake order marked {status}.",
+    "markPayroll": "Mark payroll {status}?",
+    "payrollMarked": "Payroll marked {status}.",
+}
+
+TEMPLATES: dict[str, tuple[str, str]] = {
+    "newRecord": ("አዲስ {name}", "{name} haaraa"),
+    "editRecord": ("{name} አርትዕ", "{name} gulaali"),
+    "deleteRecord": ("{name} አጥፋ?", "{name} haqi?"),
+    "noRecords": ("{name} የለም።", "{name} hin jiru."),
+    "createRecord": ("{name} ፍጠር", "{name} uumi"),
+    "searchRecords": ("{name} ፈልግ", "{name} barbaadi"),
+    "recordDeleted": ("{name} ጠፍቷል።", "{name} haqame."),
+    "recordSaved": ("{name} ተቀምጧል።", "{name} olkaa'ame."),
+    "recordExported": ("{name} ተልኳል", "{name} al-ergame."),
+    "rowsExported": (
+        "{count} ረድፎች ከBrade and Cake House ተልከዋል",
+        "Tarreen {count} Brade and Cake House irraa al-ergame.",
+    ),
+    "savedTo": (
+        "የተቀመጠበት:\n{path}\n\n{count} ረድፎች።",
+        "Iddoo olkaa'ame:\n{path}\n\nTarree {count}.",
+    ),
+    "mustBeAtLeast": ("ቢያንስ {min} መሆን አለበት", "Xiqqaatee {min} ta'uu qaba"),
+    "mustBeAtMost": ("ቢበዛ {max} መሆን አለበት", "Baay'atee {max} ta'uu qaba"),
+    "cakeOrderMarked": (
+        "የኬክ ትዕዛዝ {status} ተደርጓል።",
+        "Ajajni keekii {status} godhame.",
+    ),
+    "markPayroll": (
+        "የደመወዝ ክፍያ {status} ምልክት አድርግ?",
+        "Kaffaltii mindaa {status} godhi?",
+    ),
+    "payrollMarked": (
+        "የደመወዝ ክፍያ {status} ተደርጓል።",
+        "Kaffaltiin mindaa {status} godhame.",
+    ),
+}
+
+
+def dart_map(values: dict[str, str]) -> str:
+    lines = []
+    for key, value in values.items():
+        lines.append(f"    {json.dumps(key, ensure_ascii=False)}: {json.dumps(value, ensure_ascii=False)},")
+    return "\n".join(lines)
+
+
+def main() -> None:
+    am = {key: pair[0] for key, pair in UI.items()}
+    om = {key: pair[1] for key, pair in UI.items()}
+    am_templates = {key: pair[0] for key, pair in TEMPLATES.items()}
+    om_templates = {key: pair[1] for key, pair in TEMPLATES.items()}
+    am_words = {key: pair[0] for key, pair in WORDS.items()}
+    om_words = {key: pair[1] for key, pair in WORDS.items()}
+
+    output = f"""// Generated by tool/generate_ui_text.py. Do not edit by hand.
+import 'package:flutter/widgets.dart';
+
+const Map<String, Map<String, String>> _uiTranslations = {{
+  'am': {{
+{dart_map(am)}
+  }},
+  'om': {{
+{dart_map(om)}
+  }},
+}};
+
+const Map<String, Map<String, String>> _wordTranslations = {{
+  'am': {{
+{dart_map(am_words)}
+  }},
+  'om': {{
+{dart_map(om_words)}
+  }},
+}};
+
+const Set<String> _technicalWords = {{{', '.join(json.dumps(w) for w in sorted(TECHNICAL))}}};
+
+const Map<String, String> uiTemplateSources = {{
+{chr(10).join(f"  {json.dumps(k)}: {json.dumps(v)}," for k, v in TEMPLATE_SOURCES.items())}
+}};
+
+const Map<String, Map<String, String>> _templateTranslations = {{
+  'am': {{
+{dart_map(am_templates)}
+  }},
+  'om': {{
+{dart_map(om_templates)}
+  }},
+}};
+
+/// Translates a known UI phrase. Unknown English is returned unchanged so
+/// data values (names, product codes) are never mangled.
+const List<String> uiTextKeys = [
+{chr(10).join(f"  {json.dumps(k, ensure_ascii=False)}," for k in UI)}
+];
+
+const List<String> uiTemplateKeys = [
+{chr(10).join(f"  {json.dumps(k, ensure_ascii=False)}," for k in TEMPLATES)}
+];
+
+/// Pure lookup used by tests and by [uiText].
+String uiTextForLocale(String code, String english) {{
+  if (code == 'en') return english;
+  final exact = _uiTranslations[code]?[english];
+  if (exact != null) return exact;
+  return _translateWords(code, english);
+}}
+
+String uiText(BuildContext context, String english) {{
+  return uiTextForLocale(Localizations.localeOf(context).languageCode, english);
+}}
+
+String _translateWords(String code, String english) {{
+  final words = _wordTranslations[code];
+  if (words == null) return english;
+  final matches = RegExp(r"[A-Za-z][A-Za-z\']*").allMatches(english);
+  final buffer = StringBuffer();
+  var last = 0;
+  for (final match in matches) {{
+    buffer.write(english.substring(last, match.start));
+    final word = match.group(0)!;
+    final lower = word.toLowerCase();
+    final translated = words[lower];
+    if (translated != null) {{
+      buffer.write(translated);
+    }} else if (_technicalWords.contains(lower)) {{
+      buffer.write(word);
+    }} else {{
+      buffer.write(word);
+    }}
+    last = match.end;
+  }}
+  buffer.write(english.substring(last));
+  return buffer.toString();
+}}
+
+/// Translates a template such as `newRecord` and replaces `{{name}}` style
+/// placeholders. The template itself is never shown to the user.
+String uiTemplateForLocale(String code, String key) {{
+  if (code == 'en') return key;
+  return _templateTranslations[code]?[key] ?? key;
+}}
+
+String uiTextFormat(
+  BuildContext context,
+  String key,
+  Map<String, String> values,
+) {{
+  var text = uiTemplateForLocale(Localizations.localeOf(context).languageCode, key);
+  for (final entry in values.entries) {{
+    text = text.replaceAll('{{${{entry.key}}}}', entry.value);
+  }}
+  return text;
+}}
+
+/// A [Text] widget that localizes a known UI phrase without threading a
+/// context through every call site.
+class LText extends StatelessWidget {{
+  const LText(
+    this.text, {{
+    super.key,
+    this.style,
+    this.maxLines,
+    this.overflow,
+    this.textAlign,
+    this.softWrap,
+  }});
+
+  final String text;
+  final TextStyle? style;
+  final int? maxLines;
+  final TextOverflow? overflow;
+  final TextAlign? textAlign;
+  final bool? softWrap;
+
+  @override
+  Widget build(BuildContext context) {{
+    return Text(
+      uiText(context, text),
+      style: style,
+      maxLines: maxLines,
+      overflow: overflow,
+      textAlign: textAlign,
+      softWrap: softWrap,
+    );
+  }}
+}}
+"""
+    target = ROOT / "lib" / "l10n" / "ui_text.dart"
+    target.write_text(output, encoding="utf-8")
+    print(f"Wrote {target} ({len(UI)} phrases, {len(TEMPLATES)} templates)")
+
+
+if __name__ == "__main__":
+    main()

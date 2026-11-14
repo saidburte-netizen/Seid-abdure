@@ -7,6 +7,7 @@ import '../../core/errors/friendly_error.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/common.dart';
+import '../../l10n/ui_text.dart';
 
 class BusinessSettingsScreen extends StatefulWidget {
   const BusinessSettingsScreen({super.key});
@@ -182,7 +183,9 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                       Expanded(
                         child: TextField(
                           controller: _currencyCode,
-                          decoration: const InputDecoration(labelText: 'Code'),
+                          decoration: InputDecoration(
+                            labelText: uiText(context, 'Code'),
+                          ),
                           textCapitalization: TextCapitalization.characters,
                           onChanged: (_) => _markDirty(),
                         ),
@@ -191,8 +194,8 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                       Expanded(
                         child: TextField(
                           controller: _currencySymbol,
-                          decoration: const InputDecoration(
-                            labelText: 'Symbol',
+                          decoration: InputDecoration(
+                            labelText: uiText(context, 'Symbol'),
                           ),
                           onChanged: (_) => _markDirty(),
                         ),
@@ -201,7 +204,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                   ),
                 ),
                 SectionCard(
-                  title: 'Tax rates',
+                  title: uiText(context, 'Tax rates'),
                   child: Row(
                     children: [
                       Expanded(
@@ -244,7 +247,7 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
                       DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
                       DropdownMenuItem(
                         value: 'om',
-                        child: Text('Afaan Oromoo'),
+                        child: LText('Afaan Oromoo'),
                       ),
                     ],
                     onChanged: (value) {

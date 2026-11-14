@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../l10n/app_localizations.dart';
 import 'friendly_error.dart';
+import '../../l10n/ui_text.dart';
 
 /// Shows a branded, friendly error snackbar. Technical exception text is never
 /// passed through.
@@ -142,12 +143,15 @@ class FriendlyCrashView extends StatelessWidget {
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 18),
-                _CrashAction(label: 'Try again', onPressed: onRetry!),
+                _CrashAction(
+                  label: uiText(context, 'Try again'),
+                  onPressed: onRetry!,
+                ),
               ],
               if (onResetLanguage != null) ...[
                 const SizedBox(height: 8),
                 _CrashAction(
-                  label: 'Reset language',
+                  label: uiText(context, 'Reset language'),
                   onPressed: onResetLanguage!,
                 ),
               ],

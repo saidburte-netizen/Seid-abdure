@@ -9,6 +9,7 @@ import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
 import 'pos_screen.dart';
+import '../l10n/ui_text.dart';
 
 class SalesScreen extends StatefulWidget {
   const SalesScreen({super.key});
@@ -120,11 +121,12 @@ class _SalesScreenState extends State<SalesScreen> {
     if (input == null || !mounted) return;
     final confirmed = await confirmAction(
       context,
-      title: 'Void this sale?',
-      message:
-          'The database restores stock, cash and credit for this sale. This '
-          'cannot be undone.',
-      confirmLabel: 'Void sale',
+      title: uiText(context, 'Void this sale?'),
+      message: uiText(
+        context,
+        'The database restores stock, cash and credit for this sale. This cannot be undone.',
+      ),
+      confirmLabel: uiText(context, 'Void sale'),
     );
     if (!confirmed || !mounted) return;
     try {
@@ -145,6 +147,12 @@ class _SalesScreenState extends State<SalesScreen> {
     AuthController session,
     Map<String, dynamic> sale,
   ) async {
+    final title = uiText(context, 'Sales receipt');
+    final statusLabel = uiText(context, 'Status');
+    final statusValue = uiText(
+      context,
+      prettyLabel(asText(sale['payment_status'])),
+    );
     try {
       final items = await session.client
           .from('sale_items')
@@ -152,14 +160,14 @@ class _SalesScreenState extends State<SalesScreen> {
           .eq('sale_id', sale['id']);
       final branch = session.selectedBranch;
       final bytes = await BrandPdf.document(
-        title: 'Sales receipt',
+        title: title,
         documentNumber: asText(sale['receipt_no']),
         branchName: branch?.branchName ?? 'Main branch',
         subtitle: formatDate(sale['sale_date']),
         details: [
           ('Total', formatMoney(sale['total_amount'])),
           ('Paid', formatMoney(sale['paid_amount'])),
-          ('Status', prettyLabel(asText(sale['payment_status']))),
+          (statusLabel, statusValue),
         ],
         columns: const [
           PdfColumn('Item', 'product_name'),
@@ -210,7 +218,7 @@ class _SalesScreenState extends State<SalesScreen> {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Sales & returns',
+      title: uiText(context, 'Sales & returns'),
       actions: [
         if (session.can('pos.use'))
           FilledButton.icon(
@@ -218,7 +226,7 @@ class _SalesScreenState extends State<SalesScreen> {
               context,
             ).push(MaterialPageRoute(builder: (_) => const PosScreen())),
             icon: const Icon(Icons.point_of_sale),
-            label: const Text('New sale'),
+            label: const LText('New sale'),
           ),
       ],
       body: DefaultTabController(
@@ -247,21 +255,21 @@ class _SalesScreenState extends State<SalesScreen> {
                     alwaysReadOnly: true,
                     actions: (row) => [
                       CrudRowAction(
-                        label: 'Print receipt',
+                        label: uiText(context, 'Print receipt'),
                         icon: Icons.print_outlined,
                         onPressed: (row) => _receipt(session, row),
                       ),
                       if (session.can('sales.void') &&
                           row['status'] != 'returned')
                         CrudRowAction(
-                          label: 'Record return',
+                          label: uiText(context, 'Record return'),
                           icon: Icons.assignment_return_outlined,
                           onPressed: (row) => _returnSale(session, row),
                         ),
                       if (session.can('sales.void') &&
                           row['status'] == 'completed')
                         CrudRowAction(
-                          label: 'Void sale',
+                          label: uiText(context, 'Void sale'),
                           icon: Icons.block_outlined,
                           onPressed: (row) => _voidSale(session, row),
                         ),
@@ -298,7 +306,7 @@ class _SalesScreenState extends State<SalesScreen> {
                                 ? () => _closeDay(session)
                                 : null,
                             icon: const Icon(Icons.lock_clock_outlined),
-                            label: const Text('Close today'),
+                            label: const LText('Close today'),
                           ),
                         ),
                       ),
@@ -423,7 +431,9 @@ class _ReturnDialogState extends State<_ReturnDialog> {
                 children: [
                   TextField(
                     controller: _reason,
-                    decoration: const InputDecoration(labelText: 'Reason'),
+                    decoration: InputDecoration(
+                      labelText: uiText(context, 'Reason'),
+                    ),
                   ),
                   const SizedBox(height: 12),
                   for (final item in _items)
@@ -439,8 +449,8 @@ class _ReturnDialogState extends State<_ReturnDialog> {
                           child: TextField(
                             controller: _quantities[item['id']],
                             keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              labelText: 'Return qty',
+                            decoration: InputDecoration(
+                              labelText: uiText(context, 'Return qty'),
                             ),
                           ),
                         ),
@@ -453,11 +463,11 @@ class _ReturnDialogState extends State<_ReturnDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const LText('Cancel'),
       ),
       FilledButton(
         onPressed: _loading || _error != null ? null : _submit,
-        child: const Text('Record return'),
+        child: const LText('Record return'),
       ),
     ],
   );
@@ -483,19 +493,21 @@ class _CloseDayDialogState extends State<_CloseDayDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Close business day'),
+    title: const LText('Close business day'),
     content: Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         TextField(
           controller: _counted,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Counted cash'),
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Counted cash'),
+          ),
         ),
         const SizedBox(height: 12),
         TextField(
           controller: _notes,
-          decoration: const InputDecoration(labelText: 'Notes'),
+          decoration: InputDecoration(labelText: uiText(context, 'Notes')),
           maxLines: 2,
         ),
       ],
@@ -503,7 +515,7 @@ class _CloseDayDialogState extends State<_CloseDayDialog> {
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const LText('Cancel'),
       ),
       FilledButton(
         onPressed: () => Navigator.of(

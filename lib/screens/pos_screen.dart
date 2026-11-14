@@ -7,6 +7,7 @@ import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class PosScreen extends StatefulWidget {
   const PosScreen({super.key});
@@ -199,7 +200,7 @@ class _PosScreenState extends State<PosScreen> {
         : (tendered > _total ? _total : tendered);
     final confirmed = await confirmAction(
       context,
-      title: 'Complete sale',
+      title: uiText(context, 'Complete sale'),
       message: 'Charge ${formatMoney(_total)} and issue a receipt?',
       confirmLabel: 'Complete',
     );
@@ -303,14 +304,17 @@ class _PosScreenState extends State<PosScreen> {
     final session = SessionScope.of(context);
     final branch = session.selectedBranch;
     final bytes = await BrandPdf.document(
-      title: 'Sales receipt',
+      title: uiText(context, 'Sales receipt'),
       documentNumber: asText(sale['receipt_no']),
       branchName: branch?.branchName ?? 'Main branch',
       subtitle: formatDate(sale['sale_date']),
       details: [
         ('Customer', _customerName()),
         ('Cashier', session.fullName ?? session.userEmail ?? ''),
-        ('Payment method', prettyLabel(_method)),
+        (
+          uiText(context, 'Payment method'),
+          uiText(context, prettyLabel(_method)),
+        ),
         ('Paid', formatMoney(paid)),
         ('Balance', formatMoney(asNum(sale['total_amount']) - paid)),
       ],
@@ -328,7 +332,7 @@ class _PosScreenState extends State<PosScreen> {
     await showDialog<void>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Sale completed'),
+        title: const LText('Sale completed'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -342,7 +346,7 @@ class _PosScreenState extends State<PosScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Close'),
+            child: const LText('Close'),
           ),
           FilledButton.icon(
             onPressed: () => BrandPdf.share(
@@ -351,7 +355,7 @@ class _PosScreenState extends State<PosScreen> {
               subject: 'Brade and Cake House receipt',
             ),
             icon: const Icon(Icons.print_outlined),
-            label: const Text('Receipt PDF'),
+            label: const LText('Receipt PDF'),
           ),
         ],
       ),
@@ -394,10 +398,10 @@ class _PosScreenState extends State<PosScreen> {
         )
         .toList();
     return ModuleScaffold(
-      title: 'Point of sale',
+      title: uiText(context, 'Point of sale'),
       actions: [
         IconButton(
-          tooltip: 'Clear cart',
+          tooltip: uiText(context, 'Clear cart'),
           onPressed: _cart.isEmpty ? null : _clear,
           icon: const Icon(Icons.remove_shopping_cart_outlined),
         ),
@@ -446,9 +450,9 @@ class _PosScreenState extends State<PosScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
         child: TextField(
           controller: _search,
-          decoration: const InputDecoration(
-            labelText: 'Search products',
-            prefixIcon: Icon(Icons.search),
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Search products'),
+            prefixIcon: const Icon(Icons.search),
           ),
           onChanged: (value) =>
               setState(() => _query = value.trim().toLowerCase()),
@@ -456,8 +460,11 @@ class _PosScreenState extends State<PosScreen> {
       ),
       Expanded(
         child: products.isEmpty
-            ? const EmptyView(
-                message: 'No active products. Add products in Production.',
+            ? EmptyView(
+                message: uiText(
+                  context,
+                  'No active products. Add products in Production.',
+                ),
               )
             : GridView.builder(
                 padding: const EdgeInsets.all(12),
@@ -527,11 +534,11 @@ class _PosScreenState extends State<PosScreen> {
       Text('Current sale', style: Theme.of(context).textTheme.titleLarge),
       const SizedBox(height: 8),
       if (_cart.isEmpty)
-        const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 24),
           child: EmptyView(
             icon: Icons.shopping_basket_outlined,
-            message: 'Tap a product to add it to the sale.',
+            message: uiText(context, 'Tap a product to add it to the sale.'),
           ),
         )
       else
@@ -560,7 +567,7 @@ class _PosScreenState extends State<PosScreen> {
       const Divider(),
       DropdownButtonFormField<String?>(
         initialValue: _customerId,
-        decoration: const InputDecoration(labelText: 'Customer'),
+        decoration: InputDecoration(labelText: uiText(context, 'Customer')),
         items: [
           const DropdownMenuItem<String?>(value: null, child: Text('Walk-in')),
           for (final customer in _customers)
@@ -574,7 +581,7 @@ class _PosScreenState extends State<PosScreen> {
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         initialValue: _storeId,
-        decoration: const InputDecoration(labelText: 'Store'),
+        decoration: InputDecoration(labelText: uiText(context, 'Store')),
         items: [
           for (final store in _stores)
             DropdownMenuItem(
@@ -587,7 +594,9 @@ class _PosScreenState extends State<PosScreen> {
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
         initialValue: _method,
-        decoration: const InputDecoration(labelText: 'Payment method'),
+        decoration: InputDecoration(
+          labelText: uiText(context, 'Payment method'),
+        ),
         items: const [
           DropdownMenuItem(value: 'cash', child: Text('Cash')),
           DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
@@ -603,7 +612,9 @@ class _PosScreenState extends State<PosScreen> {
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _accountId,
-          decoration: const InputDecoration(labelText: 'Cash account'),
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Cash account'),
+          ),
           items: [
             for (final account in _accounts)
               DropdownMenuItem(
@@ -617,20 +628,22 @@ class _PosScreenState extends State<PosScreen> {
       const SizedBox(height: 8),
       TextField(
         controller: _discount,
-        decoration: const InputDecoration(labelText: 'Discount (ETB)'),
+        decoration: InputDecoration(
+          labelText: uiText(context, 'Discount (ETB)'),
+        ),
         keyboardType: TextInputType.number,
         onChanged: (_) => setState(_setPaidToTotal),
       ),
       const SizedBox(height: 8),
       TextField(
         controller: _paid,
-        decoration: const InputDecoration(labelText: 'Amount paid'),
+        decoration: InputDecoration(labelText: uiText(context, 'Amount paid')),
         keyboardType: TextInputType.number,
       ),
       const SizedBox(height: 8),
       TextField(
         controller: _notes,
-        decoration: const InputDecoration(labelText: 'Notes'),
+        decoration: InputDecoration(labelText: uiText(context, 'Notes')),
         maxLines: 2,
       ),
       const SizedBox(height: 12),

@@ -7,6 +7,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class InventoryScreen extends StatefulWidget {
   const InventoryScreen({super.key});
@@ -45,7 +46,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
             title: Text('Receive ${order['po_number']}'),
             content: DropdownButtonFormField<String>(
               initialValue: selectedStoreId,
-              decoration: const InputDecoration(labelText: 'Receiving store'),
+              decoration: InputDecoration(
+                labelText: uiText(context, 'Receiving store'),
+              ),
               items: [
                 for (final store in stores)
                   DropdownMenuItem(
@@ -61,7 +64,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
             actions: [
               TextButton(
                 onPressed: () => Navigator.of(context).pop(),
-                child: const Text('Cancel'),
+                child: const LText('Cancel'),
               ),
               FilledButton(
                 onPressed: () => Navigator.of(context).pop(selectedStoreId),
@@ -125,9 +128,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
   ) async {
     final confirmed = await confirmAction(
       context,
-      title: 'Approve stock count?',
-      message: 'The database trigger will post counted variances to stock.',
-      confirmLabel: 'Approve',
+      title: uiText(context, 'Approve stock count?'),
+      message: uiText(
+        context,
+        'The database trigger will post counted variances to stock.',
+      ),
+      confirmLabel: uiText(context, 'Approve'),
     );
     if (!confirmed) return;
     try {
@@ -145,7 +151,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Inventory & purchasing',
+      title: uiText(context, 'Inventory & purchasing'),
       body: DefaultTabController(
         length: 14,
         child: Column(
@@ -220,7 +226,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Receive goods',
+                          label: uiText(context, 'Receive goods'),
                           icon: Icons.local_shipping_outlined,
                           onPressed: (row) =>
                               _receivePurchaseOrder(session, row),
@@ -254,7 +260,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Approve count',
+                          label: uiText(context, 'Approve count'),
                           icon: Icons.fact_check_outlined,
                           onPressed: (row) => _approveCount(session, row),
                         ),

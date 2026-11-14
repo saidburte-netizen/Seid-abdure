@@ -12,6 +12,7 @@ import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/common.dart';
 import '../../widgets/crud_tab.dart';
+import '../../l10n/ui_text.dart';
 
 /// A single permission-aware master-data screen used by Settings.
 class SettingsTableScreen extends StatelessWidget {
@@ -379,8 +380,8 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                   width: 180,
                   child: TextField(
                     controller: _table,
-                    decoration: const InputDecoration(
-                      labelText: 'Table',
+                    decoration: InputDecoration(
+                      labelText: uiText(context, 'Table'),
                       isDense: true,
                     ),
                     onSubmitted: (_) => _load(),
@@ -390,8 +391,8 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                   width: 210,
                   child: TextField(
                     controller: _user,
-                    decoration: const InputDecoration(
-                      labelText: 'User ID',
+                    decoration: InputDecoration(
+                      labelText: uiText(context, 'User ID'),
                       isDense: true,
                     ),
                     onSubmitted: (_) => _load(),
@@ -404,8 +405,8 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                     builder: (context, value, _) =>
                         DropdownButtonFormField<String?>(
                           initialValue: value,
-                          decoration: const InputDecoration(
-                            labelText: 'Action',
+                          decoration: InputDecoration(
+                            labelText: uiText(context, 'Action'),
                             isDense: true,
                           ),
                           items: const [
@@ -420,7 +421,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                             ),
                             DropdownMenuItem(
                               value: 'DELETE',
-                              child: Text('Delete'),
+                              child: LText('Delete'),
                             ),
                           ],
                           onChanged: (value) {
@@ -465,8 +466,11 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                 : _error != null
                 ? ErrorView(message: _error!, onRetry: _load)
                 : _rows.isEmpty
-                ? const EmptyView(
-                    message: 'No audit entries match these filters.',
+                ? EmptyView(
+                    message: uiText(
+                      context,
+                      'No audit entries match these filters.',
+                    ),
                   )
                 : RefreshIndicator(
                     onRefresh: _load,
@@ -525,7 +529,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
       actions: [
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text('Close'),
+          child: const LText('Close'),
         ),
       ],
     ),
@@ -638,7 +642,7 @@ class _DataExportScreenState extends State<DataExportScreen> {
           DropdownButtonFormField<String>(
             initialValue: _selected,
             isExpanded: true,
-            decoration: const InputDecoration(labelText: 'Report'),
+            decoration: InputDecoration(labelText: uiText(context, 'Report')),
             items: [
               for (final entry in _reports.entries)
                 DropdownMenuItem(
@@ -682,7 +686,7 @@ class _DataExportScreenState extends State<DataExportScreen> {
           else if (_error != null)
             ErrorView(message: _error!, onRetry: _load)
           else if (_rows.isEmpty)
-            const EmptyView(message: 'This report returned no rows.')
+            EmptyView(message: uiText(context, 'This report returned no rows.'))
           else
             SectionCard(
               title: '${_rows.length} rows',
@@ -710,14 +714,14 @@ class AccountsSettingsScreen extends StatelessWidget {
     ].where((tab) => session.can(tab.$3)).toList();
     if (tabs.isEmpty) {
       return AppScaffold(
-        title: const Text('Stores & cash accounts'),
+        title: const LText('Stores & cash accounts'),
         body: EmptyView(message: strings.noPermissionForArea),
       );
     }
     return DefaultTabController(
       length: tabs.length,
       child: AppScaffold(
-        title: const Text('Stores & cash accounts'),
+        title: const LText('Stores & cash accounts'),
         bottomNavigationBar: TabBar(
           tabs: [for (final tab in tabs) Tab(text: tab.$1)],
         ),

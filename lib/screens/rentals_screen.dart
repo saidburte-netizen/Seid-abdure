@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class RentalsScreen extends StatelessWidget {
   const RentalsScreen({super.key});
@@ -18,8 +19,11 @@ class RentalsScreen extends StatelessWidget {
   ) async {
     final confirmed = await confirmAction(
       context,
-      title: 'Generate rent invoices?',
-      message: 'The database will create invoices for active leases for today.',
+      title: uiText(context, 'Generate rent invoices?'),
+      message: uiText(
+        context,
+        'The database will create invoices for active leases for today.',
+      ),
       confirmLabel: 'Generate',
     );
     if (!confirmed) return;
@@ -81,7 +85,7 @@ class RentalsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Rentals',
+      title: uiText(context, 'Rentals'),
       actions: [
         if (session.can('rentals.manage'))
           IconButton(
@@ -135,7 +139,7 @@ class RentalsScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Record rent',
+                          label: uiText(context, 'Record rent'),
                           icon: Icons.payments_outlined,
                           onPressed: (row) =>
                               _recordPayment(context, session, row),
@@ -198,7 +202,9 @@ class _RentPaymentDialogState extends State<_RentPaymentDialog> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _account,
-          decoration: const InputDecoration(labelText: 'Cash account'),
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Cash account'),
+          ),
           items: [
             for (final account in widget.accounts)
               DropdownMenuItem(
@@ -212,12 +218,12 @@ class _RentPaymentDialogState extends State<_RentPaymentDialog> {
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Amount'),
+          decoration: InputDecoration(labelText: uiText(context, 'Amount')),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _method,
-          decoration: const InputDecoration(labelText: 'Method'),
+          decoration: InputDecoration(labelText: uiText(context, 'Method')),
           items: const [
             DropdownMenuItem(value: 'cash', child: Text('Cash')),
             DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
@@ -233,14 +239,14 @@ class _RentPaymentDialogState extends State<_RentPaymentDialog> {
         const SizedBox(height: 8),
         TextField(
           controller: _reference,
-          decoration: const InputDecoration(labelText: 'Reference'),
+          decoration: InputDecoration(labelText: uiText(context, 'Reference')),
         ),
       ],
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const LText('Cancel'),
       ),
       FilledButton(
         onPressed: () => Navigator.of(context).pop({
@@ -249,7 +255,7 @@ class _RentPaymentDialogState extends State<_RentPaymentDialog> {
           'method': _method,
           'reference': _reference.text.trim(),
         }),
-        child: const Text('Record rent'),
+        child: const LText('Record rent'),
       ),
     ],
   );

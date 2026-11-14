@@ -7,6 +7,7 @@ import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
 import 'common.dart';
+import '../l10n/ui_text.dart';
 
 class CrudRowAction {
   const CrudRowAction({
@@ -175,9 +176,12 @@ class _CrudTabState extends State<CrudTab> {
   @override
   Widget build(BuildContext context) {
     if (!_canRead) {
-      return const EmptyView(
+      return EmptyView(
         icon: Icons.lock_outline,
-        message: 'You do not have permission to view this list.',
+        message: uiText(
+          context,
+          'You do not have permission to view this list.',
+        ),
       );
     }
     return AsyncView<_CrudSnapshot>(
@@ -202,12 +206,14 @@ class _CrudTabState extends State<CrudTab> {
                       controller: _search,
                       decoration: InputDecoration(
                         isDense: true,
-                        labelText: 'Search ${widget.spec.title.toLowerCase()}',
+                        labelText: uiTextFormat(context, 'searchRecords', {
+                          'name': uiText(context, widget.spec.title),
+                        }),
                         prefixIcon: const Icon(Icons.search),
                         suffixIcon: _query.isEmpty
                             ? null
                             : IconButton(
-                                tooltip: 'Clear search',
+                                tooltip: uiText(context, 'Clear search'),
                                 icon: const Icon(Icons.clear),
                                 onPressed: () {
                                   _search.clear();
@@ -221,27 +227,31 @@ class _CrudTabState extends State<CrudTab> {
                   OutlinedButton.icon(
                     onPressed: _refresh,
                     icon: const Icon(Icons.refresh),
-                    label: const Text('Refresh'),
+                    label: const LText('Refresh'),
                   ),
                   OutlinedButton.icon(
                     onPressed: rows.isEmpty
                         ? null
                         : () => _export(context, snapshot, rows),
                     icon: const Icon(Icons.download_outlined),
-                    label: const Text('CSV'),
+                    label: const LText('CSV'),
                   ),
                   OutlinedButton.icon(
                     onPressed: rows.isEmpty
                         ? null
                         : () => _exportPdf(context, rows),
                     icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const Text('PDF'),
+                    label: const LText('PDF'),
                   ),
                   if (_canWrite && widget.spec.canCreate)
                     FilledButton.icon(
                       onPressed: () => _openForm(context, snapshot, null),
                       icon: const Icon(Icons.add),
-                      label: Text('New ${widget.spec.singular.toLowerCase()}'),
+                      label: Text(
+                        uiTextFormat(context, 'newRecord', {
+                          'name': uiText(context, widget.spec.singular),
+                        }),
+                      ),
                     ),
                 ],
               ),
@@ -253,7 +263,7 @@ class _CrudTabState extends State<CrudTab> {
                   vertical: 4,
                 ),
                 child: Text(
-                  widget.spec.description!,
+                  uiText(context, widget.spec.description!),
                   style: Theme.of(context).textTheme.bodySmall,
                 ),
               ),
@@ -270,13 +280,20 @@ class _CrudTabState extends State<CrudTab> {
                               icon: Icons.table_rows_outlined,
                               message:
                                   widget.emptyMessage ??
-                                  'No ${widget.spec.title.toLowerCase()} found.',
+                                  uiTextFormat(context, 'noRecords', {
+                                    'name': uiText(context, widget.spec.title),
+                                  }),
                               action: _canWrite && widget.spec.canCreate
                                   ? FilledButton(
                                       onPressed: () =>
                                           _openForm(context, snapshot, null),
                                       child: Text(
-                                        'Create ${widget.spec.singular.toLowerCase()}',
+                                        uiTextFormat(context, 'createRecord', {
+                                          'name': uiText(
+                                            context,
+                                            widget.spec.singular,
+                                          ),
+                                        }),
                                       ),
                                     )
                                   : null,
@@ -318,9 +335,14 @@ class _CrudTabState extends State<CrudTab> {
           columns: [
             for (final key in columns)
               DataColumn(
-                label: Text(widget.spec.field(key)?.label ?? prettyLabel(key)),
+                label: Text(
+                  uiText(
+                    context,
+                    widget.spec.field(key)?.label ?? prettyLabel(key),
+                  ),
+                ),
               ),
-            const DataColumn(label: Text('Actions')),
+            const DataColumn(label: LText('Actions')),
           ],
           rows: [
             for (final row in rows)
@@ -369,6 +391,7 @@ class _CrudTabState extends State<CrudTab> {
                   Expanded(
                     child: Text(
                       _display(
+                        context,
                         widget.spec.field(titleKey),
                         row[titleKey],
                         snapshot.lookups,
@@ -389,7 +412,10 @@ class _CrudTabState extends State<CrudTab> {
                       SizedBox(
                         width: 120,
                         child: Text(
-                          widget.spec.field(key)?.label ?? prettyLabel(key),
+                          uiText(
+                            context,
+                            widget.spec.field(key)?.label ?? prettyLabel(key),
+                          ),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -417,7 +443,7 @@ class _CrudTabState extends State<CrudTab> {
     Object? value,
     Map<String, List<LookupOption>> lookups,
   ) {
-    final text = _display(field, value, lookups);
+    final text = _display(context, field, value, lookups);
     if (field?.type == FieldType.boolean || field?.type == FieldType.select) {
       final color = field?.type == FieldType.boolean && value == true
           ? Theme.of(context).colorScheme.primary
@@ -439,6 +465,7 @@ class _CrudTabState extends State<CrudTab> {
   }
 
   String _display(
+    BuildContext context,
     FieldSpec? field,
     Object? value,
     Map<String, List<LookupOption>> lookups,
@@ -453,10 +480,12 @@ class _CrudTabState extends State<CrudTab> {
       return asText(value);
     }
     if (field.type == FieldType.select) {
-      return field.options[value.toString()] ?? prettyLabel(value.toString());
+      return field.options[value.toString()] == null
+          ? uiText(context, prettyLabel(value.toString()))
+          : uiText(context, field.options[value.toString()]!);
     }
     if (field.type == FieldType.boolean) {
-      return value == true ? 'Yes' : 'No';
+      return uiText(context, value == true ? 'Yes' : 'No');
     }
     if (field.type == FieldType.number || field.type == FieldType.integer) {
       return formatQuantity(value);
@@ -480,7 +509,7 @@ class _CrudTabState extends State<CrudTab> {
       return const SizedBox.shrink();
     }
     return PopupMenuButton<String>(
-      tooltip: 'Row actions',
+      tooltip: uiText(context, 'Row actions'),
       onSelected: (value) async {
         if (value == 'edit') {
           await _openForm(context, snapshot, row);
@@ -518,7 +547,7 @@ class _CrudTabState extends State<CrudTab> {
             value: 'edit',
             child: ListTile(
               leading: Icon(Icons.edit_outlined),
-              title: Text('Edit'),
+              title: LText('Edit'),
             ),
           ),
         if (canExport)
@@ -526,7 +555,7 @@ class _CrudTabState extends State<CrudTab> {
             value: 'copy',
             child: ListTile(
               leading: Icon(Icons.copy_outlined),
-              title: Text('Copy row'),
+              title: LText('Copy row'),
             ),
           ),
         for (final action in custom)
@@ -555,7 +584,7 @@ class _CrudTabState extends State<CrudTab> {
                 Icons.delete_outline,
                 color: Theme.of(context).colorScheme.error,
               ),
-              title: Text(
+              title: LText(
                 'Delete',
                 style: TextStyle(color: Theme.of(context).colorScheme.error),
               ),
@@ -570,10 +599,14 @@ class _CrudTabState extends State<CrudTab> {
     if (id == null) return;
     final confirmed = await confirmAction(
       context,
-      title: 'Delete ${widget.spec.singular.toLowerCase()}?',
-      message:
-          'This permanently removes the record. Records referenced by transactions cannot be deleted.',
-      confirmLabel: 'Delete',
+      title: uiTextFormat(context, 'deleteRecord', {
+        'name': uiText(context, widget.spec.singular),
+      }),
+      message: uiText(
+        context,
+        'This permanently removes the record. Records referenced by transactions cannot be deleted.',
+      ),
+      confirmLabel: uiText(context, 'Delete'),
     );
     if (!confirmed || !context.mounted) return;
     try {
@@ -583,7 +616,12 @@ class _CrudTabState extends State<CrudTab> {
         primaryKey: widget.spec.primaryKey,
       );
       if (context.mounted) {
-        showSnack(context, '${widget.spec.singular} deleted.');
+        showSnack(
+          context,
+          uiTextFormat(context, 'recordDeleted', {
+            'name': uiText(context, widget.spec.singular),
+          }),
+        );
         await _refresh();
         widget.onChanged?.call();
       }
@@ -625,7 +663,12 @@ class _CrudTabState extends State<CrudTab> {
         );
       }
       if (context.mounted) {
-        showSnack(context, '${widget.spec.singular} saved.');
+        showSnack(
+          context,
+          uiTextFormat(context, 'recordSaved', {
+            'name': uiText(context, widget.spec.singular),
+          }),
+        );
         await _refresh();
         widget.onChanged?.call();
       }
@@ -644,16 +687,18 @@ class _CrudTabState extends State<CrudTab> {
       final session = SessionScope.of(context);
       final keys = widget.spec.effectiveListColumns.take(8).toList();
       final bytes = await BrandPdf.document(
-        title: widget.spec.title,
+        title: uiText(context, widget.spec.title),
         documentNumber: dateOnly(DateTime.now()),
         branchName: session.selectedBranch?.branchName ?? '',
-        subtitle: '${rows.length} rows exported from Brade and Cake House',
+        subtitle: uiTextFormat(context, 'rowsExported', {
+          'count': rows.length.toString(),
+        }),
         columns: [
           for (final key in keys)
             PdfColumn(
               widget.spec.fields
                       .where((field) => field.key == key)
-                      .map((field) => field.label)
+                      .map((field) => uiText(context, field.label))
                       .firstOrNull ??
                   key.replaceAll('_', ' ').toUpperCase(),
               key,
@@ -664,7 +709,7 @@ class _CrudTabState extends State<CrudTab> {
         footer: 'Brade and Cake House • hani brade and cake',
       );
       await BrandPdf.share(fileName: widget.spec.table, bytes: bytes);
-      if (context.mounted) showSnack(context, 'PDF exported.');
+      if (context.mounted) showSnack(context, uiText(context, 'PDF exported.'));
     } catch (error) {
       if (context.mounted) showFriendlyError(context, error);
     }
@@ -686,16 +731,25 @@ class _CrudTabState extends State<CrudTab> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('${widget.spec.title} exported'),
-        content: SelectableText('Saved to:\n$path\n\n${rows.length} rows.'),
+        title: Text(
+          uiTextFormat(context, 'recordExported', {
+            'name': uiText(context, widget.spec.title),
+          }),
+        ),
+        content: SelectableText(
+          uiTextFormat(context, 'savedTo', {
+            'path': path,
+            'count': rows.length.toString(),
+          }),
+        ),
         actions: [
           TextButton(
             onPressed: () => copyText(context, csv, 'CSV'),
-            child: const Text('Copy CSV'),
+            child: const LText('Copy CSV'),
           ),
           FilledButton(
             onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Done'),
+            child: const LText('Done'),
           ),
         ],
       ),
@@ -773,9 +827,11 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
       },
       child: AlertDialog(
         title: Text(
-          widget.row == null
-              ? 'New ${widget.spec.singular.toLowerCase()}'
-              : 'Edit ${widget.spec.singular.toLowerCase()}',
+          uiTextFormat(
+            context,
+            widget.row == null ? 'newRecord' : 'editRecord',
+            {'name': uiText(context, widget.spec.singular)},
+          ),
         ),
         content: SizedBox(
           width: media.width > 720 ? 640 : media.width * 0.9,
@@ -802,11 +858,11 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         actions: [
           TextButton(
             onPressed: _saving ? null : _close,
-            child: const Text('Cancel'),
+            child: const LText('Cancel'),
           ),
           FilledButton(
             onPressed: _saving ? null : _submit,
-            child: Text(_saving ? 'Saving…' : 'Save'),
+            child: LText(_saving ? 'Saving…' : 'Save'),
           ),
         ],
       ),
@@ -824,7 +880,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
       case FieldType.boolean:
         return SwitchListTile(
           contentPadding: EdgeInsets.zero,
-          title: Text(field.label),
+          title: LText(field.label),
           value: _values[field.key] == true,
           onChanged: (value) => setState(() {
             _dirty = true;
@@ -835,20 +891,24 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         final current = _controllers[field.key]?.text ?? '';
         final options = Map<String, String>.from(field.options);
         if (current.isNotEmpty && !options.containsKey(current)) {
-          options[current] = prettyLabel(current);
+          options[current] = uiText(context, prettyLabel(current));
         }
         return DropdownButtonFormField<String>(
           initialValue: current.isEmpty ? null : current,
           decoration: InputDecoration(
-            labelText: field.label,
-            hintText: field.hint,
+            labelText: uiText(context, field.label),
+            hintText: field.hint == null ? null : uiText(context, field.hint!),
           ),
           items: [
             for (final entry in options.entries)
-              DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+              DropdownMenuItem(
+                value: entry.key,
+                child: Text(uiText(context, entry.value)),
+              ),
           ],
-          validator: (value) =>
-              field.required && value == null ? 'Required' : null,
+          validator: (value) => field.required && value == null
+              ? uiText(context, 'Required')
+              : null,
           onChanged: (value) {
             _controllers[field.key]?.text = value ?? '';
             setState(() {
@@ -865,7 +925,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           initialValue: valid ? current : null,
           isExpanded: true,
           decoration: InputDecoration(
-            labelText: field.label,
+            labelText: uiText(context, field.label),
             hintText: field.hint,
           ),
           items: [
@@ -877,7 +937,9 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ],
           validator: (value) {
             if (!field.required) return null;
-            return value == null || value.isEmpty ? 'Required' : null;
+            return value == null || value.isEmpty
+                ? uiText(context, 'Required')
+                : null;
           },
           onChanged: (value) {
             _controllers[field.key]?.text = value ?? '';
@@ -892,8 +954,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           controller: _controllers[field.key],
           readOnly: true,
           decoration: InputDecoration(
-            labelText: field.label,
-            hintText: 'YYYY-MM-DD',
+            labelText: uiText(context, field.label),
+            hintText: uiText(context, 'YYYY-MM-DD'),
             suffixIcon: const Icon(Icons.calendar_today_outlined),
           ),
           validator: (value) =>
@@ -925,7 +987,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
             decimal: field.type == FieldType.number,
           ),
           decoration: InputDecoration(
-            labelText: field.label,
+            labelText: uiText(context, field.label),
             hintText: field.hint,
           ),
           onChanged: (_) {
@@ -933,16 +995,20 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) {
             if (field.required && (value == null || value.trim().isEmpty)) {
-              return 'Required';
+              return uiText(context, 'Required');
             }
             if (value == null || value.trim().isEmpty) return null;
             final number = num.tryParse(value.trim());
-            if (number == null) return 'Enter a number';
+            if (number == null) return uiText(context, 'Enter a number');
             if (field.min != null && number < field.min!) {
-              return 'Must be at least ${field.min}';
+              return uiTextFormat(context, 'mustBeAtLeast', {
+                'min': field.min.toString(),
+              });
             }
             if (field.max != null && number > field.max!) {
-              return 'Must be at most ${field.max}';
+              return uiTextFormat(context, 'mustBeAtMost', {
+                'max': field.max.toString(),
+              });
             }
             return null;
           },
@@ -953,7 +1019,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           minLines: 2,
           maxLines: 4,
           decoration: InputDecoration(
-            labelText: field.label,
+            labelText: uiText(context, field.label),
             hintText: field.hint,
           ),
           onChanged: (_) {
@@ -969,9 +1035,10 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         return TextFormField(
           controller: _controllers[field.key],
           decoration: InputDecoration(
-            labelText: field.label,
-            hintText:
-                field.hint ?? (field.type == FieldType.time ? 'HH:MM' : null),
+            labelText: uiText(context, field.label),
+            hintText: field.hint == null
+                ? (field.type == FieldType.time ? 'HH:MM' : null)
+                : uiText(context, field.hint!),
           ),
           onChanged: (_) {
             if (!_dirty) setState(() => _dirty = true);

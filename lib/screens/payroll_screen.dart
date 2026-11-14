@@ -7,6 +7,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class PayrollScreen extends StatelessWidget {
   const PayrollScreen({super.key});
@@ -18,9 +19,11 @@ class PayrollScreen extends StatelessWidget {
   ) async {
     final confirmed = await confirmAction(
       context,
-      title: 'Generate payslips?',
-      message:
-          'The database will calculate gross pay, tax, pension, advances and net pay.',
+      title: uiText(context, 'Generate payslips?'),
+      message: uiText(
+        context,
+        'The database will calculate gross pay, tax, pension, advances and net pay.',
+      ),
       confirmLabel: 'Generate',
     );
     if (!confirmed) return;
@@ -45,10 +48,14 @@ class PayrollScreen extends StatelessWidget {
   ) async {
     final confirmed = await confirmAction(
       context,
-      title: 'Mark payroll ${prettyLabel(status)}?',
-      message:
-          'This updates the payroll run and lets the database apply its totals.',
-      confirmLabel: prettyLabel(status),
+      title: uiTextFormat(context, 'markPayroll', {
+        'status': uiText(context, prettyLabel(status)),
+      }),
+      message: uiText(
+        context,
+        'This updates the payroll run and lets the database apply its totals.',
+      ),
+      confirmLabel: uiText(context, prettyLabel(status)),
     );
     if (!confirmed) return;
     try {
@@ -63,7 +70,12 @@ class PayrollScreen extends StatelessWidget {
           .update(values)
           .eq('id', run['id']);
       if (context.mounted) {
-        showSnack(context, 'Payroll marked ${prettyLabel(status)}.');
+        showSnack(
+          context,
+          uiTextFormat(context, 'payrollMarked', {
+            'status': uiText(context, prettyLabel(status)),
+          }),
+        );
       }
     } catch (error) {
       if (context.mounted) {
@@ -77,6 +89,7 @@ class PayrollScreen extends StatelessWidget {
     AuthController session,
     Map<String, dynamic> slip,
   ) async {
+    final title = uiText(context, 'Payslip');
     try {
       final employee = await session.client
           .from('employees')
@@ -85,7 +98,7 @@ class PayrollScreen extends StatelessWidget {
           .maybeSingle();
       final branch = session.selectedBranch;
       final bytes = await BrandPdf.document(
-        title: 'Payslip',
+        title: title,
         documentNumber: asText(slip['id']).substring(0, 8).toUpperCase(),
         branchName: branch?.branchName ?? 'Main branch',
         subtitle: asText(slip['created_at']).split('T').first,
@@ -134,7 +147,7 @@ class PayrollScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Payroll',
+      title: uiText(context, 'Payroll'),
       body: DefaultTabController(
         length: 3,
         child: Column(
@@ -159,21 +172,21 @@ class PayrollScreen extends StatelessWidget {
                       return [
                         if (status == 'draft')
                           CrudRowAction(
-                            label: 'Generate payslips',
+                            label: uiText(context, 'Generate payslips'),
                             icon: Icons.calculate_outlined,
                             onPressed: (row) =>
                                 _generate(context, session, row),
                           ),
                         if (status == 'draft')
                           CrudRowAction(
-                            label: 'Approve run',
+                            label: uiText(context, 'Approve run'),
                             icon: Icons.check_circle_outline,
                             onPressed: (row) =>
                                 _setStatus(context, session, row, 'approved'),
                           ),
                         if (status == 'approved')
                           CrudRowAction(
-                            label: 'Mark paid',
+                            label: uiText(context, 'Mark paid'),
                             icon: Icons.payments_outlined,
                             onPressed: (row) =>
                                 _setStatus(context, session, row, 'paid'),
@@ -187,7 +200,7 @@ class PayrollScreen extends StatelessWidget {
                     alwaysReadOnly: true,
                     actions: (row) => [
                       CrudRowAction(
-                        label: 'Payslip PDF',
+                        label: uiText(context, 'Payslip PDF'),
                         icon: Icons.print_outlined,
                         onPressed: (row) => _payslip(context, session, row),
                       ),

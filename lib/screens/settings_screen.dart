@@ -8,6 +8,7 @@ import '../l10n/app_localizations.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/brand_ui.dart';
 import '../widgets/common.dart';
+import '../l10n/ui_text.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -103,7 +104,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: const [
                 DropdownMenuItem(value: 'en', child: Text('English')),
                 DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
-                DropdownMenuItem(value: 'om', child: Text('Afaan Oromoo')),
+                DropdownMenuItem(value: 'om', child: LText('Afaan Oromoo')),
               ],
               onChanged: _setLanguage,
             ),
@@ -134,28 +135,34 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 icon: Icons.storefront_outlined,
                 title: strings.businessSettings,
-                subtitle: 'Name, slogan, currency, tax and default language',
+                subtitle: uiText(
+                  context,
+                  'Name, slogan, currency, tax and default language',
+                ),
                 route: '/settings/business',
               ),
             if (session.can('branches.manage'))
               _tile(
                 context,
                 icon: Icons.account_tree_outlined,
-                title: 'Branches',
+                title: uiText(context, 'Branches'),
                 route: '/settings/branches',
               ),
             _tile(
               context,
               icon: Icons.savings_outlined,
-              title: 'Stores & cash accounts',
+              title: uiText(context, 'Stores & cash accounts'),
               route: '/settings/accounts',
             ),
             if (isAdmin && session.can('users.manage'))
               _tile(
                 context,
                 icon: Icons.manage_accounts_outlined,
-                title: 'Users & roles',
-                subtitle: 'Assign branch, role and active status',
+                title: uiText(context, 'Users & roles'),
+                subtitle: uiText(
+                  context,
+                  'Assign branch, role and active status',
+                ),
                 route: '/settings/users',
               ),
             if (isAdmin)
@@ -170,7 +177,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 icon: Icons.dataset_outlined,
                 title: strings.masterData,
-                subtitle: 'Units, categories, departments, shifts and tax',
+                subtitle: uiText(
+                  context,
+                  'Units, categories, departments, shifts and tax',
+                ),
                 route: '/settings/master-data',
               ),
             if (session.can('audit.view'))
@@ -178,7 +188,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 icon: Icons.history,
                 title: strings.auditLog,
-                subtitle: 'Filter by table, user, action and date',
+                subtitle: uiText(
+                  context,
+                  'Filter by table, user, action and date',
+                ),
                 route: '/settings/audit',
               ),
             if (session.can('reports.view'))
@@ -186,26 +199,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 context,
                 icon: Icons.download_outlined,
                 title: strings.dataExport,
-                subtitle: 'PDF with logo, CSV with every visible column',
+                subtitle: uiText(
+                  context,
+                  'PDF with logo, CSV with every visible column',
+                ),
                 route: '/settings/export',
               ),
             if (session.can('settings.manage')) ...[
               _tile(
                 context,
                 icon: Icons.storage_outlined,
-                title: 'Storage',
+                title: uiText(context, 'Storage'),
                 route: '/settings/storage',
               ),
               _tile(
                 context,
                 icon: Icons.workspace_premium_outlined,
-                title: 'Branding',
+                title: uiText(context, 'Branding'),
                 route: '/settings/branding',
               ),
               ListTile(
                 leading: const Icon(Icons.notification_add_outlined),
                 title: Text(strings.runAlerts),
-                subtitle: const Text(
+                subtitle: const LText(
                   'Creates stock, credit and rent alerts now.',
                 ),
                 trailing: _runningAlerts
@@ -278,7 +294,7 @@ class StorageScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) =>
-      const AppScaffold(title: Text('Storage'), body: _StorageTab());
+      const AppScaffold(title: LText('Storage'), body: _StorageTab());
 }
 
 class _BrandingTab extends StatelessWidget {
@@ -289,7 +305,7 @@ class _BrandingTab extends StatelessWidget {
     padding: const EdgeInsets.all(16),
     children: [
       SectionCard(
-        title: 'Official brand',
+        title: uiText(context, 'Official brand'),
         child: Column(
           children: [
             Image.asset(Brand.logoAsset, width: 180, height: 180),
@@ -307,9 +323,9 @@ class _BrandingTab extends StatelessWidget {
           ],
         ),
       ),
-      const SectionCard(
-        title: 'Brand assets',
-        child: Column(
+      SectionCard(
+        title: uiText(context, 'Brand assets'),
+        child: const Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text('Logo: assets/branding/logo.png'),

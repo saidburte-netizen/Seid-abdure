@@ -7,6 +7,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class CreditScreen extends StatelessWidget {
   const CreditScreen({super.key});
@@ -79,9 +80,12 @@ class CreditScreen extends StatelessWidget {
   ) async {
     final confirmed = await confirmAction(
       context,
-      title: 'Approve write-off?',
-      message: 'The database trigger will reduce the receivable balance.',
-      confirmLabel: 'Approve',
+      title: uiText(context, 'Approve write-off?'),
+      message: uiText(
+        context,
+        'The database trigger will reduce the receivable balance.',
+      ),
+      confirmLabel: uiText(context, 'Approve'),
     );
     if (!confirmed) return;
     try {
@@ -105,7 +109,7 @@ class CreditScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Credit & debit control',
+      title: uiText(context, 'Credit & debit control'),
       body: DefaultTabController(
         length: 10,
         child: Column(
@@ -140,7 +144,7 @@ class CreditScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Receive payment',
+                          label: uiText(context, 'Receive payment'),
                           icon: Icons.payments_outlined,
                           onPressed: (row) =>
                               _payment(context, session, row, 'receivable'),
@@ -164,7 +168,7 @@ class CreditScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Pay supplier',
+                          label: uiText(context, 'Pay supplier'),
                           icon: Icons.payments_outlined,
                           onPressed: (row) =>
                               _payment(context, session, row, 'payable'),
@@ -188,7 +192,7 @@ class CreditScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Approve write-off',
+                          label: uiText(context, 'Approve write-off'),
                           icon: Icons.check_circle_outline,
                           onPressed: (row) =>
                               _approveWriteOff(context, session, row),
@@ -269,7 +273,9 @@ class _CreditPaymentDialogState extends State<_CreditPaymentDialog> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _account,
-          decoration: const InputDecoration(labelText: 'Cash account'),
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Cash account'),
+          ),
           items: [
             for (final account in widget.accounts)
               DropdownMenuItem(
@@ -283,12 +289,12 @@ class _CreditPaymentDialogState extends State<_CreditPaymentDialog> {
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Amount'),
+          decoration: InputDecoration(labelText: uiText(context, 'Amount')),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _method,
-          decoration: const InputDecoration(labelText: 'Method'),
+          decoration: InputDecoration(labelText: uiText(context, 'Method')),
           items: const [
             DropdownMenuItem(value: 'cash', child: Text('Cash')),
             DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
@@ -304,14 +310,14 @@ class _CreditPaymentDialogState extends State<_CreditPaymentDialog> {
         const SizedBox(height: 8),
         TextField(
           controller: _reference,
-          decoration: const InputDecoration(labelText: 'Reference'),
+          decoration: InputDecoration(labelText: uiText(context, 'Reference')),
         ),
       ],
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const LText('Cancel'),
       ),
       FilledButton(
         onPressed: () => Navigator.of(context).pop({

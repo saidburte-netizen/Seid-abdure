@@ -6,6 +6,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class PeopleScreen extends StatelessWidget {
   const PeopleScreen({super.key});
@@ -39,7 +40,7 @@ class PeopleScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'People & HR',
+      title: uiText(context, 'People & HR'),
       body: DefaultTabController(
         length: 10,
         child: Column(
@@ -109,13 +110,13 @@ class PeopleScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Approve leave',
+                          label: uiText(context, 'Approve leave'),
                           icon: Icons.check_circle_outline,
                           onPressed: (row) =>
                               _decideLeave(context, session, row, true),
                         ),
                         CrudRowAction(
-                          label: 'Reject leave',
+                          label: uiText(context, 'Reject leave'),
                           icon: Icons.cancel_outlined,
                           danger: true,
                           onPressed: (row) =>

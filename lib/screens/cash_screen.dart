@@ -7,6 +7,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../l10n/ui_text.dart';
 
 class CashScreen extends StatelessWidget {
   const CashScreen({super.key});
@@ -57,7 +58,7 @@ class CashScreen extends StatelessWidget {
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => _PaymentDialog(
-          title: 'Pay payable',
+          title: uiText(context, 'Pay payable'),
           accounts: accounts,
           suggested: asNum(payable['balance']),
         ),
@@ -84,7 +85,7 @@ class CashScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
     return ModuleScaffold(
-      title: 'Cash & expenses',
+      title: uiText(context, 'Cash & expenses'),
       body: DefaultTabController(
         length: 8,
         child: Column(
@@ -139,7 +140,7 @@ class CashScreen extends StatelessWidget {
                       if (!session.can('cash.manage')) return const [];
                       return [
                         CrudRowAction(
-                          label: 'Create payable',
+                          label: uiText(context, 'Create payable'),
                           icon: Icons.request_quote_outlined,
                           onPressed: (row) =>
                               _createPayable(context, session, row),
@@ -158,7 +159,7 @@ class CashScreen extends StatelessWidget {
                       }
                       return [
                         CrudRowAction(
-                          label: 'Pay payable',
+                          label: uiText(context, 'Pay payable'),
                           icon: Icons.payments_outlined,
                           onPressed: (row) =>
                               _payPayable(context, session, row),
@@ -219,7 +220,9 @@ class _PaymentDialogState extends State<_PaymentDialog> {
       children: [
         DropdownButtonFormField<String>(
           initialValue: _account,
-          decoration: const InputDecoration(labelText: 'Cash account'),
+          decoration: InputDecoration(
+            labelText: uiText(context, 'Cash account'),
+          ),
           items: [
             for (final account in widget.accounts)
               DropdownMenuItem(
@@ -233,12 +236,12 @@ class _PaymentDialogState extends State<_PaymentDialog> {
         TextField(
           controller: _amount,
           keyboardType: TextInputType.number,
-          decoration: const InputDecoration(labelText: 'Amount'),
+          decoration: InputDecoration(labelText: uiText(context, 'Amount')),
         ),
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
           initialValue: _method,
-          decoration: const InputDecoration(labelText: 'Method'),
+          decoration: InputDecoration(labelText: uiText(context, 'Method')),
           items: const [
             DropdownMenuItem(value: 'cash', child: Text('Cash')),
             DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
@@ -255,14 +258,14 @@ class _PaymentDialogState extends State<_PaymentDialog> {
         const SizedBox(height: 8),
         TextField(
           controller: _reference,
-          decoration: const InputDecoration(labelText: 'Reference'),
+          decoration: InputDecoration(labelText: uiText(context, 'Reference')),
         ),
       ],
     ),
     actions: [
       TextButton(
         onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+        child: const LText('Cancel'),
       ),
       FilledButton(
         onPressed: () => Navigator.of(context).pop({
