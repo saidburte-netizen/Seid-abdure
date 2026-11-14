@@ -67,6 +67,19 @@ reachable from that router and is permission-gated against the live
     `brade-cake-house.aab`, and one `brade-cake-house-web.zip`.
 12. Flutter analysis was failing on four async-context diagnostics. All four
     were fixed and `flutter analyze` now reports no issues.
+13. The Oromo locale lacked Flutter Material and Cupertino localizations.
+    Oromo-specific framework delegates now load English framework labels while
+    the app continues to use `app_om.arb`.
+14. Saved locale restoration now validates language codes, resets invalid or
+    crash-marked locales to English, and shows a localized recovery notice.
+    The global crash screen also has **Try again** and **Reset language**
+    actions; technical details remain in the private logger.
+15. Intl date, quantity and ETB currency formatting now uses a supported
+    locale, mapping Oromo to English, and date data is initialized at startup.
+16. Added an app-level smoke test that boots the real router at each route in
+    English, Amharic and Oromo and exercises Admin, Manager and User dashboards.
+    Additional tests cover live locale switching, formatting, ARB keys and
+    placeholders, crash recovery, and privacy of user-facing error messages.
 
 ## Database decision
 
@@ -76,20 +89,37 @@ The timestamped files under `supabase/migrations/` are legacy local-development
 migrations and must not be applied to the live project. See
 `supabase/README.md`.
 
-## Known limitations
+## Remaining limitations
 
-- Android artifacts are debug-signed unless the four signing secrets are
-  configured. A debug-signed APK installs normally but cannot be uploaded to
-  Google Play as a production release.
-- GitHub Pages deployment is optional and only runs when repository variable
-  `ENABLE_PAGES` is `true`. The web ZIP is always attached to the release.
-- The app has no in-app user-creation screen for additional users; later users
-  sign up, then an administrator assigns their branch and role under
-  **Settings → Users**. This is intentional because the live auth trigger only
-  creates the first admin automatically.
-- Role-wide notifications are readable by the role, but the live RLS update
-  policy only lets a user mark their own notifications read. Role-wide items
-  remain unread until they are addressed to a specific user.
-- Custom font files are not used. Flutter's Material icon font is bundled by
-  `uses-material-design: true`; translations are compiled into `libapp.so` by
-  `flutter gen-l10n` and are not separate downloadable assets.
+The requested operational modules (HR, cash and expenses, stores/inventory,
+production, POS/sales, rentals, credit/debit, reports, and notifications) are
+present in the existing app and are covered by the route smoke test. No TODO,
+FIXME, “coming soon”, or null-button placeholders were found in `lib/`.
+
+The following work still depends on product or deployment owners and is not
+silently treated as complete:
+
+- **Operational deep-screen translation:** the 114 shared app messages are
+  complete and ARB key/placeholder parity is checked, but many field labels,
+  dialogs, and domain-specific actions inside operational screens still use
+  English literals. A reviewed Amharic/Oromo domain glossary and translation
+  pass remain necessary before an Amharic/Oromo-only rollout.
+- **Android signing:** if the four Android signing secrets are not configured,
+  the release APK/AAB is debug-signed and must not be uploaded to Google Play.
+- **Backups and account security:** enable/verify Supabase PITR/backups, SMTP,
+  MFA and rate limits in the deployed Supabase project.
+- **Business rules:** payroll tax/deduction defaults require review by a local
+  accountant.
+- **Additional user onboarding:** later users sign up, then an administrator
+  assigns their branch and role under **Settings → Users**. Only first-admin
+  setup is self-service.
+- **Role-wide notification receipts:** the live RLS update policy only lets a
+  user mark their own notifications read, so role-wide notifications remain
+  unread until addressed to a specific user.
+- **Accessibility and platform behavior:** a full screen-reader audit remains;
+  desktop PDF sharing depends on platform/plugin support.
+- **Optional web deployment:** GitHub Pages runs only when `ENABLE_PAGES` is
+  `true`; the complete web ZIP is built independently.
+
+No Supabase migration was applied. The live schema remains authoritative; the
+legacy local migrations under `supabase/` must not be applied to production.
