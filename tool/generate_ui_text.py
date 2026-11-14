@@ -90,6 +90,10 @@ UI: dict[str, tuple[str, str]] = {
     "Receipt PDF": ("ደረሰኝ PDF", "Nagahee PDF"),
     "Point of sale": ("የሽያጭ ነጥብ", "Iddoo gurgurtaa"),
     "Clear cart": ("ጋሪ አጽዳ", "Gaarii haqi"),
+    "Show password": ("የይለፍ ቃል አሳይ", "Jecha darbii agarsiisi"),
+    "Hide password": ("የይለፍ ቃል ደብቅ", "Jecha darbii dhoksi"),
+    "Decrease quantity": ("ብዛት ቀንስ", "Baay'ina hir'isi"),
+    "Increase quantity": ("ብዛት ጨምር", "Baay'ina dabali"),
     "Search products": ("ምርቶችን ፈልግ", "Oomishaalee barbaadi"),
     "No active products. Add products in Production.": (
         "ንቁ ምርቶች የሉም። በምርት ክፍል ውስጥ ምርቶችን ያክሉ።",

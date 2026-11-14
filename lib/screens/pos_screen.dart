@@ -553,11 +553,13 @@ class _PosScreenState extends State<PosScreen> {
               mainAxisSize: MainAxisSize.min,
               children: [
                 IconButton(
+                  tooltip: uiText(context, 'Decrease quantity'),
                   onPressed: () => _change(entry.key, -1),
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
                 Text('${entry.value}'),
                 IconButton(
+                  tooltip: uiText(context, 'Increase quantity'),
                   onPressed: () => _change(entry.key, 1),
                   icon: const Icon(Icons.add_circle_outline),
                 ),

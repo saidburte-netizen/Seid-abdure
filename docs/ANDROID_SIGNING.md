@@ -4,7 +4,9 @@
 
 If all four signing secrets exist, CI builds a release-signed APK/AAB. If any is
 missing, CI still builds and uploads artifacts, but they are **debug-signed** and
-must not be published to Google Play.
+must not be published to Google Play. The workflow log and the generated
+`release-notes.md` state `SIGNING_MODE=release` or `SIGNING_MODE=debug` so a
+debug build cannot be mistaken for a Play Store build.
 
 | Secret | Purpose |
 | --- | --- |
@@ -13,11 +15,31 @@ must not be published to Google Play.
 | `ANDROID_KEY_ALIAS` | Key alias |
 | `ANDROID_KEY_PASSWORD` | Key password |
 
-## Create the keystore
+## Generate the keystore in Actions
+
+Run **Actions → generate-keystore → Run workflow**. The workflow:
+
+- generates a 4096-bit RSA key with a 10,000-day validity,
+- creates a JKS keystore so the key password can differ from the store password,
+- uses two independent random 48-byte passwords,
+- verifies the key password with `keytool -certreq`,
+- uploads **one** artifact named `android-signing-secrets` for **one day**
+  containing `android-signing-secrets.txt` (base64 keystore, alias, store
+  password, key password) and `keystore-check.txt`.
+
+The run summary warns that the keystore must be backed up safely. Losing it
+prevents future Play Store updates. Switching an installed app from debug to
+release signing also requires one uninstall/reinstall.
+
+Download the artifact, store the `.jks` and passwords in a password manager, and
+then add the four repository secrets under **Settings → Secrets and variables →
+Actions**. Do not commit the keystore or the secrets file.
+
+## Manual keystore creation
 
 ```sh
-keytool -genkeypair -v -keystore upload-keystore.jks \
-  -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+keytool -genkeypair -v -storetype JKS -keystore upload-keystore.jks \
+  -keyalg RSA -keysize 4096 -validity 10000 -alias upload
 base64 -w0 upload-keystore.jks > upload-keystore.b64
 ```
 
@@ -33,5 +55,5 @@ repository secret**:
 3. `ANDROID_KEY_ALIAS` — for example `upload`.
 4. `ANDROID_KEY_PASSWORD`.
 
-Re-run **Android build** from the Actions tab. The run summary states whether
-the build was release-signed or debug-signed.
+Re-run **Android build** from the Actions tab. The run summary and release notes
+state whether the build was release-signed or debug-signed.

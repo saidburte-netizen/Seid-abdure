@@ -1,89 +1,91 @@
 # Testing
 
-## Automated
+## Flutter gates
 
 ```sh
 flutter pub get
 flutter gen-l10n
+dart format --output=none --set-exit-if-changed lib test
+bash tool/check_placeholders.sh
+python3 tool/check_schema.py
 flutter analyze
 flutter test
 ```
 
-`flutter analyze` must report no issues. Widget tests verify the branded
-configuration screen and brand constants. Add widget tests for each new screen
-and unit tests for formatting/export logic.
+`flutter analyze` must report no issues. The suite covers:
 
-Database:
+- branded configuration and brand constants,
+- every portal route in en/am/om (`test/all_routes_localization_test.dart`),
+- live locale switching and the pre-login sign-in language menu,
+- green/cream balance on all 51 routes (`test/colour_probe_test.dart`),
+- offline sign-in and evidence capture (`test/airplane_mode_*_test.dart`),
+- friendly-error privacy (`test/friendly_error_test.dart`),
+- branch scoping (`test/branch_repository_test.dart`),
+- ARB key/placeholder parity and UI/schema translation coverage,
+- back navigation and Oromo framework localization.
+
+## Supabase integration contract
+
+The executable database test is
+`supabase/tests/integration/contract.sql`. It runs in a disposable local
+Supabase stack through `.github/workflows/supabase-integration.yml`:
 
 ```sh
 supabase start
-supabase db reset
-supabase test db
+psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/integration/seed.sql
+psql "$LOCAL_DB_URL" -v ON_ERROR_STOP=1 -f supabase/tests/integration/contract.sql
 ```
 
-`supabase/tests/database/initial_foundation.test.sql` and
-`operational_modules.test.sql` use pgTAP to check core tables/views/functions,
-RLS on every public table, policy coverage and the permission catalog.
+When the fifteen uploaded `20261114000001`–`20261114000015` migrations are
+present, the workflow applies them. Otherwise it applies the read-only
+`supabase/fixtures/live_schema.sql` snapshot and then
+`supabase/migrations/20261114000016_void_sale.sql`. The contract wraps all work
+in a transaction and rolls back. It never contacts the hosted project and never
+uses the `service_role` key.
 
-## Manual end-to-end RPC smoke test
+The contract covers auth users/profiles for all nine roles, RLS probes,
+purchasing/receipts, stock counts, production, cash/credit/split sales, returns,
+voids, customer payments, payables, cash transfers, payroll approval/payment,
+rent invoices/payments, alerts, expenses, bills, approvals, stock transfers,
+write-offs, role permissions, audit logs, translation columns and avatars.
 
-Use a disposable local database with the Supabase Auth/storage stubs, then run
-the script below with `psql`. It is wrapped in `begin/rollback` so it leaves no
-data. It verifies owner bootstrap, POS sale, return, rent invoice/payment,
-payroll run/approval, alerts and dashboard reporting.
+## Android emulator smoke test
 
-```sql
-begin;
-insert into auth.users (email) values ('owner@example.com') returning id as owner \gset
-select set_config('request.jwt.claim.sub', :'owner', true);
-set local role authenticated;
-select public.bootstrap_first_owner() as bootstrap \gset
-select :'bootstrap'::jsonb->>'branch_id' as branch \gset
-reset role;
--- seed store, inventory item, product, cash account and customer here
--- then call complete_sale, process_sale_return, generate_rent_invoices,
--- record_rent_payment, run_payroll, approve_payroll, refresh_branch_alerts
--- and report_dashboard; assert row counts before rollback.
-rollback;
+The release APK is installed on a Pixel 6 API 34 emulator by
+`tool/android_smoke.py` inside `build-android.yml`:
+
+```sh
+python3 tool/android_smoke.py brade-cake-house.apk
 ```
 
-The full executable script is kept outside source control because it depends on
-the local Auth stubs. Recreate it from the function signatures in
-`supabase/migrations/`.
-
-## RLS isolation check
-
-Create a second Auth user with no membership and set their claim. The following
-must hold:
-
-```sql
-select public.has_permission('<branch>', 'sales.write'); -- false
-select count(*) from public.branches;                    -- 0
-select count(*) from public.branch_memberships;          -- 0
-select count(*) from public.profiles;                    -- 1 (own profile only)
-```
+The script clears app data, launches
+`net.bradeandcake.brade_and_cake_house/.MainActivity`, confirms the login screen,
+switches the pre-login language menu English → አማርኛ → Afaan Oromoo → English,
+captures screenshots in `build/evidence/android-smoke/`, and fails on visible
+technical exception text.
 
 ## Build checks
 
 ```sh
-flutter build web --release
+flutter clean
+flutter pub get
+flutter gen-l10n
 flutter build apk --release
 flutter build appbundle --release
+flutter build web --release
 ```
 
-On an arm64 development host whose Flutter SDK lacks the `const_finder`
-snapshot, use `flutter build web --release --no-tree-shake-icons`; CI on x64
-runs the normal command.
+CI passes `SUPABASE_URL` and `SUPABASE_ANON_KEY` from repository secrets. It
+verifies the APK package, label, INTERNET permission, launcher icon, bundled
+logo, signing mode and SHA-256 checksums.
 
 ## Release checklist
 
-- [ ] Analyze/test/build green.
-- [ ] Migrations reset cleanly.
-- [ ] pgTAP passes.
-- [ ] RLS coverage query returns zero rows.
-- [ ] Owner claim tested once on a fresh project.
-- [ ] Staff membership and permission denial tested.
-- [ ] Cash close, payroll and rent cycle smoke-tested.
-- [ ] Receipt/invoice/payslip PDF branding inspected.
-- [ ] Launcher icon, splash, notification icon and platform names inspected.
-- [ ] Backups enabled and restore tested.
+- [x] Format, placeholder, schema, analyze and full-test gates green.
+- [x] Local Supabase contract green.
+- [x] Android emulator smoke green.
+- [x] APK/AAB/web build and content verification green.
+- [x] Checksums generated and attached.
+- [ ] Tag `v1.0.5` pushed and release verified.
+- [ ] Android signing secrets configured (release signing).
+- [ ] PITR/backups enabled and restore tested in the hosted project.

@@ -716,6 +716,12 @@ class _SignInScreenState extends State<SignInScreen> {
                                 decoration: InputDecoration(
                                   labelText: strings.password,
                                   suffixIcon: IconButton(
+                                    tooltip: uiText(
+                                      context,
+                                      _obscure
+                                          ? 'Show password'
+                                          : 'Hide password',
+                                    ),
                                     onPressed: () =>
                                         setState(() => _obscure = !_obscure),
                                     icon: Icon(

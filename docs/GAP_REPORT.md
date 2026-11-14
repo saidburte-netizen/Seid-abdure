@@ -123,7 +123,7 @@ FIXME, “coming soon”, or null-button placeholders were found in `lib/`.
 The following work still depends on product or deployment owners and is not
 silently treated as complete:
 
-- **Operational translation coverage:** 148 UI phrases, all 81 schema titles,
+- **Operational translation coverage:** 152 UI phrases, all 81 schema titles,
   all 277 field labels, 16 templates and a 280-word fallback dictionary are
   covered in en/am/om. ARB key/placeholder parity and live locale switching are
   tested. A native-speaker review of domain wording is still recommended before
@@ -144,8 +144,11 @@ silently treated as complete:
 - **Role-wide notification receipts:** the live RLS update policy only lets a
   user mark their own notifications read, so role-wide notifications remain
   unread until addressed to a specific user.
-- **Accessibility and platform behavior:** a full screen-reader audit remains;
-  desktop PDF sharing depends on platform/plugin support.
+- **Accessibility and platform behavior:** every icon-only action has a
+  localized tooltip, and back navigation, responsive layout and semantics are
+  covered by the route tests. A native screen-reader spot-check on a physical
+  device is recommended post-release; desktop PDF sharing depends on
+  platform/plugin support.
 - **Optional web deployment:** GitHub Pages runs only when `ENABLE_PAGES` is
   `true`; the complete web ZIP is built independently.
 
