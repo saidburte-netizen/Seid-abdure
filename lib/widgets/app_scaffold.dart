@@ -144,22 +144,19 @@ class _AppScaffoldState extends State<AppScaffold> {
     final heroWidget = widget.hero ??
         (widget.showHero
             ? AppHeroHeader(
-                title:
-                    _titleText ??
-                    widget.heroTitle ??
-                    strings.appTitle,
+                title: _titleText ?? widget.heroTitle ?? strings.appTitle,
                 subtitle: widget.heroSubtitle ?? strings.appTitle,
                 heightFactor: widget.heroHeightFactor,
               )
             : null);
     final leading = !_showBack
         ? (widget.drawer == null
-              ? null
-              : IconButton(
-                  tooltip: strings.menu,
-                  icon: const Icon(Icons.menu),
-                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-                ))
+            ? null
+            : IconButton(
+                tooltip: strings.menu,
+                icon: const Icon(Icons.menu),
+                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+              ))
         : IconButton(
             tooltip: strings.back,
             icon: const Icon(Icons.arrow_back),

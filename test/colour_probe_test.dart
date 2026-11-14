@@ -15,29 +15,6 @@ const _routes = [
   '/',
   '/settings',
 ];
-const _unusedRoutes = [
-  '/',
-  '/pos',
-  '/sales',
-  '/production',
-  '/inventory',
-  '/cash',
-  '/people',
-  '/payroll',
-  '/rentals',
-  '/credit',
-  '/approvals',
-  '/reports',
-  '/notifications',
-  '/settings',
-  '/settings/profile',
-  '/settings/security',
-  '/settings/business',
-  '/settings/accounts',
-  '/settings/audit',
-  '/sign-in',
-];
-
 void main() {
   for (final route in _routes) {
     testWidgets('probe $route', (tester) async {

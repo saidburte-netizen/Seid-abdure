@@ -77,11 +77,12 @@ class AppHeroHeader extends StatelessWidget {
                             const SizedBox(width: 10),
                             Flexible(
                               child: Text(
-                                kicker ??
-                                    AppLocalizations.of(context).appTitle,
+                                kicker ?? AppLocalizations.of(context).appTitle,
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
-                                style: Theme.of(context).textTheme.labelLarge
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .labelLarge
                                     ?.copyWith(
                                       color: BrandColors.lightGold,
                                       fontWeight: FontWeight.w700,
@@ -96,7 +97,9 @@ class AppHeroHeader extends StatelessWidget {
                           title,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.headlineMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .headlineMedium
                               ?.copyWith(
                                 color: BrandColors.ivory,
                                 fontWeight: FontWeight.w800,
@@ -108,7 +111,9 @@ class AppHeroHeader extends StatelessWidget {
                           subtitle ?? Brand.slogan,
                           maxLines: 2,
                           overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.bodyMedium
+                          style: Theme.of(context)
+                              .textTheme
+                              .bodyMedium
                               ?.copyWith(
                                 color: BrandColors.cream.withValues(alpha: 0.9),
                               ),
@@ -127,12 +132,12 @@ class AppHeroHeader extends StatelessWidget {
                         const SizedBox(height: 6),
                         Text(
                           strings.pressBackToReturn,
-                          style: Theme.of(context).textTheme.labelSmall
-                              ?.copyWith(
-                                color: BrandColors.cream.withValues(
-                                  alpha: 0.78,
-                                ),
-                              ),
+                          style:
+                              Theme.of(context).textTheme.labelSmall?.copyWith(
+                                    color: BrandColors.cream.withValues(
+                                      alpha: 0.78,
+                                    ),
+                                  ),
                         ),
                       ],
                     ),
@@ -168,54 +173,54 @@ class KpiCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    color: BrandColors.deepGreen,
-    clipBehavior: Clip.antiAlias,
-    shape: RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(16),
-      side: const BorderSide(color: BrandColors.gold, width: 1),
-    ),
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Row(
+        color: BrandColors.deepGreen,
+        clipBehavior: Clip.antiAlias,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: BrandColors.gold, width: 1),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                if (icon != null) ...[
-                  Icon(icon, color: BrandColors.lightGold, size: 20),
-                  const SizedBox(width: 8),
-                ],
-                Expanded(
-                  child: Text(
-                    label,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: BrandColors.cream,
-                      fontWeight: FontWeight.w600,
+                Row(
+                  children: [
+                    if (icon != null) ...[
+                      Icon(icon, color: BrandColors.lightGold, size: 20),
+                      const SizedBox(width: 8),
+                    ],
+                    Expanded(
+                      child: Text(
+                        label,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                              color: BrandColors.cream,
+                              fontWeight: FontWeight.w600,
+                            ),
+                      ),
                     ),
-                  ),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        color: BrandColors.ivory,
+                        fontWeight: FontWeight.w800,
+                      ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            Text(
-              value,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                color: BrandColors.ivory,
-                fontWeight: FontWeight.w800,
-              ),
-            ),
-          ],
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 /// An ivory content card with a thin gold/green border.
@@ -237,43 +242,44 @@ class AppCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    margin: margin,
-    clipBehavior: Clip.antiAlias,
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (title != null)
-          Container(
-            color: BrandColors.forestGreen,
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-            child: Row(
-              children: [
-                Container(
-                  width: 6,
-                  height: 6,
-                  decoration: const BoxDecoration(
-                    color: BrandColors.gold,
-                    shape: BoxShape.circle,
-                  ),
-                ),
-                const SizedBox(width: 8),
-                Expanded(
-                  child: Text(
-                    title!,
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                      color: BrandColors.ivory,
-                      fontWeight: FontWeight.w700,
+        margin: margin,
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (title != null)
+              Container(
+                color: BrandColors.forestGreen,
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                child: Row(
+                  children: [
+                    Container(
+                      width: 6,
+                      height: 6,
+                      decoration: const BoxDecoration(
+                        color: BrandColors.gold,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        title!,
+                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                              color: BrandColors.ivory,
+                              fontWeight: FontWeight.w700,
+                            ),
+                      ),
+                    ),
+                    if (trailing != null) trailing!,
+                  ],
                 ),
-                if (trailing != null) trailing!,
-              ],
-            ),
-          ),
-        Padding(padding: padding, child: child),
-      ],
-    ),
-  );
+              ),
+            Padding(padding: padding, child: child),
+          ],
+        ),
+      );
 }
 
 /// A compact green section title bar for long cream lists.
@@ -291,40 +297,40 @@ class SectionBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Container(
-    margin: const EdgeInsets.fromLTRB(16, 18, 16, 6),
-    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-    decoration: const BoxDecoration(
-      color: BrandColors.forestGreen,
-      borderRadius: BorderRadius.all(Radius.circular(12)),
-      border: Border.fromBorderSide(
-        BorderSide(color: BrandColors.gold, width: 1),
-      ),
-    ),
-    child: Row(
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: BrandColors.ivory,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              if (subtitle != null)
-                Text(
-                  subtitle!,
-                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: BrandColors.cream.withValues(alpha: 0.85),
-                  ),
-                ),
-            ],
+        margin: const EdgeInsets.fromLTRB(16, 18, 16, 6),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: const BoxDecoration(
+          color: BrandColors.forestGreen,
+          borderRadius: BorderRadius.all(Radius.circular(12)),
+          border: Border.fromBorderSide(
+            BorderSide(color: BrandColors.gold, width: 1),
           ),
         ),
-        if (trailing != null) trailing!,
-      ],
-    ),
-  );
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: BrandColors.ivory,
+                          fontWeight: FontWeight.w700,
+                        ),
+                  ),
+                  if (subtitle != null)
+                    Text(
+                      subtitle!,
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: BrandColors.cream.withValues(alpha: 0.85),
+                          ),
+                    ),
+                ],
+              ),
+            ),
+            if (trailing != null) trailing!,
+          ],
+        ),
+      );
 }
