@@ -40,5 +40,6 @@ project, and never replay the legacy files.
 - `SUPABASE_URL`
 - `SUPABASE_ANON_KEY`
 
-The service-role key is used only by the manual `inspect-db.yml` workflow for
-read-only schema inspection. It is never used by the Flutter app.
+The service-role key is not used by the Flutter app and is not required by any
+remaining workflow. Schema inspection was performed once and then removed from
+the repository.
