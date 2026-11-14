@@ -67,6 +67,22 @@ class AppLocalizationsOm extends AppLocalizations {
       'Hayyama herrega keessanii fe\'uun hin danda\'amne.';
 
   @override
+  String get loading => 'Fe\'aa jira…';
+
+  @override
+  String get branchSetup => 'Qindaa\'ina damee';
+
+  @override
+  String get noActiveBranch =>
+      'Dameen hojii irra jiru hin jiru. Brade and Cake House fayyadamuuf damee jalqabaa uumi.';
+
+  @override
+  String get createMainBranch => 'Damee guddaa uumi';
+
+  @override
+  String get creating => 'Uumaa jira…';
+
+  @override
   String get retry => 'Irra deebi\'ii yaali';
 
   @override
@@ -457,6 +473,9 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get dataExport => 'Daataa al-ergi';
+
+  @override
+  String get generateInvoices => 'Nagahee uumi';
 
   @override
   String get runAlerts => 'Akeekkachiisa amma siiqqeessi';

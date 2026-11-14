@@ -637,10 +637,14 @@ class _DataExportScreenState extends State<DataExportScreen> {
         children: [
           DropdownButtonFormField<String>(
             initialValue: _selected,
+            isExpanded: true,
             decoration: const InputDecoration(labelText: 'Report'),
             items: [
               for (final entry in _reports.entries)
-                DropdownMenuItem(value: entry.key, child: Text(entry.value)),
+                DropdownMenuItem(
+                  value: entry.key,
+                  child: Text(entry.value, overflow: TextOverflow.ellipsis),
+                ),
             ],
             onChanged: (value) {
               if (value == null) return;

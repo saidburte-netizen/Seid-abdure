@@ -65,6 +65,22 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accessLoadFailed => 'Could not load your account access.';
 
   @override
+  String get loading => 'Loading…';
+
+  @override
+  String get branchSetup => 'Branch setup';
+
+  @override
+  String get noActiveBranch =>
+      'No active branch exists. Create the first branch to start using Brade and Cake House.';
+
+  @override
+  String get createMainBranch => 'Create main branch';
+
+  @override
+  String get creating => 'Creating…';
+
+  @override
   String get retry => 'Retry';
 
   @override
@@ -452,6 +468,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get dataExport => 'Data export';
+
+  @override
+  String get generateInvoices => 'Generate invoices';
 
   @override
   String get runAlerts => 'Run alerts now';

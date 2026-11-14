@@ -4,6 +4,7 @@ import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
@@ -83,10 +84,10 @@ class RentalsScreen extends StatelessWidget {
       title: 'Rentals',
       actions: [
         if (session.can('rentals.manage'))
-          FilledButton.icon(
+          IconButton(
+            tooltip: AppLocalizations.of(context).generateInvoices,
             onPressed: () => _generateInvoices(context, session),
             icon: const Icon(Icons.receipt_long_outlined),
-            label: const Text('Generate invoices'),
           ),
       ],
       body: DefaultTabController(

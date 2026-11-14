@@ -65,6 +65,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String get accessLoadFailed => 'የመለያዎን ፈቃዶች መጫን አልተቻለም።';
 
   @override
+  String get loading => 'በመጫን ላይ…';
+
+  @override
+  String get branchSetup => 'የቅርንጫፍ ማዋቀር';
+
+  @override
+  String get noActiveBranch =>
+      'ንቁ ቅርንጫፍ የለም። Brade and Cake Houseን ለመጠቀም የመጀመሪያውን ቅርንጫፍ ይፍጠሩ።';
+
+  @override
+  String get createMainBranch => 'ዋና ቅርንጫፍ ፍጠር';
+
+  @override
+  String get creating => 'በመፍጠር ላይ…';
+
+  @override
   String get retry => 'እንደገና ሞክር';
 
   @override
@@ -438,6 +454,9 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get dataExport => 'ውሂብ ላክ';
+
+  @override
+  String get generateInvoices => 'ደረሰኞችን ፍጠር';
 
   @override
   String get runAlerts => 'ማንቂያዎችን አሁን አስኪድ';

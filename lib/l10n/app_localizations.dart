@@ -64,7 +64,7 @@ import 'app_localizations_om.dart';
 /// property.
 abstract class AppLocalizations {
   AppLocalizations(String locale)
-      : localeName = intl.Intl.canonicalizedLocale(locale.toString());
+    : localeName = intl.Intl.canonicalizedLocale(locale.toString());
 
   final String localeName;
 
@@ -87,11 +87,11 @@ abstract class AppLocalizations {
   /// of delegates is preferred or required.
   static const List<LocalizationsDelegate<dynamic>> localizationsDelegates =
       <LocalizationsDelegate<dynamic>>[
-    delegate,
-    GlobalMaterialLocalizations.delegate,
-    GlobalCupertinoLocalizations.delegate,
-    GlobalWidgetsLocalizations.delegate,
-  ];
+        delegate,
+        GlobalMaterialLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+      ];
 
   /// A list of this localizations delegate's supported locales.
   static const List<Locale> supportedLocales = <Locale>[
@@ -207,6 +207,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Could not load your account access.'**
   String get accessLoadFailed;
+
+  /// No description provided for @loading.
+  ///
+  /// In en, this message translates to:
+  /// **'Loading…'**
+  String get loading;
+
+  /// No description provided for @branchSetup.
+  ///
+  /// In en, this message translates to:
+  /// **'Branch setup'**
+  String get branchSetup;
+
+  /// No description provided for @noActiveBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'No active branch exists. Create the first branch to start using Brade and Cake House.'**
+  String get noActiveBranch;
+
+  /// No description provided for @createMainBranch.
+  ///
+  /// In en, this message translates to:
+  /// **'Create main branch'**
+  String get createMainBranch;
+
+  /// No description provided for @creating.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating…'**
+  String get creating;
 
   /// No description provided for @retry.
   ///
@@ -945,6 +975,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Data export'**
   String get dataExport;
+
+  /// No description provided for @generateInvoices.
+  ///
+  /// In en, this message translates to:
+  /// **'Generate invoices'**
+  String get generateInvoices;
 
   /// No description provided for @runAlerts.
   ///

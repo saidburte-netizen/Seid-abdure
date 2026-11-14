@@ -33,7 +33,7 @@ class AppScaffold extends StatefulWidget {
     this.heroTitle,
     this.heroSubtitle,
     this.showHero = true,
-    this.heroHeightFactor = 0.34,
+    this.heroHeightFactor = 0.55,
     super.key,
   });
 
@@ -141,7 +141,8 @@ class _AppScaffoldState extends State<AppScaffold> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final heroWidget = widget.hero ??
+    final heroWidget =
+        widget.hero ??
         (widget.showHero
             ? AppHeroHeader(
                 title: _titleText ?? widget.heroTitle ?? strings.appTitle,
@@ -151,12 +152,12 @@ class _AppScaffoldState extends State<AppScaffold> {
             : null);
     final leading = !_showBack
         ? (widget.drawer == null
-            ? null
-            : IconButton(
-                tooltip: strings.menu,
-                icon: const Icon(Icons.menu),
-                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              ))
+              ? null
+              : IconButton(
+                  tooltip: strings.menu,
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ))
         : IconButton(
             tooltip: strings.back,
             icon: const Icon(Icons.arrow_back),

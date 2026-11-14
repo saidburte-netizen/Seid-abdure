@@ -621,157 +621,195 @@ class _SignInScreenState extends State<SignInScreen> {
     final strings = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
     return Scaffold(
-      body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [scheme.primary, scheme.surface],
-            stops: const [0, 0.72],
+      body: Column(
+        children: [
+          Container(
+            width: double.infinity,
+            height: MediaQuery.sizeOf(context).height * 0.62,
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [scheme.primary, scheme.primaryContainer],
+              ),
+              border: Border(
+                bottom: BorderSide(color: scheme.secondary, width: 3),
+              ),
+            ),
+            child: SafeArea(
+              bottom: false,
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const BrandMark(size: 140, light: true),
+                      const SizedBox(height: 8),
+                      Text(
+                        strings.signInSubtitle,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                          color: scheme.onPrimary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
           ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 440),
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const BrandMark(size: 148),
-                          const SizedBox(height: 8),
-                          Text(
-                            strings.signInSubtitle,
-                            textAlign: TextAlign.center,
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                          const SizedBox(height: 20),
-                          TextFormField(
-                            controller: _email,
-                            decoration: InputDecoration(
-                              labelText: strings.email,
-                            ),
-                            keyboardType: TextInputType.emailAddress,
-                            autofillHints: const [AutofillHints.email],
-                            validator: (value) {
-                              final email = value?.trim() ?? '';
-                              if (email.isEmpty) return strings.requiredField;
-                              if (!_emailPattern.hasMatch(email)) {
-                                return strings.errorInvalidEmail;
-                              }
-                              return null;
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _password,
-                            decoration: InputDecoration(
-                              labelText: strings.password,
-                              suffixIcon: IconButton(
-                                onPressed: () =>
-                                    setState(() => _obscure = !_obscure),
-                                icon: Icon(
-                                  _obscure
-                                      ? Icons.visibility_outlined
-                                      : Icons.visibility_off_outlined,
+          Expanded(
+            child: Container(
+              color: scheme.surface,
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 440),
+                    child: Card(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Form(
+                          key: _formKey,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextFormField(
+                                controller: _email,
+                                decoration: InputDecoration(
+                                  labelText: strings.email,
+                                ),
+                                keyboardType: TextInputType.emailAddress,
+                                autofillHints: const [AutofillHints.email],
+                                validator: (value) {
+                                  final email = value?.trim() ?? '';
+                                  if (email.isEmpty) {
+                                    return strings.requiredField;
+                                  }
+                                  if (!_emailPattern.hasMatch(email)) {
+                                    return strings.errorInvalidEmail;
+                                  }
+                                  return null;
+                                },
+                              ),
+                              const SizedBox(height: 12),
+                              TextFormField(
+                                controller: _password,
+                                decoration: InputDecoration(
+                                  labelText: strings.password,
+                                  suffixIcon: IconButton(
+                                    onPressed: () =>
+                                        setState(() => _obscure = !_obscure),
+                                    icon: Icon(
+                                      _obscure
+                                          ? Icons.visibility_outlined
+                                          : Icons.visibility_off_outlined,
+                                    ),
+                                  ),
+                                ),
+                                obscureText: _obscure,
+                                autofillHints: const [AutofillHints.password],
+                                validator: (value) =>
+                                    value == null || value.isEmpty
+                                    ? strings.requiredField
+                                    : null,
+                                onFieldSubmitted: (_) => _signIn(),
+                              ),
+                              if (_error != null) ...[
+                                const SizedBox(height: 12),
+                                FriendlyErrorBox(
+                                  error: _error!,
+                                  onRetry: _signIn,
+                                ),
+                              ],
+                              const SizedBox(height: 20),
+                              SizedBox(
+                                width: double.infinity,
+                                child: FilledButton.icon(
+                                  onPressed: _submitting ? null : _signIn,
+                                  icon: _submitting
+                                      ? const SizedBox(
+                                          width: 18,
+                                          height: 18,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                          ),
+                                        )
+                                      : const Icon(Icons.login),
+                                  label: Text(
+                                    _submitting
+                                        ? strings.signingIn
+                                        : strings.signIn,
+                                  ),
                                 ),
                               ),
-                            ),
-                            obscureText: _obscure,
-                            autofillHints: const [AutofillHints.password],
-                            validator: (value) => value == null || value.isEmpty
-                                ? strings.requiredField
-                                : null,
-                            onFieldSubmitted: (_) => _signIn(),
-                          ),
-                          if (_error != null) ...[
-                            const SizedBox(height: 12),
-                            FriendlyErrorBox(error: _error!, onRetry: _signIn),
-                          ],
-                          const SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: _submitting ? null : _signIn,
-                              icon: _submitting
-                                  ? const SizedBox(
-                                      width: 18,
-                                      height: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
+                              const SizedBox(height: 8),
+                              if (_checkingAccess)
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      const SizedBox(
+                                        width: 16,
+                                        height: 16,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
                                       ),
-                                    )
-                                  : const Icon(Icons.login),
-                              label: Text(
-                                _submitting
-                                    ? strings.signingIn
-                                    : strings.signIn,
-                              ),
-                            ),
+                                      const SizedBox(width: 8),
+                                      Flexible(
+                                        child: Text(
+                                          strings.checkingAccountOptions,
+                                          style: Theme.of(
+                                            context,
+                                          ).textTheme.bodySmall,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                )
+                              else if (_accessError != null && _error == null)
+                                FriendlyErrorBox(
+                                  error: _accessError!,
+                                  onRetry: _loadAccess,
+                                )
+                              else if (_hasAdmin == false)
+                                TextButton.icon(
+                                  onPressed: _submitting
+                                      ? null
+                                      : () => _openSignUp(firstAdmin: true),
+                                  icon: const Icon(Icons.person_add_alt_1),
+                                  label: Text(strings.createFirstAccount),
+                                )
+                              else if (_hasAdmin == true &&
+                                  _allowCustomerSignup)
+                                TextButton.icon(
+                                  onPressed: _submitting
+                                      ? null
+                                      : () => _openSignUp(firstAdmin: false),
+                                  icon: const Icon(Icons.person_add_alt_1),
+                                  label: Text(strings.createAccount),
+                                )
+                              else
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 8,
+                                  ),
+                                  child: Text(
+                                    strings.contactAdminToGetAccount,
+                                    textAlign: TextAlign.center,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.bodySmall,
+                                  ),
+                                ),
+                            ],
                           ),
-                          const SizedBox(height: 8),
-                          if (_checkingAccess)
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Flexible(
-                                    child: Text(
-                                      strings.checkingAccountOptions,
-                                      style: Theme.of(
-                                        context,
-                                      ).textTheme.bodySmall,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            )
-                          else if (_accessError != null && _error == null)
-                            FriendlyErrorBox(
-                              error: _accessError!,
-                              onRetry: _loadAccess,
-                            )
-                          else if (_hasAdmin == false)
-                            TextButton.icon(
-                              onPressed: _submitting
-                                  ? null
-                                  : () => _openSignUp(firstAdmin: true),
-                              icon: const Icon(Icons.person_add_alt_1),
-                              label: Text(strings.createFirstAccount),
-                            )
-                          else if (_hasAdmin == true && _allowCustomerSignup)
-                            TextButton.icon(
-                              onPressed: _submitting
-                                  ? null
-                                  : () => _openSignUp(firstAdmin: false),
-                              icon: const Icon(Icons.person_add_alt_1),
-                              label: Text(strings.createAccount),
-                            )
-                          else
-                            Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 8),
-                              child: Text(
-                                strings.contactAdminToGetAccount,
-                                textAlign: TextAlign.center,
-                                style: Theme.of(context).textTheme.bodySmall,
-                              ),
-                            ),
-                        ],
+                        ),
                       ),
                     ),
                   ),
@@ -779,7 +817,7 @@ class _SignInScreenState extends State<SignInScreen> {
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
@@ -1022,8 +1060,10 @@ class LoadingScreen extends StatelessWidget {
   const LoadingScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => const Scaffold(
-    body: Center(
+  Widget build(BuildContext context) => AppScaffold(
+    title: Text(AppLocalizations.of(context).loading),
+    isRoot: true,
+    body: const Center(
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -1042,20 +1082,19 @@ class ProfileMissingScreen extends StatelessWidget {
   final AuthController controller;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(
-      title: const Text(Brand.appName),
-      actions: [
-        IconButton(
-          tooltip: AppLocalizations.of(context).signOut,
-          onPressed: controller.signOut,
-          icon: const Icon(Icons.logout),
-        ),
-      ],
-    ),
-    body: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+  Widget build(BuildContext context) => AppScaffold(
+    title: const Text(Brand.appName),
+    isRoot: true,
+    actions: [
+      IconButton(
+        tooltip: AppLocalizations.of(context).signOut,
+        onPressed: controller.signOut,
+        icon: const Icon(Icons.logout),
+      ),
+    ],
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Column(
@@ -1118,10 +1157,19 @@ class _BranchSetupScreenState extends State<BranchSetupScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+  Widget build(BuildContext context) => AppScaffold(
+    title: Text(AppLocalizations.of(context).branchSetup),
+    isRoot: true,
+    actions: [
+      IconButton(
+        tooltip: AppLocalizations.of(context).signOut,
+        onPressed: widget.controller.signOut,
+        icon: const Icon(Icons.logout),
+      ),
+    ],
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Center(
         child: ConstrainedBox(
           constraints: const BoxConstraints(maxWidth: 520),
           child: Column(
@@ -1129,9 +1177,8 @@ class _BranchSetupScreenState extends State<BranchSetupScreen> {
             children: [
               const BrandMark(size: 150),
               const SizedBox(height: 20),
-              const Text(
-                'No active branch exists. Create the first branch to start '
-                'using Brade and Cake House.',
+              Text(
+                AppLocalizations.of(context).noActiveBranch,
                 textAlign: TextAlign.center,
               ),
               if (_error != null) ...[
@@ -1148,11 +1195,15 @@ class _BranchSetupScreenState extends State<BranchSetupScreen> {
               FilledButton.icon(
                 onPressed: _saving ? null : _create,
                 icon: const Icon(Icons.add_business_outlined),
-                label: Text(_saving ? 'Creating…' : 'Create main branch'),
+                label: Text(
+                  _saving
+                      ? AppLocalizations.of(context).creating
+                      : AppLocalizations.of(context).createMainBranch,
+                ),
               ),
               TextButton(
                 onPressed: widget.controller.signOut,
-                child: const Text('Sign out'),
+                child: Text(AppLocalizations.of(context).signOut),
               ),
             ],
           ),
@@ -1168,29 +1219,27 @@ class AccessDeniedScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) => AppScaffold(
     title: const Text(Brand.appName),
-    body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.lock_outline,
-              size: 64,
-              color: Theme.of(context).colorScheme.secondary,
-            ),
-            const SizedBox(height: 16),
-            Text(
-              AppLocalizations.of(context).accessDenied,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: 16),
-            FilledButton(
-              onPressed: () => context.go('/'),
-              child: Text(AppLocalizations.of(context).backToDashboard),
-            ),
-          ],
-        ),
+    body: SingleChildScrollView(
+      padding: const EdgeInsets.all(24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.lock_outline,
+            size: 64,
+            color: Theme.of(context).colorScheme.secondary,
+          ),
+          const SizedBox(height: 16),
+          Text(
+            AppLocalizations.of(context).accessDenied,
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: 16),
+          FilledButton(
+            onPressed: () => context.go('/'),
+            child: Text(AppLocalizations.of(context).backToDashboard),
+          ),
+        ],
       ),
     ),
   );
@@ -1213,10 +1262,12 @@ class AuthErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    return Scaffold(
-      body: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(24),
+    return AppScaffold(
+      title: Text(strings.accessLoadFailed),
+      isRoot: true,
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: Center(
           child: ConstrainedBox(
             constraints: const BoxConstraints(maxWidth: 520),
             child: Column(
