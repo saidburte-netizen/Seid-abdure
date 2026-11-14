@@ -2,41 +2,55 @@
 
 **hani brade and cake**
 
-A complete Flutter + Supabase management system for the Brade and Cake House
-bakery, shop and rental business. The app uses the official green, cream and
-gold brand identity and ships English, Amharic and Afaan Oromo interfaces.
+One Flutter app for the Brade and Cake House bakery, shop and rental business.
+It runs on Android and on the web from the same project, uses the official
+green, cream and gold brand, and ships English, Amharic and Afaan Oromo
+interfaces with light and dark themes.
 
-## What is included
+## Download and install
 
-- Responsive Admin, Manager and Team portals selected from the signed-in role.
-- Point of sale with product search, cart, discounts, tax/service charge,
-  cash/mobile-money/bank/credit payments, receipts, returns and offline queue.
-- Production batches, recipes, stock ledger, stock counts, adjustments,
-  transfers, purchasing, goods receipts and supplier bills.
-- Customers, credit limits, receivables, statements and customer payments.
-- Cash accounts, expenses, transfers, bills, daily business close and variance.
-- Employees, shifts, attendance, leave, salary components, payroll runs,
-  payslips, advances and approval/payment.
-- Properties, units, leases, rent invoices, rent payments, rent roll and
-  maintenance requests.
-- Supplier payables, aging, statements and payments.
-- Notifications, read state, preferences and branch alert refresh.
-- Dashboard, sales, inventory, production, P&L, receivables, payables, rentals,
-  payroll and full-branch export reports with CSV and branded PDF output.
-- Supabase Auth, branch-scoped roles/permissions, row-level security, audit
-  logging, private storage policies and idempotent offline-sale ingestion.
-- Branded launcher icons, Android adaptive/monochrome notification icons,
-  native light/dark splash screens, web/PWA metadata and desktop titles.
+The GitHub Release contains the three compiled deliverables:
 
-See [docs/PLAN.md](docs/PLAN.md), [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md),
-[docs/SECURITY.md](docs/SECURITY.md), [docs/RUNBOOK.md](docs/RUNBOOK.md),
-[docs/REPORTING.md](docs/REPORTING.md) and [docs/BRANDING.md](docs/BRANDING.md).
+- `brade-cake-house.apk` — install this on an Android phone.
+- `brade-cake-house.aab` — upload this to Google Play.
+- `brade-cake-house-web.zip` — unzip and serve `index.html` for the web admin
+  portal.
 
-## Requirements
+Install the APK by opening it on the phone and allowing installs from the
+browser or file manager. If Android warns that the app is debug-signed, that is
+expected until the four Android signing secrets are added to the repository.
 
-- Flutter stable 3.35+ and Dart 3.9+
-- Supabase CLI and Docker for a local database
-- A Supabase project for deployed environments
+## Included modules
+
+- Dashboard with live KPIs and alerts.
+- Point of sale, sales, returns, receipts, close-day.
+- Products, categories, units, items, recipes, production batches, cake orders.
+- Stock, stores, movements, counts, transfers, purchasing and goods receipts.
+- Cash accounts, transactions, transfers, expenses, bills and payables.
+- Employees, departments, documents, shifts, attendance, leave and advances.
+- Payroll runs, payslips, approval, payment and PDF payslips.
+- Properties, units, tenants, leases, rent invoices, rent payments, maintenance.
+- Receivables, supplier payables, aging, statements and write-offs.
+- Approvals, notifications, reports, CSV/PDF exports, users, roles and settings.
+
+Every module is reachable from the single navigation drawer and is gated by the
+live `role_permissions` table. Admin, manager and staff see the menus their role
+allows; the admin role can use every module.
+
+## First login
+
+1. Open the app and tap **Create the first account**.
+2. Enter a name, email and password. The live `handle_new_user` trigger makes
+   the first profile `admin` automatically.
+3. If Supabase email confirmation is enabled, confirm the email and sign in.
+4. If no branch exists yet, the app offers **Create the first branch**.
+5. Add later users by having them sign up, then open **Settings → Users** as an
+   administrator and set their branch and role.
+6. Roles are `admin`, `manager`, `cashier`, `baker`, `store_keeper`,
+   `hr_officer`, `accountant`, `staff` and `customer`.
+
+The app only reads `SUPABASE_URL` and `SUPABASE_ANON_KEY` at build time. It
+never embeds a service-role key.
 
 ## Local development
 
@@ -47,61 +61,61 @@ flutter analyze
 flutter test
 flutter run -d chrome \
   --dart-define=SUPABASE_URL=https://your-project.supabase.co \
-  --dart-define=SUPABASE_PUBLISHABLE_KEY=your-public-key
+  --dart-define=SUPABASE_ANON_KEY=your-anon-key
 ```
 
-`SUPABASE_ANON_KEY` is also accepted for older projects. Only a public
-publishable/anon key belongs in the client; never put a service-role key in the
-Flutter app or repository.
-
-Local database:
+Build the same three deliverables locally:
 
 ```sh
-supabase start
-supabase db reset
-supabase test db
+flutter build apk --release \
+  --dart-define=SUPABASE_URL=... \
+  --dart-define=SUPABASE_ANON_KEY=...
+cp build/app/outputs/flutter-apk/app-release.apk brade-cake-house.apk
+
+flutter build appbundle --release \
+  --dart-define=SUPABASE_URL=... \
+  --dart-define=SUPABASE_ANON_KEY=...
+cp build/app/outputs/bundle/release/app-release.aab brade-cake-house.aab
+
+flutter build web --release \
+  --dart-define=SUPABASE_URL=... \
+  --dart-define=SUPABASE_ANON_KEY=...
+(cd build/web && zip -r ../../brade-cake-house-web.zip .)
 ```
 
-## First-run setup
+## CI and releases
 
-1. Create the first user in Supabase Auth.
-2. Sign in to the app. The onboarding screen offers **Claim owner account**
-   when no active membership exists yet. This creates the organization, the
-   first branch and the owner role.
-3. Add additional users in Supabase Auth, then add them under
-   **Settings → Members** with a branch role.
-4. Configure organization details, branch prefixes, tax/service rates,
-   numbering and notification preferences.
+- `.github/workflows/ci.yml` runs formatting, `flutter analyze`, `flutter test`
+  and a web build.
+- `.github/workflows/build-android.yml` builds one universal APK and one AAB,
+  renames them, verifies the APK with `aapt`, checks the 15 MB minimum, checks
+  the package/label, checks the bundled logo, and uploads only those files.
+- `.github/workflows/build-web.yml` builds and zips the web app, uploads only
+  `brade-cake-house-web.zip`, and optionally deploys to GitHub Pages when the
+  repository variable `ENABLE_PAGES` is `true`.
+- Pushing a `v*` tag creates/updates the GitHub Release and attaches the APK,
+  AAB and web ZIP.
 
-## Testing
+Android release signing uses `ANDROID_KEYSTORE_BASE64`,
+`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
+If they are absent, the workflow produces a clearly labelled debug-signed build.
+See [docs/ANDROID_SIGNING.md](docs/ANDROID_SIGNING.md).
 
-```sh
-flutter analyze                 # must be clean
-flutter test                    # widget and brand tests
-supabase test db                # pgTAP schema, RLS and RPC coverage
-```
+## Documentation
 
-A local end-to-end RPC smoke script is documented in
-[docs/TESTING.md](docs/TESTING.md). It exercises owner bootstrap, a POS sale,
-a return, rent invoicing/payment, payroll approval, alerts and dashboard
-reporting against a disposable transaction.
-
-## CI/CD
-
-- `.github/workflows/ci.yml` runs formatting, analysis, tests and a web build,
-  then resets the database and runs pgTAP.
-- `.github/workflows/build-web.yml` and `build-android.yml` publish artifacts
-  on `v*` tags or manual dispatch.
-- No signing keys, service-role keys or deployment credentials are committed.
-  Configure them as GitHub Actions secrets and environment configuration.
+- [docs/GAP_REPORT.md](docs/GAP_REPORT.md) — live-schema audit and known limits.
+- [docs/BUILD_DIAGNOSIS.md](docs/BUILD_DIAGNOSIS.md) — why the old artifact was
+  not one app.
+- [docs/TOOLS.md](docs/TOOLS.md) — tool versions.
+- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
+- [docs/SECURITY.md](docs/SECURITY.md)
+- [docs/REPORTING.md](docs/REPORTING.md)
+- [docs/BRANDING.md](docs/BRANDING.md)
+- [supabase/README.md](supabase/README.md) — live database and migration safety.
 
 ## Security
 
-Row-level security is enabled on every public table and every table has at
-least one policy. All money, stock, credit and workflow writes go through
-`SECURITY DEFINER` RPCs with explicit permission checks and a fixed
-`search_path`. The client only receives the public API key.
-
-If a GitHub token or other secret was ever pasted into a terminal, issue
-tracker or commit, revoke/rotate it immediately. The repository remote must not
-contain a plaintext token; use a credential helper or GitHub CLI login.
+The client uses only the public anon key. Row-level security, role checks,
+triggers and `SECURITY DEFINER` functions enforce access in the database.
+Never commit a service-role key, keystore, password, or GitHub token. If a token
+was ever placed in a remote URL or terminal, revoke and rotate it immediately.
