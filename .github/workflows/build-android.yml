@@ -32,7 +32,8 @@ jobs:
 
       - run: flutter pub get
       - run: flutter gen-l10n
-      - run: flutter doctor -v
+      - run: flutter analyze
+      - run: flutter test
 
       - name: Configure release signing
         env:
@@ -50,12 +51,14 @@ jobs:
           keyAlias=$ANDROID_KEY_ALIAS
           storeFile=upload-keystore.jks
           PROPS
+            echo "SIGNING_MODE=release" >> "$GITHUB_ENV"
             echo "Release signing configured from repository secrets."
           else
-            echo "::warning title=Debug-signed build::Android signing secrets are missing. APK/AAB artifacts will be debug-signed."
+            echo "SIGNING_MODE=debug" >> "$GITHUB_ENV"
+            echo "::warning title=Debug-signed build::Android signing secrets are missing. The APK/AAB will be debug-signed and must not be uploaded to Google Play."
           fi
 
-      - name: Build APK (universal and split per ABI)
+      - name: Build universal release APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -64,11 +67,9 @@ jobs:
           flutter build apk --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
-          flutter build apk --release --split-per-abi \
-            --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          cp build/app/outputs/flutter-apk/app-release.apk brade-cake-house.apk
 
-      - name: Build AAB
+      - name: Build release AAB
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -77,26 +78,54 @@ jobs:
           flutter build appbundle --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+          cp build/app/outputs/bundle/release/app-release.aab brade-cake-house.aab
 
-      - name: Upload APK artifacts
+      - name: Verify the APK is a real installable app
+        run: |
+          set -euo pipefail
+          APK=brade-cake-house.apk
+          test -f "$APK"
+          SIZE=$(stat -c%s "$APK")
+          echo "APK_SIZE_BYTES=$SIZE"
+          echo "APK_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $SIZE/1048576}") MB"
+          if [ "$SIZE" -lt 15728640 ]; then
+            echo "ERROR: APK is smaller than 15 MB and is probably not a complete Flutter app."
+            exit 1
+          fi
+          SDK="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-}}"
+          AAPT=$(find "$SDK/build-tools" -name aapt 2>/dev/null | sort -V | tail -1 || true)
+          if [ -z "$AAPT" ]; then
+            echo "ERROR: aapt not found in Android SDK build-tools."
+            exit 1
+          fi
+          "$AAPT" dump badging "$APK" | tee apk-badging.txt
+          grep -q "package: name='net.bradeandcake.brade_and_cake_house'" apk-badging.txt
+          grep -q "application-label:'Brade and Cake House'" apk-badging.txt
+          unzip -l "$APK" | tee apk-files.txt
+          grep -q "assets/flutter_assets/assets/branding/logo.png" apk-files.txt
+          grep -q "assets/flutter_assets/AssetManifest" apk-files.txt
+          grep -q "libapp.so" apk-files.txt
+          echo "PACKAGE_NAME=net.bradeandcake.brade_and_cake_house"
+          echo "APP_LABEL=Brade and Cake House"
+          echo "SIGNING_MODE=${SIGNING_MODE}"
+          echo "Bundled logo: assets/flutter_assets/assets/branding/logo.png"
+          echo "Bundled translations are compiled into libapp.so by flutter gen-l10n."
+
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: brade-cake-house-apk
           if-no-files-found: error
-          path: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
+          path: brade-cake-house.apk
 
-      - name: Upload AAB artifact
+      - name: Upload AAB
         uses: actions/upload-artifact@v4
         with:
           name: brade-cake-house-aab
           if-no-files-found: error
-          path: build/app/outputs/bundle/release/app-release.aab
+          path: brade-cake-house.aab
 
-      - name: Attach artifacts to GitHub Release
+      - name: Attach Android files to GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
@@ -106,8 +135,5 @@ jobs:
           prerelease: false
           generate_release_notes: true
           files: |
-            build/app/outputs/flutter-apk/app-release.apk
-            build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk
-            build/app/outputs/flutter-apk/app-arm64-v8a-release.apk
-            build/app/outputs/flutter-apk/app-x86_64-release.apk
-            build/app/outputs/bundle/release/app-release.aab
+            brade-cake-house.apk
+            brade-cake-house.aab

@@ -7,7 +7,7 @@ on:
     tags: ["v*"]
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -21,7 +21,9 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter gen-l10n
-      - name: Build web portal
+      - run: flutter analyze
+      - run: flutter test
+      - name: Build web admin portal
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
@@ -30,11 +32,31 @@ jobs:
           flutter build web --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+      - name: Zip the complete web app
+        run: |
+          set -euo pipefail
+          test -f build/web/index.html
+          (cd build/web && zip -r ../../brade-cake-house-web.zip .)
+          test -f brade-cake-house-web.zip
+          unzip -l brade-cake-house-web.zip | tee web-files.txt
+          grep -q "index.html" web-files.txt
+          grep -q "main.dart.js" web-files.txt
+          grep -q "assets/branding/logo.png" web-files.txt
+          echo "WEB_ZIP_SIZE_MB=$(awk "BEGIN {printf \"%.2f\", $(stat -c%s brade-cake-house-web.zip)/1048576}") MB"
       - uses: actions/upload-artifact@v4
         with:
           name: brade-cake-house-web
           if-no-files-found: error
-          path: build/web
+          path: brade-cake-house-web.zip
+      - name: Attach web ZIP to GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Brade and Cake House ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          files: brade-cake-house-web.zip
 
   deploy-pages:
     if: vars.ENABLE_PAGES == 'true'
@@ -50,7 +72,8 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: brade-cake-house-web
-          path: build/web
+          path: .
+      - run: unzip -o brade-cake-house-web.zip -d build/web
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:
