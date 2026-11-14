@@ -33,12 +33,29 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          DB_URL="postgresql://postgres:${SUPABASE_DB_PASSWORD}@db.nmrpmypgkljmtnsvmcfn.supabase.co:5432/postgres?sslmode=require"
-          supabase db dump \
-            --db-url "$DB_URL" \
-            --schema public \
-            --file live-public-schema.sql
-          test -s live-public-schema.sql
+          DB_USER="postgres.nmrpmypgkljmtnsvmcfn"
+          DUMPED=0
+          for HOST in \
+            aws-0-eu-central-1.pooler.supabase.com \
+            aws-1-eu-central-1.pooler.supabase.com; do
+            rm -f live-public-schema.sql
+            DB_URL="postgresql://${DB_USER}:${SUPABASE_DB_PASSWORD}@${HOST}:5432/postgres?sslmode=require"
+            echo "Trying pooler host: $HOST"
+            if supabase db dump \
+              --db-url "$DB_URL" \
+              --schema public \
+              --file live-public-schema.sql; then
+              if [ -s live-public-schema.sql ]; then
+                echo "DUMP_HOST=$HOST"
+                DUMPED=1
+                break
+              fi
+            fi
+          done
+          if [ "$DUMPED" -ne 1 ]; then
+            echo "ERROR: Could not dump the live schema through either IPv4 pooler host."
+            exit 1
+          fi
           wc -l live-public-schema.sql
 
       - name: Upload the schema-only fixture
