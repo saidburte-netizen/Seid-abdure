@@ -29,6 +29,7 @@ class CreditScreen extends StatelessWidget {
       if (accounts.isEmpty) {
         throw Exception('Create a cash account before recording a payment.');
       }
+      if (!context.mounted) return;
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => _CreditPaymentDialog(

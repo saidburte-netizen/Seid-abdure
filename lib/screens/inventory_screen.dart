@@ -36,6 +36,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           .from('purchase_order_items')
           .select()
           .eq('po_id', order['id']);
+      if (!mounted) return;
       final storeId = await showDialog<String>(
         context: context,
         builder: (context) => AlertDialog(

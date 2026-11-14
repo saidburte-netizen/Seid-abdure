@@ -53,6 +53,7 @@ class CashScreen extends StatelessWidget {
       if (accounts.isEmpty) {
         throw Exception('Create a cash account before paying a payable.');
       }
+      if (!context.mounted) return;
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => _PaymentDialog(

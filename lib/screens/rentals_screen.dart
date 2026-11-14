@@ -52,6 +52,7 @@ class RentalsScreen extends StatelessWidget {
       if (accounts.isEmpty) {
         throw Exception('Create a cash account before recording rent.');
       }
+      if (!context.mounted) return;
       final result = await showDialog<Map<String, dynamic>>(
         context: context,
         builder: (context) => _RentPaymentDialog(
