@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../brand/brand.dart';
+import '../core/logging/app_logger.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -290,17 +291,22 @@ class _StorageTabState extends State<_StorageTab> {
   ];
 
   Future<List<Map<String, dynamic>>> _list(String bucket) async {
-    final session = SessionScope.of(context);
-    final files = await session.client.storage.from(bucket).list();
-    return files
-        .map(
-          (file) => {
-            'name': file.name,
-            'created_at': file.createdAt,
-            'bucket': bucket,
-          },
-        )
-        .toList();
+    try {
+      final session = SessionScope.of(context);
+      final files = await session.client.storage.from(bucket).list();
+      return files
+          .map(
+            (file) => {
+              'name': file.name,
+              'created_at': file.createdAt,
+              'bucket': bucket,
+            },
+          )
+          .toList();
+    } catch (error, stack) {
+      AppLogger.error('Could not list storage bucket', error, stack);
+      rethrow;
+    }
   }
 
   @override
@@ -331,11 +337,7 @@ class _StorageTabState extends State<_StorageTab> {
                   if (snapshot.hasError) {
                     return Padding(
                       padding: const EdgeInsets.all(16),
-                      child: Text(
-                        'Cannot list this bucket with the current role. '
-                        'Uploads are still available through the database URL '
-                        'fields.\n${snapshot.error}',
-                      ),
+                      child: FriendlyErrorBox(error: snapshot.error!),
                     );
                   }
                   final files = snapshot.data ?? const [];
