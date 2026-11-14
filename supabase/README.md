@@ -15,10 +15,10 @@ permission, policy, trigger, or function was changed.
 
 ## Migrations in this folder
 
-The timestamped SQL files in `supabase/migrations/` are legacy
-local-development migrations. They describe an earlier schema and do **not**
-match the live project. Do not run `supabase db push`, `supabase db reset`, or
-`supabase migration up` against the live project with these files.
+The timestamped SQL files were moved to `supabase/legacy_migrations/`. They
+describe an earlier schema and do **not** match the live project. Do not run
+`supabase db push`, `supabase db reset`, or `supabase migration up` against the
+live project with those files. `supabase/migrations/` contains only a README.
 
 There is no new migration for this delivery because the live schema already
 contains every object the app needs. If a future change is required, add one
