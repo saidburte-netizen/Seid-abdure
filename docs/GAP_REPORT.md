@@ -83,11 +83,35 @@ reachable from that router and is permission-gated against the live
 
 ## Database decision
 
-No new migration is required. The live schema already contains the tables,
-views, roles, permissions, RLS policies, triggers, and RPCs used by the app.
-The timestamped files under `supabase/migrations/` are legacy local-development
-migrations and must not be applied to the live project. See
-`supabase/README.md`.
+The live project remains authoritative. The fifteen uploaded
+`20261114000001`–`20261114000015` migrations are the intended source of truth
+and were not edited.
+
+A real mismatch was found while diffing the app's RPC calls against the
+read-only live-schema snapshot: the app calls `void_sale`, but the live schema
+does not expose that RPC. One later-timestamp migration was added:
+
+- `supabase/migrations/20261114000016_void_sale.sql`
+
+It creates `public.void_sale(uuid, text)`, checks the admin/manager/cashier
+role, reverses cash sale payments and received credit payments, writes off the
+remaining receivable with a balancing customer-ledger credit, updates the sale
+to `void`/`refunded`, and lets the existing `trg_sales_void` and
+`trg_sales_audit` triggers restore stock and write the audit row. The local
+contract calls it twice to prove idempotency.
+
+Apply the exact SQL to the hosted project with the Supabase CLI or SQL editor:
+
+```bash
+supabase db push
+# or
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+  -f supabase/migrations/20261114000016_void_sale.sql
+```
+
+No other migration is required. The read-only live-schema fixture under
+`supabase/fixtures/live_schema.sql` is used only for disposable local/CI runs
+and must never be applied to the hosted project.
 
 ## Remaining limitations
 
@@ -99,13 +123,17 @@ FIXME, “coming soon”, or null-button placeholders were found in `lib/`.
 The following work still depends on product or deployment owners and is not
 silently treated as complete:
 
-- **Operational deep-screen translation:** the 114 shared app messages are
-  complete and ARB key/placeholder parity is checked, but many field labels,
-  dialogs, and domain-specific actions inside operational screens still use
-  English literals. A reviewed Amharic/Oromo domain glossary and translation
-  pass remain necessary before an Amharic/Oromo-only rollout.
-- **Android signing:** if the four Android signing secrets are not configured,
-  the release APK/AAB is debug-signed and must not be uploaded to Google Play.
+- **Operational translation coverage:** 148 UI phrases, all 81 schema titles,
+  all 277 field labels, 16 templates and a 280-word fallback dictionary are
+  covered in en/am/om. ARB key/placeholder parity and live locale switching are
+  tested. A native-speaker review of domain wording is still recommended before
+  an Amharic/Oromo-only rollout.
+- **Android signing:** the `generate-keystore` workflow produces one
+  password-protected JKS artifact with a one-day retention and a backup
+  warning. Until the four repository secrets (`ANDROID_KEYSTORE_BASE64`,
+  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) are
+  configured, release artifacts are debug-signed and must not be uploaded to
+  Google Play. Switching to release signing requires one uninstall/reinstall.
 - **Backups and account security:** enable/verify Supabase PITR/backups, SMTP,
   MFA and rate limits in the deployed Supabase project.
 - **Business rules:** payroll tax/deduction defaults require review by a local
@@ -121,5 +149,6 @@ silently treated as complete:
 - **Optional web deployment:** GitHub Pages runs only when `ENABLE_PAGES` is
   `true`; the complete web ZIP is built independently.
 
-No Supabase migration was applied. The live schema remains authoritative; the
-legacy local migrations under `supabase/` must not be applied to production.
+One later-timestamp migration (`20261114000016_void_sale.sql`) is committed and
+must be applied to the hosted project; the fifteen uploaded migrations were not
+edited. The live schema remains authoritative for every other object.

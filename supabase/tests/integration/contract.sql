@@ -72,7 +72,9 @@ values
   ('55555555-5555-5555-5555-555555555503', 'TEST-RAW-ITEM', 'Raw item', 'raw_material', '44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333', 2, 0, true);
 
 insert into public.products (id, sku, name, name_am, name_om, category_id, item_id, unit_id, price, cost, tax_rate, is_active)
-values ('66666666-6666-6666-6666-666666666666', 'TEST-PROD-1', 'Test product', 'የሙከራ ምርት', 'Oomisha qorannoo', '44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555502', '33333333-3333-3333-3333-333333333333', 50, 20, 0, true);
+values
+  ('66666666-6666-6666-6666-666666666666', 'TEST-PROD-1', 'Test product', 'የሙከራ ምርት', 'Oomisha qorannoo', '44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555502', '33333333-3333-3333-3333-333333333333', 50, 20, 0, true),
+  ('67676767-6767-6767-6767-676767676767', 'TEST-SERVICE-1', 'Test service', 'የሙከራ አገልግሎት', 'Tajaajila qorannoo', '44444444-4444-4444-4444-444444444444', null, '33333333-3333-3333-3333-333333333333', 60, 0, 0, true);
 
 insert into public.customers (id, code, full_name, phone, customer_type, credit_limit, is_active)
 values ('77777777-7777-7777-7777-777777777777', 'TEST-CUST-1', 'Test customer', '0911000000', 'retail', 1000, true);
@@ -708,6 +710,56 @@ select pg_temp.assert_true(
    where store_id = '22222222-2222-2222-2222-222222222222'
      and item_id = '55555555-5555-5555-5555-555555555502'),
   'finished-goods stock after return and void'
+);
+
+-- Split tender: one sale paid with cash and bank.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '28282828-2828-2828-2828-282828282828', 'TEST-SALE-SPLIT',
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222',
+  '77777777-7777-7777-7777-777777777777',
+  '00000000-0000-0000-0000-000000000003',
+  now(), 60, 0, 0, 60, 0, 'unpaid', 'completed'
+);
+insert into public.sale_items (
+  sale_id, product_id, product_name, quantity, unit_price,
+  discount_amount, tax_amount, line_total
+) values (
+  '28282828-2828-2828-2828-282828282828',
+  '67676767-6767-6767-6767-676767676767', 'Test service', 1, 60, 0, 0, 60
+);
+insert into public.sale_payments (
+  sale_id, cash_account_id, method, amount, received_by
+) values
+  (
+    '28282828-2828-2828-2828-282828282828',
+    '88888888-8888-8888-8888-888888888881', 'cash', 30,
+    '00000000-0000-0000-0000-000000000003'
+  ),
+  (
+    '28282828-2828-2828-2828-282828282828',
+    '88888888-8888-8888-8888-888888888882', 'bank', 30,
+    '00000000-0000-0000-0000-000000000003'
+  );
+select pg_temp.assert_true(
+  (select paid_amount = 60 and payment_status = 'paid'
+   from public.sales
+   where id = '28282828-2828-2828-2828-282828282828'),
+  'split tender settles sale'
+);
+select pg_temp.assert_true(
+  (select count(*) = 2 from public.cash_transactions
+   where reference_type = 'sale_payment'
+     and reference_id in (
+       select id from public.sale_payments
+       where sale_id = '28282828-2828-2828-2828-282828282828'
+     )
+     and txn_type = 'in'),
+  'split tender posts two cash transactions'
 );
 
 -- Translation columns on every catalog table named by the product contract.
