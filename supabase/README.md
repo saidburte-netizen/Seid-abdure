@@ -10,20 +10,33 @@ The deployed app targets the existing Supabase project
 `next_number`.
 
 The application was written against an introspection of that live project
-(PostgREST OpenAPI plus read-only SQL inspection). No table, view, role,
-permission, policy, trigger, or function was changed.
+(PostgREST OpenAPI plus read-only SQL inspection). The live schema remains
+authoritative. No live object is modified by this repository; the one required
+new migration adds the missing `void_sale` RPC and must be applied by the
+project owner.
 
-## Migrations in this folder
+## Migrations
 
-The timestamped SQL files were moved to `supabase/legacy_migrations/`. They
-describe an earlier schema and do **not** match the live project. Do not run
-`supabase db push`, `supabase db reset`, or `supabase migration up` against the
-live project with those files. `supabase/migrations/` contains only a README.
+The fifteen uploaded `20261114000001`–`20261114000015` migrations are the
+intended source of truth and were not edited. They are not present in this
+checkout; when supplied they belong in `supabase/migrations/` and should be
+applied in order.
 
-There is no new migration for this delivery because the live schema already
-contains every object the app needs. If a future change is required, add one
-new numbered migration that contains only that change, test it on a disposable
-project, and never replay the legacy files.
+The active folder also contains:
+
+- `20261114000016_void_sale.sql` — the only added migration. It creates
+  `public.void_sale(uuid, text)` because the app calls it and the live snapshot
+  does not expose it. Apply it with `supabase db push` or:
+  ```bash
+  psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+    -f supabase/migrations/20261114000016_void_sale.sql
+  ```
+
+The old `20261113020000_organizations_rls.sql` and the other local-development
+files are in `supabase/legacy_migrations/`. They describe an earlier schema and
+must not be replayed. `supabase/fixtures/live_schema.sql` is a read-only
+schema-only snapshot used only for disposable local/CI stacks; never apply it
+to the hosted project.
 
 ## Adding users
 

@@ -86,6 +86,6 @@ logo, signing mode and SHA-256 checksums.
 - [x] Android emulator smoke green.
 - [x] APK/AAB/web build and content verification green.
 - [x] Checksums generated and attached.
-- [ ] Tag `v1.0.5` pushed and release verified.
+- [x] Tag `v1.0.5` pushed and release verified.
 - [ ] Android signing secrets configured (release signing).
 - [ ] PITR/backups enabled and restore tested in the hosted project.

@@ -42,7 +42,7 @@ integration and widget tests.
 ## Live-only objects
 
 The live project contains 68 tables, 13 views and the roles/RPCs documented in
-`supabase/README.md`. Many of those objects are not in the legacy SQL. The
+`supabase/README.md`, plus the added `void_sale` RPC migration. Many of those objects are not in the legacy SQL. The
 default run prints a `WARN` for each live-only object and still passes. This is
 expected and prevents the legacy migrations from being treated as a source of
 truth. Use `--strict-sql` only when you are intentionally validating a future

@@ -215,16 +215,37 @@ friendly offline error box.
 
 ## Release evidence
 
-To be completed after the `v1.0.5` tag run:
+Published **2026-11-14T23:35:15Z** at
+https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.5
 
-| Item | Value |
-| --- | --- |
-| Release | `v1.0.5` |
-| APK | `brade-cake-house.apk` |
-| AAB | `brade-cake-house.aab` |
-| Web ZIP | `brade-cake-house-web.zip` |
-| Signing | Release-signed when the four secrets are present; otherwise debug-signed and labelled in the release notes |
-| Checksums | Attached as `sha256sums.txt` |
+| Item | Size (bytes) | SHA-256 |
+| --- | ---: | --- |
+| `brade-cake-house.apk` | 82,101,418 | `c2e6edbd10d93d10f98582c733bcd31636a2cf15cd94f0ac17a4367e5b87c4cd` |
+| `brade-cake-house.aab` | 67,574,789 | `22e4cd7b3cbebdde66dcb1b08627e62a5a6e18e916175d86f687056dfcc67dc2` |
+| `brade-cake-house-web.zip` | 17,710,413 | `08aebe0e245ba4d18adcd98a98b4550c63afc04b5f3e639b40615351d8bd1cf9` |
+
+`sha256sum -c sha256sums.txt` passed for all three downloaded assets.
+
+Signing: **debug-signed**. The release notes state this explicitly because the
+four release-signing repository secrets are not configured. Do not upload this
+build to Google Play.
+
+Verification: package `net.bradeandcake.brade_and_cake_house`, label
+`Brade and Cake House`, launcher activity `.MainActivity`, INTERNET and
+ACCESS_NETWORK_STATE permissions, bundled logo/icon/notification icon, and
+`libapp.so` for arm64-v8a, armeabi-v7a and x86_64. The APK contains only the
+public `anon` Supabase JWT (role `anon`, project ref
+`nmrpmypgkljmtnsvmcfn`); no `service_role` string or key was found. Amharic
+strings are present as UTF-16LE and Oromo strings as UTF-8 in `libapp.so`.
+
+Release runs:
+
+- Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653443635
+- Main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653433991
+- Main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653434014
+- Main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653434146
+- Main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653433988
+- Smoke screenshots artifact: `android-smoke-screenshots` (id `14136849647`)
 
 ## Release checklist
 
@@ -234,5 +255,5 @@ To be completed after the `v1.0.5` tag run:
 - [x] APK/AAB/web build and APK content verification in workflow
 - [x] Local Supabase contract and Android emulator smoke test in CI
 - [x] SHA-256 checksums generated and attached
-- [ ] Tag `v1.0.5` pushed and release verified
+- [x] Tag `v1.0.5` pushed and release verified
 - [ ] Android signing secrets configured (release signing)

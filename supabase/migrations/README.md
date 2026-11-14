@@ -1,10 +1,29 @@
-# No migrations are applied to the live project
+# Active migrations
 
-The live Supabase project already contains the full schema used by the app.
-This delivery intentionally adds no migration.
+The live Supabase project remains authoritative. The fifteen uploaded
+`20261114000001`–`20261114000015` migrations are the intended source of truth
+and were not edited. They are not present in this checkout; when they are
+supplied, they belong here and should be applied in order.
 
-The earlier timestamped SQL files were moved to `../legacy_migrations/`. They
-describe a different schema and must not be applied to the live project.
+One later migration is committed here:
 
-If a future schema change is genuinely required, add one new numbered `.sql`
-file here containing only that change. Test it on a disposable project first.
+- `20261114000016_void_sale.sql`
+
+The app calls `void_sale`, but the read-only live-schema snapshot does not
+expose that RPC. This migration adds only that missing function. It relies on
+the existing `trg_sales_void` and `trg_sales_audit` triggers.
+
+Apply it to the hosted project with the Supabase CLI or SQL editor:
+
+```bash
+supabase db push
+# or
+psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
+  -f supabase/migrations/20261114000016_void_sale.sql
+```
+
+Do not edit the fifteen uploaded migrations. Do not apply
+`supabase/fixtures/live_schema.sql` to the hosted project; it is a schema-only
+snapshot for disposable local/CI runs. The older
+`20261113020000_organizations_rls.sql` file is in `../legacy_migrations/` and
+must not be replayed.
