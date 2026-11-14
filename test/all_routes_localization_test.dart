@@ -172,6 +172,45 @@ void main() {
 
     controller.dispose();
   });
+
+  testWidgets('sign-in language menu switches en, am, om and back', (
+    tester,
+  ) async {
+    final controller = await _createTestController(tester);
+    controller.status = AuthStatus.signedOut;
+    controller.locale = const Locale('en');
+
+    await tester.pumpWidget(
+      BakeryApp(
+        client: controller.client,
+        authController: controller,
+        initialLocation: '/sign-in',
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('Email'), findsOneWidget);
+
+    Future<void> choose(String language) async {
+      await tester.tap(find.byKey(const Key('sign-in-language-menu')));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(language));
+      await tester.pump(const Duration(milliseconds: 350));
+    }
+
+    await choose('አማርኛ');
+    expect(find.text('ኢሜይል'), findsOneWidget);
+    expect(controller.locale?.languageCode, 'am');
+
+    await choose('Afaan Oromoo');
+    expect(find.text('Imeelii'), findsOneWidget);
+    expect(controller.locale?.languageCode, 'om');
+
+    await choose('English');
+    expect(find.text('Email'), findsOneWidget);
+    expect(controller.locale?.languageCode, 'en');
+
+    controller.dispose();
+  });
 }
 
 Future<AuthController> _createTestController(

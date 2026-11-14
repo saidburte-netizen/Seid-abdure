@@ -635,24 +635,44 @@ class _SignInScreenState extends State<SignInScreen> {
             ),
             child: SafeArea(
               bottom: false,
-              child: Center(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const BrandMark(size: 140, light: true),
-                      const SizedBox(height: 8),
-                      Text(
-                        strings.signInSubtitle,
-                        textAlign: TextAlign.center,
-                        style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                          color: scheme.onPrimary,
-                        ),
+              child: Stack(
+                children: [
+                  Center(
+                    child: SingleChildScrollView(
+                      padding: const EdgeInsets.all(24),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const BrandMark(size: 140, light: true),
+                          const SizedBox(height: 8),
+                          Text(
+                            strings.signInSubtitle,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyMedium
+                                ?.copyWith(color: scheme.onPrimary),
+                          ),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                ),
+                  Positioned(
+                    top: 4,
+                    right: 8,
+                    child: PopupMenuButton<String>(
+                      key: const Key('sign-in-language-menu'),
+                      tooltip: strings.language,
+                      icon: Icon(Icons.language, color: scheme.onPrimary),
+                      onSelected: (value) {
+                        unawaited(SessionScope.of(context).setLocale(value));
+                      },
+                      itemBuilder: (context) => const [
+                        PopupMenuItem(value: 'en', child: Text('English')),
+                        PopupMenuItem(value: 'am', child: Text('አማርኛ')),
+                        PopupMenuItem(value: 'om', child: Text('Afaan Oromoo')),
+                      ],
+                    ),
+                  ),
+                ],
               ),
             ),
           ),

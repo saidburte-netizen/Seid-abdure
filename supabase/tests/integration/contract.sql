@@ -55,7 +55,9 @@ insert into public.branches (id, code, name, is_active)
 values ('11111111-1111-1111-1111-111111111111', 'TEST', 'Test Branch', true);
 
 insert into public.stores (id, branch_id, name, store_type, is_active)
-values ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Test Store', 'main', true);
+values
+  ('22222222-2222-2222-2222-222222222222', '11111111-1111-1111-1111-111111111111', 'Test Store', 'main', true),
+  ('23232323-2323-2323-2323-232323232323', '11111111-1111-1111-1111-111111111111', 'Test Branch Store', 'branch', true);
 
 insert into public.units (id, code, name, name_am, name_om)
 values ('33333333-3333-3333-3333-333333333333', 'test_pcs', 'Test piece', 'የሙከራ ቁራጭ', 'Qaama qorannoo');
@@ -362,6 +364,350 @@ update public.app_settings set value = jsonb_set(value, '{name}', '"Brade and Ca
 select pg_temp.assert_true(
   (select count(*) >= 1 from public.audit_logs where table_name = 'app_settings' and action = 'UPDATE'),
   'app settings update is audited'
+);
+
+-- Customer credit payment.
+insert into public.receivable_payments (
+  id, receivable_id, cash_account_id, amount, payment_date, method, received_by
+)
+select
+  '17171717-1717-1717-1717-171717171717', id,
+  '88888888-8888-8888-8888-888888888881', 20, current_date, 'cash',
+  '00000000-0000-0000-0000-000000000001'
+from public.receivables
+where sale_id = '14141414-1414-1414-1414-141414141414';
+select pg_temp.assert_true(
+  (select paid_amount = 20 and balance = 30 and status = 'partial'
+   from public.receivables
+   where sale_id = '14141414-1414-1414-1414-141414141414'),
+  'customer payment reduces receivable'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.ledger_entries
+   where reference_type = 'receivable_payment'
+     and reference_id = '17171717-1717-1717-1717-171717171717'
+     and credit = 20),
+  'customer payment posts ledger credit'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'receivable_payment'
+     and reference_id = '17171717-1717-1717-1717-171717171717'
+     and txn_type = 'in' and amount = 20),
+  'customer payment posts cash transaction'
+);
+
+-- Sale return restores stock and refunds cash.
+insert into public.sale_returns (
+  id, return_no, sale_id, return_date, reason, refund_amount,
+  cash_account_id, created_by
+) values (
+  '18181818-1818-1818-1818-181818181818', 'TEST-RETURN-1',
+  '14141414-1414-1414-1414-141414141414', now(), 'QA return', 10,
+  '88888888-8888-8888-8888-888888888881',
+  '00000000-0000-0000-0000-000000000001'
+);
+insert into public.sale_return_items (
+  return_id, sale_item_id, product_id, quantity, amount
+)
+select
+  '18181818-1818-1818-1818-181818181818', id, product_id, 1, 10
+from public.sale_items
+where sale_id = '14141414-1414-1414-1414-141414141414';
+update public.sales
+set status = 'returned'
+where id = '14141414-1414-1414-1414-141414141414';
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.stock_movements
+   where reference_type = 'sale_return'
+     and reference_id = '18181818-1818-1818-1818-181818181818'
+     and movement_type = 'return_in' and quantity = 1),
+  'sale return restores stock'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'sale_return'
+     and reference_id = '18181818-1818-1818-1818-181818181818'
+     and txn_type = 'out' and amount = 10),
+  'sale return refunds cash'
+);
+select pg_temp.assert_true(
+  (select status = 'returned' from public.sales
+   where id = '14141414-1414-1414-1414-141414141414'),
+  'sale return updates sale status'
+);
+
+-- Voiding a completed cash sale reverses stock and cash exactly once.
+select public.void_sale(
+  '13131313-1313-1313-1313-131313131313', 'QA void'
+);
+select pg_temp.assert_true(
+  (select status = 'void' and payment_status = 'refunded'
+   from public.sales
+   where id = '13131313-1313-1313-1313-131313131313'),
+  'void sale updates sale status'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.stock_movements
+   where reference_type = 'sale_void'
+     and reference_id = '13131313-1313-1313-1313-131313131313'
+     and movement_type = 'return_in' and quantity = 2),
+  'void sale restores stock'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'sale_void'
+     and reference_id = '13131313-1313-1313-1313-131313131313'
+     and txn_type = 'out' and amount = 100),
+  'void sale reverses cash'
+);
+select pg_temp.assert_true(
+  (select count(*) >= 1 from public.audit_logs
+   where table_name = 'sales'
+     and record_id = '13131313-1313-1313-1313-131313131313'
+     and action = 'UPDATE'
+     and new_data->>'status' = 'void'),
+  'void sale is audited'
+);
+select public.void_sale(
+  '13131313-1313-1313-1313-131313131313', 'QA void again'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'sale_void'
+     and reference_id = '13131313-1313-1313-1313-131313131313'),
+  'void sale is idempotent'
+);
+
+-- Payroll approval and payment.
+update public.payroll_runs
+set cash_account_id = '88888888-8888-8888-8888-888888888881',
+    status = 'approved'
+where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+select pg_temp.assert_true(
+  (select status = 'approved' and approved_at is not null
+   from public.payroll_runs
+   where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+  'payroll approval'
+);
+update public.payroll_runs
+set status = 'paid'
+where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee';
+select pg_temp.assert_true(
+  (select status = 'paid' and paid_at is not null
+   from public.payroll_runs
+   where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+  'payroll payment'
+);
+select pg_temp.assert_true(
+  (select bool_and(is_paid) from public.payslips
+   where payroll_run_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
+  'payroll payslips are paid'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'payroll_run'
+     and reference_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+     and txn_type = 'out' and amount = 10800),
+  'payroll payment posts cash transaction'
+);
+
+-- Operating expense.
+insert into public.expense_categories (id, name, kind, is_active)
+values (
+  '19191919-1919-1919-1919-191919191919', 'QA Expense', 'expense', true
+);
+insert into public.cash_transactions (
+  id, branch_id, cash_account_id, txn_type, category_id, amount, txn_date,
+  description, reference_type, reference_id, created_by
+) values (
+  '20202020-2020-2020-2020-202020202020',
+  '11111111-1111-1111-1111-111111111111',
+  '88888888-8888-8888-8888-888888888881', 'out',
+  '19191919-1919-1919-1919-191919191919', 25, current_date,
+  'QA expense', 'expense', '20202020-2020-2020-2020-202020202020',
+  '00000000-0000-0000-0000-000000000001'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'expense'
+     and reference_id = '20202020-2020-2020-2020-202020202020'
+     and txn_type = 'out' and amount = 25),
+  'expense posts cash transaction'
+);
+select pg_temp.assert_true(
+  (select total = 25 from public.v_expense_summary
+   where category = 'QA Expense' and txn_type = 'out'),
+  'expense appears in expense summary'
+);
+
+-- Supplier bill and its payment.
+insert into public.expense_categories (id, name, kind, is_active)
+values (
+  '29292929-2929-2929-2929-292929292929', 'QA Bill Expense', 'expense', true
+);
+insert into public.bills (
+  id, bill_no, supplier_id, branch_id, category_id, description, amount,
+  paid_amount, bill_date, due_date, status, created_by
+) values (
+  '22222222-2222-2222-2222-222222222221', 'TEST-BILL-1',
+  '99999999-9999-9999-9999-999999999999',
+  '11111111-1111-1111-1111-111111111111',
+  '29292929-2929-2929-2929-292929292929', 'QA bill', 40, 40,
+  current_date, current_date + 30, 'paid',
+  '00000000-0000-0000-0000-000000000001'
+);
+insert into public.cash_transactions (
+  id, branch_id, cash_account_id, txn_type, category_id, amount, txn_date,
+  description, reference_type, reference_id, created_by
+) values (
+  '23232323-2323-2323-2323-232323232320',
+  '11111111-1111-1111-1111-111111111111',
+  '88888888-8888-8888-8888-888888888881', 'out',
+  '29292929-2929-2929-2929-292929292929', 40, current_date,
+  'QA bill payment', 'bill_payment',
+  '22222222-2222-2222-2222-222222222221',
+  '00000000-0000-0000-0000-000000000001'
+);
+select pg_temp.assert_true(
+  (select paid_amount = 40 and status = 'paid' from public.bills
+   where id = '22222222-2222-2222-2222-222222222221'),
+  'bill payment settles bill'
+);
+select pg_temp.assert_true(
+  (select count(*) >= 1 from public.audit_logs
+   where table_name = 'bills'
+     and record_id = '22222222-2222-2222-2222-222222222221'
+     and action = 'INSERT'),
+  'bill creation is audited'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'bill_payment'
+     and reference_id = '22222222-2222-2222-2222-222222222221'
+     and txn_type = 'out' and amount = 40),
+  'bill payment posts cash transaction'
+);
+
+-- Approval decision.
+insert into public.approvals (
+  id, entity_type, entity_id, requested_by, status, amount, reason
+) values (
+  '24242424-2424-2424-2424-242424242424', 'write_off',
+  '27272727-2727-2727-2727-272727272727',
+  '00000000-0000-0000-0000-000000000001', 'pending', 30,
+  'QA approval'
+);
+update public.approvals
+set status = 'approved',
+    approver_id = '00000000-0000-0000-0000-000000000001',
+    decided_at = now(),
+    decision_note = 'Approved'
+where id = '24242424-2424-2424-2424-242424242424';
+select pg_temp.assert_true(
+  (select status = 'approved' and decided_at is not null
+   from public.approvals
+   where id = '24242424-2424-2424-2424-242424242424'),
+  'approval decision is recorded'
+);
+
+-- Stock transfer between stores.
+insert into public.stock_transfers (
+  id, transfer_no, from_store_id, to_store_id, item_id, quantity,
+  notes, created_by
+) values (
+  '25252525-2525-2525-2525-252525252525', 'TEST-TRANSFER-1',
+  '22222222-2222-2222-2222-222222222222',
+  '23232323-2323-2323-2323-232323232323',
+  '55555555-5555-5555-5555-555555555501', 5, 'QA transfer',
+  '00000000-0000-0000-0000-000000000001'
+);
+select pg_temp.assert_true(
+  (select count(*) = 2 from public.stock_movements
+   where reference_type = 'stock_transfer'
+     and reference_id = '25252525-2525-2525-2525-252525252525'),
+  'stock transfer posts both sides'
+);
+select pg_temp.assert_true(
+  (select quantity = 5 from public.stock_levels
+   where store_id = '23232323-2323-2323-2323-232323232323'
+     and item_id = '55555555-5555-5555-5555-555555555501'),
+  'stock transfer updates destination level'
+);
+
+-- Rent payment.
+insert into public.rent_payments (
+  id, invoice_id, cash_account_id, amount, payment_date, method, received_by
+)
+select
+  '26262626-2626-2626-2626-262626262626', id,
+  '88888888-8888-8888-8888-888888888881', 5000, current_date, 'cash',
+  '00000000-0000-0000-0000-000000000001'
+from public.rent_invoices
+where lease_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd';
+select pg_temp.assert_true(
+  (select paid_amount = 5000 and status = 'paid'
+   from public.rent_invoices
+   where lease_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'),
+  'rent payment settles invoice'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'rent_payment'
+     and reference_id = '26262626-2626-2626-2626-262626262626'
+     and txn_type = 'in' and amount = 5000),
+  'rent payment posts cash transaction'
+);
+
+-- Receivable write-off.
+insert into public.write_offs (
+  id, receivable_id, amount, reason, status, requested_by
+)
+select
+  '27272727-2727-2727-2727-272727272727', id, 30, 'QA write-off',
+  'pending', '00000000-0000-0000-0000-000000000001'
+from public.receivables
+where sale_id = '14141414-1414-1414-1414-141414141414';
+update public.write_offs
+set status = 'approved',
+    approved_by = '00000000-0000-0000-0000-000000000001',
+    decided_at = now()
+where id = '27272727-2727-2727-2727-272727272727';
+select pg_temp.assert_true(
+  (select status = 'written_off' from public.receivables
+   where sale_id = '14141414-1414-1414-1414-141414141414'),
+  'write-off closes receivable'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.ledger_entries
+   where reference_type = 'write_off'
+     and reference_id = '27272727-2727-2727-2727-272727272727'
+     and credit = 30),
+  'write-off posts ledger credit'
+);
+
+-- Role permission change.
+delete from public.role_permissions
+where role_code = 'customer' and permission_code = 'products.view';
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.role_permissions
+   where role_code = 'customer' and permission_code = 'products.view'),
+  'role permission removal'
+);
+insert into public.role_permissions (role_code, permission_code)
+values ('customer', 'products.view');
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.role_permissions
+   where role_code = 'customer' and permission_code = 'products.view'),
+  'role permission restoration'
+);
+
+-- Finished-goods stock is back to 18 after one return and one void.
+select pg_temp.assert_true(
+  (select quantity = 18 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555502'),
+  'finished-goods stock after return and void'
 );
 
 -- Translation columns on every catalog table named by the product contract.

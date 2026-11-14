@@ -39,12 +39,21 @@ jobs:
           else
             echo "::warning::The 15 uploaded migrations are not present. Using the read-only live schema fixture for this disposable stack."
             mkdir -p supabase/migrations.disabled
+            if [ -f supabase/migrations/20261114000016_void_sale.sql ]; then
+              cp supabase/migrations/20261114000016_void_sale.sql /tmp/void_sale.sql
+            fi
             find supabase/migrations -maxdepth 1 -type f -name '*.sql' -exec mv {} supabase/migrations.disabled/ \;
             supabase start
             export PGPASSWORD=postgres
             psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
               -v ON_ERROR_STOP=1 \
               -f supabase/fixtures/live_schema.sql
+            if [ -f /tmp/void_sale.sql ]; then
+              echo "Applying the later void_sale migration after the fixture."
+              psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+                -v ON_ERROR_STOP=1 \
+                -f /tmp/void_sale.sql
+            fi
           fi
 
       - name: Apply the one-time login and storage helpers
