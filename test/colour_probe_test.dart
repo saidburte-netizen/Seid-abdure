@@ -2,6 +2,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -61,6 +62,16 @@ void main() {
 
 Future<AuthController> _createController(WidgetTester tester) async {
   SharedPreferences.setMockInitialValues({});
+  final messenger =
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+  messenger.setMockMethodCallHandler(
+    const MethodChannel('dev.fluttercommunity.plus/connectivity'),
+    (call) async => call.method == 'check' ? <String>['wifi'] : null,
+  );
+  messenger.setMockMethodCallHandler(
+    const MethodChannel('dev.fluttercommunity.plus/connectivity_status'),
+    (call) async => null,
+  );
   final client = SupabaseClient(
     'https://example.supabase.co',
     'test-anon-key',

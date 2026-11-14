@@ -187,7 +187,7 @@ class _WelcomeHeader extends StatelessWidget {
           : '${strings.welcome}, ${session.fullName}',
       subtitle:
           '${branch.branchName} • ${branch.roleLabel} • ${formatDate(DateTime.now())}',
-      heightFactor: 0.36,
+      heightFactor: 0.30,
       trailing: Column(
         mainAxisSize: MainAxisSize.min,
         children: [

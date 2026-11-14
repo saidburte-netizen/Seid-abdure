@@ -28,7 +28,7 @@ class AppHeroHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final height = (MediaQuery.sizeOf(context).height * heightFactor).clamp(
-      220.0,
+      240.0,
       370.0,
     );
     return SizedBox(

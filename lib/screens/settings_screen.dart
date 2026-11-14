@@ -6,6 +6,7 @@ import '../brand/brand.dart';
 import '../core/logging/app_logger.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/app_scaffold.dart';
+import '../widgets/brand_ui.dart';
 import '../widgets/common.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -244,16 +245,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _section(BuildContext context, String label) => Padding(
-    padding: const EdgeInsets.fromLTRB(16, 20, 16, 6),
-    child: Text(
-      label.toUpperCase(),
-      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-        color: Theme.of(context).colorScheme.primary,
-        letterSpacing: 1.1,
-      ),
-    ),
-  );
+  Widget _section(BuildContext context, String label) =>
+      SectionBar(title: label);
 
   Widget _tile(
     BuildContext context, {
