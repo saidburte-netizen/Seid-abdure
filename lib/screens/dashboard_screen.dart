@@ -30,9 +30,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _reload() {
     final session = SessionScope.of(context);
     if (session.isCustomer) return;
-    _kpis = session.client.from('v_dashboard_kpis').select().maybeSingle().then(
-        (row) =>
-            row == null ? <String, dynamic>{} : Map<String, dynamic>.from(row));
+    _kpis = session.client
+        .from('v_dashboard_kpis')
+        .select()
+        .maybeSingle()
+        .then(
+          (row) => row == null
+              ? <String, dynamic>{}
+              : Map<String, dynamic>.from(row),
+        );
   }
 
   Future<void> _refresh() async {
@@ -59,7 +65,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'cash',
       'Cash & expenses',
       Icons.account_balance_wallet_outlined,
-      'cash.view'
+      'cash.view',
     ),
     ('people', 'People & HR', Icons.groups_outlined, 'hr.view'),
     ('payroll', 'Payroll', Icons.receipt_long_outlined, 'payroll.manage'),
@@ -68,7 +74,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       'credit',
       'Credit control',
       Icons.account_balance_outlined,
-      'credit.manage'
+      'credit.manage',
     ),
     ('approvals', 'Approvals', Icons.fact_check_outlined, 'expenses.approve'),
     ('reports', 'Reports', Icons.bar_chart, 'reports.view'),
@@ -118,8 +124,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final columns = constraints.maxWidth >= 1000
                       ? 4
                       : constraints.maxWidth >= 620
-                          ? 3
-                          : 2;
+                      ? 3
+                      : 2;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -162,8 +168,8 @@ class _WelcomeHeader extends StatelessWidget {
     final portal = branch.isAdmin
         ? 'Admin portal'
         : branch.isManager
-            ? 'Manager portal'
-            : 'Staff portal';
+        ? 'Manager portal'
+        : 'Staff portal';
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 24, 20, 8),
       child: Wrap(
@@ -178,9 +184,9 @@ class _WelcomeHeader extends StatelessWidget {
               Text(
                 portal,
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                      color: Theme.of(context).colorScheme.secondary,
-                      fontWeight: FontWeight.w700,
-                    ),
+                  color: Theme.of(context).colorScheme.secondary,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
               const SizedBox(height: 2),
               Text(
@@ -191,8 +197,8 @@ class _WelcomeHeader extends StatelessWidget {
               Text(
                 '${branch.branchName} • ${branch.roleLabel} • ${formatDate(DateTime.now())}',
                 style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.onSurfaceVariant,
-                    ),
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
               ),
             ],
           ),
@@ -230,23 +236,23 @@ class _KpiGrid extends StatelessWidget {
       (
         'Cash balance',
         formatMoney(data['cash_balance']),
-        Icons.account_balance_wallet_outlined
+        Icons.account_balance_wallet_outlined,
       ),
       (
         'Low stock',
         formatQuantity(data['low_stock_items']),
-        Icons.warning_amber_outlined
+        Icons.warning_amber_outlined,
       ),
       (
         'Overdue credit',
         formatMoney(data['overdue_receivables']),
-        Icons.person_search_outlined
+        Icons.person_search_outlined,
       ),
       ('Rent due', formatMoney(data['rent_due']), Icons.apartment_outlined),
       (
         'Staff present',
         formatQuantity(data['staff_present_today']),
-        Icons.groups_outlined
+        Icons.groups_outlined,
       ),
     ];
     return Padding(
@@ -256,8 +262,8 @@ class _KpiGrid extends StatelessWidget {
           final columns = constraints.maxWidth >= 1000
               ? 3
               : constraints.maxWidth >= 620
-                  ? 2
-                  : 1;
+              ? 2
+              : 1;
           return GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -267,11 +273,7 @@ class _KpiGrid extends StatelessWidget {
             childAspectRatio: columns == 1 ? 3.2 : 2.4,
             children: [
               for (final card in cards)
-                StatCard(
-                  label: card.$1,
-                  value: card.$2,
-                  icon: card.$3,
-                ),
+                StatCard(label: card.$1, value: card.$2, icon: card.$3),
             ],
           );
         },
@@ -293,28 +295,27 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon,
-                    size: 30, color: Theme.of(context).colorScheme.primary),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, size: 30, color: Theme.of(context).colorScheme.primary),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _CustomerDashboard extends StatefulWidget {
@@ -392,8 +393,10 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  asText(_customer?['full_name'],
-                      fallback: session.fullName ?? ''),
+                  asText(
+                    _customer?['full_name'],
+                    fallback: session.fullName ?? '',
+                  ),
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
                 Text(asText(_customer?['phone'])),
@@ -431,10 +434,15 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
                         for (final row in _receivables)
                           ListTile(
                             contentPadding: EdgeInsets.zero,
-                            title: Text(asText(row['description'],
-                                fallback: 'Receivable')),
-                            subtitle:
-                                Text('Due ${formatDate(row['due_date'])}'),
+                            title: Text(
+                              asText(
+                                row['description'],
+                                fallback: 'Receivable',
+                              ),
+                            ),
+                            subtitle: Text(
+                              'Due ${formatDate(row['due_date'])}',
+                            ),
                             trailing: Text(formatMoney(row['balance'])),
                           ),
                       ],

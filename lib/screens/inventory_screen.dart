@@ -72,8 +72,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         receiptNo = (await session.client.rpc(
           'next_number',
           params: {'p_prefix': 'GRN'},
-        ))
-            .toString();
+        )).toString();
       } catch (_) {
         receiptNo = 'GRN-${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -113,16 +112,18 @@ class _InventoryScreenState extends State<InventoryScreen> {
       for (final entry in receivedTotals.entries) {
         await session.client
             .from('purchase_order_items')
-            .update({'quantity_received': entry.value}).eq('id', entry.key);
+            .update({'quantity_received': entry.value})
+            .eq('id', entry.key);
       }
       final fullyReceived = (lines as List).every((raw) {
         final line = Map<String, dynamic>.from(raw as Map);
         return (receivedTotals[asText(line['id'])] ?? 0) + 0.001 >=
             asNum(line['quantity_ordered']);
       });
-      await session.client.from('purchase_orders').update({
-        'status': fullyReceived ? 'received' : 'partial',
-      }).eq('id', order['id']);
+      await session.client
+          .from('purchase_orders')
+          .update({'status': fullyReceived ? 'received' : 'partial'})
+          .eq('id', order['id']);
       if (mounted) showSnack(context, 'Goods received as $receiptNo.');
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
@@ -143,7 +144,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       await session.client
           .from('stock_counts')
-          .update({'status': 'approved'}).eq('id', count['id']);
+          .update({'status': 'approved'})
+          .eq('id', count['id']);
       if (mounted) showSnack(context, 'Stock count approved.');
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);

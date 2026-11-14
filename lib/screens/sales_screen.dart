@@ -19,7 +19,9 @@ class SalesScreen extends StatefulWidget {
 
 class _SalesScreenState extends State<SalesScreen> {
   Future<void> _returnSale(
-      AuthController session, Map<String, dynamic> sale) async {
+    AuthController session,
+    Map<String, dynamic> sale,
+  ) async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
       builder: (context) => _ReturnDialog(sale: sale, session: session),
@@ -42,8 +44,7 @@ class _SalesScreenState extends State<SalesScreen> {
         returnNo = (await session.client.rpc(
           'next_number',
           params: {'p_prefix': 'RETURN'},
-        ))
-            .toString();
+        )).toString();
       } catch (_) {
         returnNo = 'RETURN-${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -84,7 +85,9 @@ class _SalesScreenState extends State<SalesScreen> {
   }
 
   Future<void> _receipt(
-      AuthController session, Map<String, dynamic> sale) async {
+    AuthController session,
+    Map<String, dynamic> sale,
+  ) async {
     try {
       final items = await session.client
           .from('sale_items')
@@ -154,9 +157,9 @@ class _SalesScreenState extends State<SalesScreen> {
       actions: [
         if (session.can('pos.use'))
           FilledButton.icon(
-            onPressed: () => Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PosScreen()),
-            ),
+            onPressed: () => Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const PosScreen())),
             icon: const Icon(Icons.point_of_sale),
             label: const Text('New sale'),
           ),
@@ -343,58 +346,57 @@ class _ReturnDialogState extends State<_ReturnDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text('Return ${widget.sale['receipt_no']}'),
-        content: SizedBox(
-          width: 520,
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _error != null
-                  ? Text(_error!)
-                  : SingleChildScrollView(
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          TextField(
-                            controller: _reason,
-                            decoration:
-                                const InputDecoration(labelText: 'Reason'),
+    title: Text('Return ${widget.sale['receipt_no']}'),
+    content: SizedBox(
+      width: 520,
+      child: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+          ? Text(_error!)
+          : SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: _reason,
+                    decoration: const InputDecoration(labelText: 'Reason'),
+                  ),
+                  const SizedBox(height: 12),
+                  for (final item in _items)
+                    Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            '${item['product_name']} (${item['quantity']})',
                           ),
-                          const SizedBox(height: 12),
-                          for (final item in _items)
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    '${item['product_name']} (${item['quantity']})',
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 90,
-                                  child: TextField(
-                                    controller: _quantities[item['id']],
-                                    keyboardType: TextInputType.number,
-                                    decoration: const InputDecoration(
-                                      labelText: 'Return qty',
-                                    ),
-                                  ),
-                                ),
-                              ],
+                        ),
+                        SizedBox(
+                          width: 90,
+                          child: TextField(
+                            controller: _quantities[item['id']],
+                            keyboardType: TextInputType.number,
+                            decoration: const InputDecoration(
+                              labelText: 'Return qty',
                             ),
-                        ],
-                      ),
+                          ),
+                        ),
+                      ],
                     ),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: _loading || _error != null ? null : _submit,
-            child: const Text('Record return'),
-          ),
-        ],
-      );
+                ],
+              ),
+            ),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: _loading || _error != null ? null : _submit,
+        child: const Text('Record return'),
+      ),
+    ],
+  );
 }
 
 class _CloseDayDialog extends StatefulWidget {
@@ -417,35 +419,34 @@ class _CloseDayDialogState extends State<_CloseDayDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: const Text('Close business day'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: _counted,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Counted cash'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _notes,
-              decoration: const InputDecoration(labelText: 'Notes'),
-              maxLines: 2,
-            ),
-          ],
+    title: const Text('Close business day'),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        TextField(
+          controller: _counted,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Counted cash'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop({
-              'counted': _counted.text,
-              'notes': _notes.text.trim(),
-            }),
-            child: const Text('Close day'),
-          ),
-        ],
-      );
+        const SizedBox(height: 12),
+        TextField(
+          controller: _notes,
+          decoration: const InputDecoration(labelText: 'Notes'),
+          maxLines: 2,
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.of(
+          context,
+        ).pop({'counted': _counted.text, 'notes': _notes.text.trim()}),
+        child: const Text('Close day'),
+      ),
+    ],
+  );
 }

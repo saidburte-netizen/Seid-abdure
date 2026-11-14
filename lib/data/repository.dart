@@ -89,23 +89,21 @@ class BranchRepository {
   Future<Object?> rpc(
     String function, [
     Map<String, Object?> params = const {},
-  ]) =>
-      client.rpc(function, params: params);
+  ]) => client.rpc(function, params: params);
 
   Future<List<Map<String, dynamic>>> lookup(
     String table, {
     String labelColumn = 'name',
     bool branchScoped = true,
     Map<String, Object?> equals = const {},
-  }) =>
-      list(
-        table,
-        columns: 'id,$labelColumn',
-        branchScoped: branchScoped,
-        equals: equals,
-        orderBy: labelColumn,
-        limit: 500,
-      );
+  }) => list(
+    table,
+    columns: 'id,$labelColumn',
+    branchScoped: branchScoped,
+    equals: equals,
+    orderBy: labelColumn,
+    limit: 500,
+  );
 
   Future<Map<String, dynamic>> upsert(
     String table,
@@ -120,11 +118,8 @@ class BranchRepository {
     return Map<String, dynamic>.from(row);
   }
 
-  Future<Map<String, dynamic>?> appSetting(String key) => first(
-        'app_settings',
-        branchScoped: false,
-        equals: {'key': key},
-      );
+  Future<Map<String, dynamic>?> appSetting(String key) =>
+      first('app_settings', branchScoped: false, equals: {'key': key});
 }
 
 String readableError(Object error) {

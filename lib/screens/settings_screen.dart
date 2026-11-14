@@ -23,7 +23,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('app_settings'),
             readPermission: 'settings.manage',
             writePermission: 'settings.manage',
-          )
+          ),
         ),
       if (session.can('branches.manage'))
         (
@@ -32,7 +32,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('branches'),
             readPermission: 'branches.manage',
             writePermission: 'branches.manage',
-          )
+          ),
         ),
       if (session.can('users.manage'))
         (
@@ -41,7 +41,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('profiles'),
             readPermission: 'users.manage',
             writePermission: 'users.manage',
-          )
+          ),
         ),
       if (session.can('settings.manage')) ...[
         (
@@ -50,7 +50,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('roles'),
             readPermission: 'settings.manage',
             alwaysReadOnly: true,
-          )
+          ),
         ),
         (
           'Permissions',
@@ -58,7 +58,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('permissions'),
             readPermission: 'settings.manage',
             alwaysReadOnly: true,
-          )
+          ),
         ),
         (
           'Role permissions',
@@ -66,7 +66,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('role_permissions'),
             readPermission: 'settings.manage',
             alwaysReadOnly: true,
-          )
+          ),
         ),
       ],
       if (session.can('audit.view'))
@@ -76,7 +76,7 @@ class SettingsScreen extends StatelessWidget {
             spec: specFor('audit_logs'),
             readPermission: 'audit.view',
             alwaysReadOnly: true,
-          )
+          ),
         ),
       if (session.can('settings.manage')) ('Storage', const _StorageTab()),
       if (session.can('settings.manage')) ('Branding', const _BrandingTab()),
@@ -93,9 +93,7 @@ class SettingsScreen extends StatelessWidget {
               tabs: [for (final tab in tabs) Tab(text: tab.$1)],
             ),
             Expanded(
-              child: TabBarView(
-                children: [for (final tab in tabs) tab.$2],
-              ),
+              child: TabBarView(children: [for (final tab in tabs) tab.$2]),
             ),
           ],
         ),
@@ -197,9 +195,13 @@ class _AccountTabState extends State<_AccountTab> {
                 decoration: const InputDecoration(labelText: 'Theme'),
                 items: const [
                   DropdownMenuItem(
-                      value: ThemeMode.system, child: Text('System')),
+                    value: ThemeMode.system,
+                    child: Text('System'),
+                  ),
                   DropdownMenuItem(
-                      value: ThemeMode.light, child: Text('Light')),
+                    value: ThemeMode.light,
+                    child: Text('Light'),
+                  ),
                   DropdownMenuItem(value: ThemeMode.dark, child: Text('Dark')),
                 ],
                 onChanged: (value) {
@@ -229,47 +231,47 @@ class _BrandingTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: 'Official brand',
-            child: Column(
-              children: [
-                Image.asset(Brand.logoAsset, width: 180, height: 180),
-                const SizedBox(height: 12),
-                Text(
-                  Brand.appName,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                Text(
-                  Brand.slogan,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        fontStyle: FontStyle.italic,
-                      ),
-                ),
-              ],
+    padding: const EdgeInsets.all(16),
+    children: [
+      SectionCard(
+        title: 'Official brand',
+        child: Column(
+          children: [
+            Image.asset(Brand.logoAsset, width: 180, height: 180),
+            const SizedBox(height: 12),
+            Text(
+              Brand.appName,
+              style: Theme.of(context).textTheme.headlineSmall,
             ),
-          ),
-          const SectionCard(
-            title: 'Brand assets',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Logo: assets/branding/logo.png'),
-                Text(
-                    'Adaptive icon foreground: assets/branding/icon_foreground.png'),
-                Text(
-                    'Notification icon: assets/branding/notification_icon.png'),
-                SizedBox(height: 8),
-                Text(
-                  'The uploaded logo is used exactly as supplied for the app icon, '
-                  'splash screen, receipt, invoice, payslip, and report headers.',
-                ),
-              ],
+            Text(
+              Brand.slogan,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
             ),
-          ),
-        ],
-      );
+          ],
+        ),
+      ),
+      const SectionCard(
+        title: 'Brand assets',
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Logo: assets/branding/logo.png'),
+            Text(
+              'Adaptive icon foreground: assets/branding/icon_foreground.png',
+            ),
+            Text('Notification icon: assets/branding/notification_icon.png'),
+            SizedBox(height: 8),
+            Text(
+              'The uploaded logo is used exactly as supplied for the app icon, '
+              'splash screen, receipt, invoice, payslip, and report headers.',
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
 }
 
 class _StorageTab extends StatefulWidget {
@@ -292,73 +294,74 @@ class _StorageTabState extends State<_StorageTab> {
     final session = SessionScope.of(context);
     final files = await session.client.storage.from(bucket).list();
     return files
-        .map((file) => {
-              'name': file.name,
-              'created_at': file.createdAt,
-              'bucket': bucket,
-            })
+        .map(
+          (file) => {
+            'name': file.name,
+            'created_at': file.createdAt,
+            'bucket': bucket,
+          },
+        )
         .toList();
   }
 
   @override
   Widget build(BuildContext context) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          const Text(
-            'Supabase Storage buckets used by the application. Public buckets can '
-            'be read directly; private buckets require authenticated access and '
-            'storage policies.',
-          ),
-          const SizedBox(height: 12),
-          for (final bucket in _buckets)
-            Card(
-              child: ExpansionTile(
-                title: Text(bucket.$1),
-                subtitle: Text(bucket.$2),
-                children: [
-                  FutureBuilder<List<Map<String, dynamic>>>(
-                    future: _list(bucket.$1),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: CircularProgressIndicator(),
-                        );
-                      }
-                      if (snapshot.hasError) {
-                        return Padding(
-                          padding: const EdgeInsets.all(16),
-                          child: Text(
-                            'Cannot list this bucket with the current role. '
-                            'Uploads are still available through the database URL '
-                            'fields.\n${snapshot.error}',
-                          ),
-                        );
-                      }
-                      final files = snapshot.data ?? const [];
-                      if (files.isEmpty) {
-                        return const Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Text('No files in this bucket.'),
-                        );
-                      }
-                      return Column(
-                        children: [
-                          for (final file in files.take(20))
-                            ListTile(
-                              dense: true,
-                              leading:
-                                  const Icon(Icons.insert_drive_file_outlined),
-                              title: Text(file['name'] as String),
-                              subtitle: Text(file['bucket'] as String),
-                            ),
-                        ],
-                      );
-                    },
-                  ),
-                ],
+    padding: const EdgeInsets.all(16),
+    children: [
+      const Text(
+        'Supabase Storage buckets used by the application. Public buckets can '
+        'be read directly; private buckets require authenticated access and '
+        'storage policies.',
+      ),
+      const SizedBox(height: 12),
+      for (final bucket in _buckets)
+        Card(
+          child: ExpansionTile(
+            title: Text(bucket.$1),
+            subtitle: Text(bucket.$2),
+            children: [
+              FutureBuilder<List<Map<String, dynamic>>>(
+                future: _list(bucket.$1),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: CircularProgressIndicator(),
+                    );
+                  }
+                  if (snapshot.hasError) {
+                    return Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Text(
+                        'Cannot list this bucket with the current role. '
+                        'Uploads are still available through the database URL '
+                        'fields.\n${snapshot.error}',
+                      ),
+                    );
+                  }
+                  final files = snapshot.data ?? const [];
+                  if (files.isEmpty) {
+                    return const Padding(
+                      padding: EdgeInsets.all(16),
+                      child: Text('No files in this bucket.'),
+                    );
+                  }
+                  return Column(
+                    children: [
+                      for (final file in files.take(20))
+                        ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.insert_drive_file_outlined),
+                          title: Text(file['name'] as String),
+                          subtitle: Text(file['bucket'] as String),
+                        ),
+                    ],
+                  );
+                },
               ),
-            ),
-        ],
-      );
+            ],
+          ),
+        ),
+    ],
+  );
 }

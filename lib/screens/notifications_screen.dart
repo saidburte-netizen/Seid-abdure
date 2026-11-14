@@ -57,10 +57,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markRead(Map<String, dynamic> notification) async {
     final session = SessionScope.of(context);
     try {
-      await session.client.from('notifications').update({
-        'is_read': true,
-        'read_at': nowIso(),
-      }).eq('id', notification['id']);
+      await session.client
+          .from('notifications')
+          .update({'is_read': true, 'read_at': nowIso()})
+          .eq('id', notification['id']);
       await _load();
     } catch (error) {
       if (mounted) showSnack(context, readableError(error), error: true);
@@ -74,7 +74,8 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       if (uid == null) return;
       var query = session.client
           .from('notifications')
-          .update({'is_read': true, 'read_at': nowIso()}).eq('is_read', false);
+          .update({'is_read': true, 'read_at': nowIso()})
+          .eq('is_read', false);
       final role = session.roleCode;
       if (role != null) {
         query = query.or('user_id.eq.$uid,role_code.eq.$role');
@@ -101,26 +102,26 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
-        title: 'Notifications',
-        body: DefaultTabController(
-          length: 2,
-          child: Column(
-            children: [
-              const TabBar(
-                tabs: [
-                  Tab(text: 'Inbox'),
-                  Tab(text: 'Preferences'),
-                ],
-              ),
-              Expanded(
-                child: TabBarView(
-                  children: [_inbox(), const _NotificationPreferences()],
-                ),
-              ),
+    title: 'Notifications',
+    body: DefaultTabController(
+      length: 2,
+      child: Column(
+        children: [
+          const TabBar(
+            tabs: [
+              Tab(text: 'Inbox'),
+              Tab(text: 'Preferences'),
             ],
           ),
-        ),
-      );
+          Expanded(
+            child: TabBarView(
+              children: [_inbox(), const _NotificationPreferences()],
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 
   Widget _inbox() {
     final unread = _notifications.where((row) => row['is_read'] != true).length;
@@ -154,52 +155,48 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: _loading
               ? const Center(child: CircularProgressIndicator())
               : _error != null
-                  ? ErrorView(message: _error!, onRetry: _load)
-                  : _notifications.isEmpty
-                      ? const EmptyView(
-                          message:
-                              'No notifications yet. Generate alerts to refresh.',
-                        )
-                      : RefreshIndicator(
-                          onRefresh: _load,
-                          child: ListView.separated(
-                            padding: const EdgeInsets.all(12),
-                            itemCount: _notifications.length,
-                            separatorBuilder: (context, index) =>
-                                const SizedBox(height: 8),
-                            itemBuilder: (context, index) {
-                              final notification = _notifications[index];
-                              final read = notification['is_read'] == true;
-                              return Card(
-                                child: ListTile(
-                                  leading: Icon(
-                                    read
-                                        ? Icons.notifications_none
-                                        : Icons.notifications_active,
-                                    color: read
-                                        ? null
-                                        : Theme.of(context)
-                                            .colorScheme
-                                            .secondary,
-                                  ),
-                                  title: Text(asText(notification['title'])),
-                                  subtitle: Text(
-                                    '${asText(notification['body'])}\n${formatDateTime(notification['created_at'])}',
-                                  ),
-                                  isThreeLine: true,
-                                  trailing: read
-                                      ? null
-                                      : IconButton(
-                                          tooltip: 'Mark read',
-                                          onPressed: () =>
-                                              _markRead(notification),
-                                          icon: const Icon(Icons.done),
-                                        ),
-                                ),
-                              );
-                            },
+              ? ErrorView(message: _error!, onRetry: _load)
+              : _notifications.isEmpty
+              ? const EmptyView(
+                  message: 'No notifications yet. Generate alerts to refresh.',
+                )
+              : RefreshIndicator(
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _notifications.length,
+                    separatorBuilder: (context, index) =>
+                        const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final notification = _notifications[index];
+                      final read = notification['is_read'] == true;
+                      return Card(
+                        child: ListTile(
+                          leading: Icon(
+                            read
+                                ? Icons.notifications_none
+                                : Icons.notifications_active,
+                            color: read
+                                ? null
+                                : Theme.of(context).colorScheme.secondary,
                           ),
+                          title: Text(asText(notification['title'])),
+                          subtitle: Text(
+                            '${asText(notification['body'])}\n${formatDateTime(notification['created_at'])}',
+                          ),
+                          isThreeLine: true,
+                          trailing: read
+                              ? null
+                              : IconButton(
+                                  tooltip: 'Mark read',
+                                  onPressed: () => _markRead(notification),
+                                  icon: const Icon(Icons.done),
+                                ),
                         ),
+                      );
+                    },
+                  ),
+                ),
         ),
       ],
     );
@@ -255,7 +252,8 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
 
   Future<void> _set(String type, String field, bool value) async {
     final session = SessionScope.of(context);
-    final current = _rows[type] ??
+    final current =
+        _rows[type] ??
         {
           'user_id': session.userId,
           'notification_type': type,
@@ -299,15 +297,18 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(prettyLabel(type),
-                      style: Theme.of(context).textTheme.titleMedium),
+                  Text(
+                    prettyLabel(type),
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
                   Wrap(
                     spacing: 8,
                     children: [
                       for (final field in ['in_app', 'push', 'sms', 'email'])
                         FilterChip(
                           label: Text(prettyLabel(field)),
-                          selected: (_rows[type]?[field] as bool?) ??
+                          selected:
+                              (_rows[type]?[field] as bool?) ??
                               field == 'in_app',
                           onSelected: (value) => _set(type, field, value),
                         ),

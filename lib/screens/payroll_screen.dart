@@ -112,7 +112,7 @@ class PayrollScreen extends StatelessWidget {
           {'component': 'Pension', 'amount': slip['pension_employee']},
           {
             'component': 'Advance deduction',
-            'amount': slip['advance_deduction']
+            'amount': slip['advance_deduction'],
           },
           {'component': 'Other deductions', 'amount': slip['other_deductions']},
           {'component': 'Net pay', 'amount': slip['net_pay']},

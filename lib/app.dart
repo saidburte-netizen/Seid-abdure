@@ -143,7 +143,9 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         ),
         GoRoute(path: '/pos', builder: (context, state) => const PosScreen()),
         GoRoute(
-            path: '/sales', builder: (context, state) => const SalesScreen()),
+          path: '/sales',
+          builder: (context, state) => const SalesScreen(),
+        ),
         GoRoute(
           path: '/production',
           builder: (context, state) => const ProductionScreen(),
@@ -218,21 +220,21 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   }
 
   Widget _moduleScreen(String name) => switch (name) {
-        'production' => const ProductionScreen(),
-        'sales' => const SalesScreen(),
-        'pos' => const PosScreen(),
-        'inventory' => const InventoryScreen(),
-        'cash' => const CashScreen(),
-        'people' => const PeopleScreen(),
-        'payroll' => const PayrollScreen(),
-        'rentals' => const RentalsScreen(),
-        'credit' => const CreditScreen(),
-        'approvals' => const ApprovalsScreen(),
-        'reports' => const ReportsScreen(),
-        'notifications' => const NotificationsScreen(),
-        'settings' => const SettingsScreen(),
-        _ => const AccessDeniedScreen(),
-      };
+    'production' => const ProductionScreen(),
+    'sales' => const SalesScreen(),
+    'pos' => const PosScreen(),
+    'inventory' => const InventoryScreen(),
+    'cash' => const CashScreen(),
+    'people' => const PeopleScreen(),
+    'payroll' => const PayrollScreen(),
+    'rentals' => const RentalsScreen(),
+    'credit' => const CreditScreen(),
+    'approvals' => const ApprovalsScreen(),
+    'reports' => const ReportsScreen(),
+    'notifications' => const NotificationsScreen(),
+    'settings' => const SettingsScreen(),
+    _ => const AccessDeniedScreen(),
+  };
 
   @override
   void dispose() {
@@ -288,44 +290,41 @@ class BrandMark extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            Brand.logoAsset,
-            width: size,
-            height: size,
-            fit: BoxFit.contain,
-            semanticLabel: Brand.appName,
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Image.asset(
+        Brand.logoAsset,
+        width: size,
+        height: size,
+        fit: BoxFit.contain,
+        semanticLabel: Brand.appName,
+      ),
+      if (showName) ...[
+        const SizedBox(height: 10),
+        Text(
+          Brand.appName,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleLarge?.copyWith(
+            color: light
+                ? Theme.of(context).colorScheme.onPrimary
+                : Theme.of(context).colorScheme.onSurface,
+            fontWeight: FontWeight.w800,
           ),
-          if (showName) ...[
-            const SizedBox(height: 10),
-            Text(
-              Brand.appName,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                    color: light
-                        ? Theme.of(context).colorScheme.onPrimary
-                        : Theme.of(context).colorScheme.onSurface,
-                    fontWeight: FontWeight.w800,
-                  ),
-            ),
-            const SizedBox(height: 2),
-            Text(
-              Brand.slogan,
-              textAlign: TextAlign.center,
-              style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: light
-                        ? Theme.of(context)
-                            .colorScheme
-                            .onPrimary
-                            .withValues(alpha: 0.8)
-                        : Theme.of(context).colorScheme.onSurfaceVariant,
-                    fontStyle: FontStyle.italic,
-                  ),
-            ),
-          ],
-        ],
-      );
+        ),
+        const SizedBox(height: 2),
+        Text(
+          Brand.slogan,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: light
+                ? Theme.of(context).colorScheme.onPrimary.withValues(alpha: 0.8)
+                : Theme.of(context).colorScheme.onSurfaceVariant,
+            fontStyle: FontStyle.italic,
+          ),
+        ),
+      ],
+    ],
+  );
 }
 
 class ConfigurationScreen extends StatelessWidget {
@@ -333,33 +332,33 @@ class ConfigurationScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BrandMark(size: 180),
-                  const SizedBox(height: 24),
-                  Text(
-                    AppLocalizations.of(context).configurationRequired,
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Build with --dart-define=SUPABASE_URL=... '
-                    '--dart-define=SUPABASE_ANON_KEY=...',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ],
+    body: Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandMark(size: 180),
+              const SizedBox(height: 24),
+              Text(
+                AppLocalizations.of(context).configurationRequired,
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 12),
+              Text(
+                'Build with --dart-define=SUPABASE_URL=... '
+                '--dart-define=SUPABASE_ANON_KEY=...',
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class SignInScreen extends StatefulWidget {
@@ -444,14 +443,15 @@ class _SignInScreenState extends State<SignInScreen> {
                           const SizedBox(height: 20),
                           TextFormField(
                             controller: _email,
-                            decoration:
-                                InputDecoration(labelText: strings.email),
+                            decoration: InputDecoration(
+                              labelText: strings.email,
+                            ),
                             keyboardType: TextInputType.emailAddress,
                             autofillHints: const [AutofillHints.email],
                             validator: (value) =>
                                 value == null || value.trim().isEmpty
-                                    ? strings.requiredField
-                                    : null,
+                                ? strings.requiredField
+                                : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
@@ -522,17 +522,17 @@ class LoadingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => const Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              BrandMark(size: 160),
-              SizedBox(height: 24),
-              CircularProgressIndicator(),
-            ],
-          ),
-        ),
-      );
+    body: Center(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          BrandMark(size: 160),
+          SizedBox(height: 24),
+          CircularProgressIndicator(),
+        ],
+      ),
+    ),
+  );
 }
 
 class ProfileMissingScreen extends StatelessWidget {
@@ -542,50 +542,50 @@ class ProfileMissingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(
-          title: const Text(Brand.appName),
-          actions: [
-            IconButton(
-              tooltip: AppLocalizations.of(context).signOut,
-              onPressed: controller.signOut,
-              icon: const Icon(Icons.logout),
-            ),
-          ],
+    appBar: AppBar(
+      title: const Text(Brand.appName),
+      actions: [
+        IconButton(
+          tooltip: AppLocalizations.of(context).signOut,
+          onPressed: controller.signOut,
+          icon: const Icon(Icons.logout),
         ),
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BrandMark(size: 150),
-                  const SizedBox(height: 20),
-                  Text(
-                    controller.errorMessage ??
-                        'Your account has no staff profile yet.',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Ask an administrator to create your profile in Supabase and '
-                    'assign a role (admin, manager, cashier, baker, store_keeper, '
-                    'hr_officer, accountant, staff, or customer).',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 20),
-                  OutlinedButton.icon(
-                    onPressed: controller.refresh,
-                    icon: const Icon(Icons.refresh),
-                    label: const Text('Retry'),
-                  ),
-                ],
+      ],
+    ),
+    body: Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandMark(size: 150),
+              const SizedBox(height: 20),
+              Text(
+                controller.errorMessage ??
+                    'Your account has no staff profile yet.',
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 8),
+              const Text(
+                'Ask an administrator to create your profile in Supabase and '
+                'assign a role (admin, manager, cashier, baker, store_keeper, '
+                'hr_officer, accountant, staff, or customer).',
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              OutlinedButton.icon(
+                onPressed: controller.refresh,
+                icon: const Icon(Icons.refresh),
+                label: const Text('Retry'),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class BranchSetupScreen extends StatefulWidget {
@@ -617,45 +617,44 @@ class _BranchSetupScreenState extends State<BranchSetupScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BrandMark(size: 150),
-                  const SizedBox(height: 20),
-                  const Text(
-                    'No active branch exists. Create the first branch to start '
-                    'using Brade and Cake House.',
-                    textAlign: TextAlign.center,
-                  ),
-                  if (_error != null) ...[
-                    const SizedBox(height: 12),
-                    Text(
-                      _error!,
-                      style:
-                          TextStyle(color: Theme.of(context).colorScheme.error),
-                    ),
-                  ],
-                  const SizedBox(height: 20),
-                  FilledButton.icon(
-                    onPressed: _saving ? null : _create,
-                    icon: const Icon(Icons.add_business_outlined),
-                    label: Text(_saving ? 'Creating…' : 'Create main branch'),
-                  ),
-                  TextButton(
-                    onPressed: widget.controller.signOut,
-                    child: const Text('Sign out'),
-                  ),
-                ],
+    body: Center(
+      child: SingleChildScrollView(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandMark(size: 150),
+              const SizedBox(height: 20),
+              const Text(
+                'No active branch exists. Create the first branch to start '
+                'using Brade and Cake House.',
+                textAlign: TextAlign.center,
               ),
-            ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                ),
+              ],
+              const SizedBox(height: 20),
+              FilledButton.icon(
+                onPressed: _saving ? null : _create,
+                icon: const Icon(Icons.add_business_outlined),
+                label: Text(_saving ? 'Creating…' : 'Create main branch'),
+              ),
+              TextButton(
+                onPressed: widget.controller.signOut,
+                child: const Text('Sign out'),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class AccessDeniedScreen extends StatelessWidget {
@@ -663,33 +662,33 @@ class AccessDeniedScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text(Brand.appName)),
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.lock_outline,
-                  size: 64,
-                  color: Theme.of(context).colorScheme.secondary,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  AppLocalizations.of(context).accessDenied,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => context.go('/'),
-                  child: Text(AppLocalizations.of(context).backToDashboard),
-                ),
-              ],
+    appBar: AppBar(title: const Text(Brand.appName)),
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              Icons.lock_outline,
+              size: 64,
+              color: Theme.of(context).colorScheme.secondary,
             ),
-          ),
+            const SizedBox(height: 16),
+            Text(
+              AppLocalizations.of(context).accessDenied,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            FilledButton(
+              onPressed: () => context.go('/'),
+              child: Text(AppLocalizations.of(context).backToDashboard),
+            ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class AuthErrorScreen extends StatelessWidget {
@@ -706,33 +705,33 @@ class AuthErrorScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        body: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 520),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const BrandMark(size: 120),
-                  const SizedBox(height: 20),
-                  Text(
-                    '${AppLocalizations.of(context).accessLoadFailed}\n$message',
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 16),
-                  FilledButton(
-                    onPressed: onRetry,
-                    child: Text(AppLocalizations.of(context).retry),
-                  ),
-                  TextButton(
-                    onPressed: onSignOut,
-                    child: Text(AppLocalizations.of(context).signOut),
-                  ),
-                ],
+    body: Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const BrandMark(size: 120),
+              const SizedBox(height: 20),
+              Text(
+                '${AppLocalizations.of(context).accessLoadFailed}\n$message',
+                textAlign: TextAlign.center,
               ),
-            ),
+              const SizedBox(height: 16),
+              FilledButton(
+                onPressed: onRetry,
+                child: Text(AppLocalizations.of(context).retry),
+              ),
+              TextButton(
+                onPressed: onSignOut,
+                child: Text(AppLocalizations.of(context).signOut),
+              ),
+            ],
           ),
         ),
-      );
+      ),
+    ),
+  );
 }

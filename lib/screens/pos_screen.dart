@@ -103,9 +103,9 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   num get _subtotal => _cart.entries.fold(0, (sum, entry) {
-        final product = _products[entry.key];
-        return sum + asNum(product?['price']) * entry.value;
-      });
+    final product = _products[entry.key];
+    return sum + asNum(product?['price']) * entry.value;
+  });
 
   num get _discountValue {
     final value = asNum(_discount.text);
@@ -229,10 +229,10 @@ class _PosScreenState extends State<PosScreen> {
             'payment_status': paid >= total
                 ? 'paid'
                 : paid > 0
-                    ? 'partial'
-                    : _method == 'credit'
-                        ? 'credit'
-                        : 'unpaid',
+                ? 'partial'
+                : _method == 'credit'
+                ? 'credit'
+                : 'unpaid',
             'status': 'completed',
             'notes': _notes.text.trim(),
           })
@@ -322,10 +322,7 @@ class _PosScreenState extends State<PosScreen> {
             _row('Receipt', asText(sale['receipt_no'])),
             _row('Total', formatMoney(sale['total_amount'])),
             _row('Paid', formatMoney(paid)),
-            _row(
-              'Balance',
-              formatMoney(asNum(sale['total_amount']) - paid),
-            ),
+            _row('Balance', formatMoney(asNum(sale['total_amount']) - paid)),
           ],
         ),
         actions: [
@@ -357,17 +354,19 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   Widget _row(String label, String value) => Padding(
-        padding: const EdgeInsets.only(bottom: 6),
-        child: Row(
-          children: [
-            SizedBox(width: 90, child: Text(label)),
-            Expanded(
-              child: Text(value,
-                  style: const TextStyle(fontWeight: FontWeight.w600)),
-            ),
-          ],
+    padding: const EdgeInsets.only(bottom: 6),
+    child: Row(
+      children: [
+        SizedBox(width: 90, child: Text(label)),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
         ),
-      );
+      ],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -392,276 +391,270 @@ class _PosScreenState extends State<PosScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? ErrorView(message: _error!, onRetry: _load)
-              : LayoutBuilder(
-                  builder: (context, constraints) {
-                    final wide = constraints.maxWidth >= 980;
-                    final catalog = _catalog(products);
-                    final cart = _cartPanel(session);
-                    return wide
-                        ? Row(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Expanded(flex: 3, child: catalog),
-                              SizedBox(width: 380, child: cart),
-                            ],
-                          )
-                        : DefaultTabController(
-                            length: 2,
-                            child: Column(
-                              children: [
-                                const TabBar(
-                                  tabs: [
-                                    Tab(text: 'Products'),
-                                    Tab(text: 'Cart'),
-                                  ],
-                                ),
-                                Expanded(
-                                  child: TabBarView(children: [catalog, cart]),
-                                ),
+          ? ErrorView(message: _error!, onRetry: _load)
+          : LayoutBuilder(
+              builder: (context, constraints) {
+                final wide = constraints.maxWidth >= 980;
+                final catalog = _catalog(products);
+                final cart = _cartPanel(session);
+                return wide
+                    ? Row(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Expanded(flex: 3, child: catalog),
+                          SizedBox(width: 380, child: cart),
+                        ],
+                      )
+                    : DefaultTabController(
+                        length: 2,
+                        child: Column(
+                          children: [
+                            const TabBar(
+                              tabs: [
+                                Tab(text: 'Products'),
+                                Tab(text: 'Cart'),
                               ],
                             ),
-                          );
-                  },
-                ),
+                            Expanded(
+                              child: TabBarView(children: [catalog, cart]),
+                            ),
+                          ],
+                        ),
+                      );
+              },
+            ),
     );
   }
 
   Widget _catalog(List<Map<String, dynamic>> products) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-            child: TextField(
-              controller: _search,
-              decoration: const InputDecoration(
-                labelText: 'Search products',
-                prefixIcon: Icon(Icons.search),
-              ),
-              onChanged: (value) =>
-                  setState(() => _query = value.trim().toLowerCase()),
-            ),
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+        child: TextField(
+          controller: _search,
+          decoration: const InputDecoration(
+            labelText: 'Search products',
+            prefixIcon: Icon(Icons.search),
           ),
-          Expanded(
-            child: products.isEmpty
-                ? const EmptyView(
-                    message: 'No active products. Add products in Production.',
-                  )
-                : GridView.builder(
-                    padding: const EdgeInsets.all(12),
-                    gridDelegate:
-                        const SliverGridDelegateWithMaxCrossAxisExtent(
-                      maxCrossAxisExtent: 220,
-                      mainAxisExtent: 150,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: products.length,
-                    itemBuilder: (context, index) {
-                      final product = products[index];
-                      final qty = _cart[product['id']] ?? 0;
-                      return Card(
-                        clipBehavior: Clip.antiAlias,
-                        child: InkWell(
-                          onTap: () => _add(product),
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
+          onChanged: (value) =>
+              setState(() => _query = value.trim().toLowerCase()),
+        ),
+      ),
+      Expanded(
+        child: products.isEmpty
+            ? const EmptyView(
+                message: 'No active products. Add products in Production.',
+              )
+            : GridView.builder(
+                padding: const EdgeInsets.all(12),
+                gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                  maxCrossAxisExtent: 220,
+                  mainAxisExtent: 150,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemCount: products.length,
+                itemBuilder: (context, index) {
+                  final product = products[index];
+                  final qty = _cart[product['id']] ?? 0;
+                  return Card(
+                    clipBehavior: Clip.antiAlias,
+                    child: InkWell(
+                      onTap: () => _add(product),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
                               children: [
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      child: Text(
-                                        asText(product['name']),
-                                        maxLines: 2,
-                                        overflow: TextOverflow.ellipsis,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .titleSmall,
-                                      ),
-                                    ),
-                                    if (qty > 0) Badge(label: Text('$qty')),
-                                  ],
+                                Expanded(
+                                  child: Text(
+                                    asText(product['name']),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(
+                                      context,
+                                    ).textTheme.titleSmall,
+                                  ),
                                 ),
-                                const Spacer(),
-                                Text(
-                                  asText(product['sku']),
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                                const SizedBox(height: 4),
-                                Text(
-                                  formatMoney(product['price']),
-                                  style: Theme.of(context)
-                                      .textTheme
-                                      .titleMedium
-                                      ?.copyWith(
-                                        color: Theme.of(context)
-                                            .colorScheme
-                                            .primary,
-                                      ),
-                                ),
+                                if (qty > 0) Badge(label: Text('$qty')),
                               ],
                             ),
-                          ),
+                            const Spacer(),
+                            Text(
+                              asText(product['sku']),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              formatMoney(product['price']),
+                              style: Theme.of(context).textTheme.titleMedium
+                                  ?.copyWith(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primary,
+                                  ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-          ),
-        ],
-      );
+                      ),
+                    ),
+                  );
+                },
+              ),
+      ),
+    ],
+  );
 
   Widget _cartPanel(AuthController session) => ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          Text('Current sale', style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          if (_cart.isEmpty)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 24),
-              child: EmptyView(
-                icon: Icons.shopping_basket_outlined,
-                message: 'Tap a product to add it to the sale.',
-              ),
-            )
-          else
-            for (final entry in _cart.entries)
-              ListTile(
-                contentPadding: EdgeInsets.zero,
-                title: Text(asText(_products[entry.key]?['name'])),
-                subtitle: Text(
-                  '${formatMoney(_products[entry.key]?['price'])} × ${entry.value}',
-                ),
-                trailing: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    IconButton(
-                      onPressed: () => _change(entry.key, -1),
-                      icon: const Icon(Icons.remove_circle_outline),
-                    ),
-                    Text('${entry.value}'),
-                    IconButton(
-                      onPressed: () => _change(entry.key, 1),
-                      icon: const Icon(Icons.add_circle_outline),
-                    ),
-                  ],
-                ),
-              ),
-          const Divider(),
-          DropdownButtonFormField<String?>(
-            initialValue: _customerId,
-            decoration: const InputDecoration(labelText: 'Customer'),
-            items: [
-              const DropdownMenuItem<String?>(
-                  value: null, child: Text('Walk-in')),
-              for (final customer in _customers)
-                DropdownMenuItem<String?>(
-                  value: customer['id'] as String,
-                  child: Text(asText(customer['full_name'])),
-                ),
-            ],
-            onChanged: (value) => setState(() => _customerId = value),
+    padding: const EdgeInsets.all(16),
+    children: [
+      Text('Current sale', style: Theme.of(context).textTheme.titleLarge),
+      const SizedBox(height: 8),
+      if (_cart.isEmpty)
+        const Padding(
+          padding: EdgeInsets.symmetric(vertical: 24),
+          child: EmptyView(
+            icon: Icons.shopping_basket_outlined,
+            message: 'Tap a product to add it to the sale.',
           ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _storeId,
-            decoration: const InputDecoration(labelText: 'Store'),
-            items: [
-              for (final store in _stores)
-                DropdownMenuItem(
-                  value: store['id'] as String,
-                  child: Text(asText(store['name'])),
-                ),
-            ],
-            onChanged: (value) => setState(() => _storeId = value),
-          ),
-          const SizedBox(height: 8),
-          DropdownButtonFormField<String>(
-            initialValue: _method,
-            decoration: const InputDecoration(labelText: 'Payment method'),
-            items: const [
-              DropdownMenuItem(value: 'cash', child: Text('Cash')),
-              DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-              DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
-              DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-              DropdownMenuItem(
-                  value: 'mobile_money', child: Text('Mobile money')),
-              DropdownMenuItem(value: 'card', child: Text('Card')),
-              DropdownMenuItem(value: 'credit', child: Text('Credit')),
-            ],
-            onChanged: (value) => setState(() => _method = value ?? 'cash'),
-          ),
-          if (_method != 'credit') ...[
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _accountId,
-              decoration: const InputDecoration(labelText: 'Cash account'),
-              items: [
-                for (final account in _accounts)
-                  DropdownMenuItem(
-                    value: account['id'] as String,
-                    child: Text(asText(account['name'])),
-                  ),
-              ],
-              onChanged: (value) => setState(() => _accountId = value),
+        )
+      else
+        for (final entry in _cart.entries)
+          ListTile(
+            contentPadding: EdgeInsets.zero,
+            title: Text(asText(_products[entry.key]?['name'])),
+            subtitle: Text(
+              '${formatMoney(_products[entry.key]?['price'])} × ${entry.value}',
             ),
-          ],
-          const SizedBox(height: 8),
-          TextField(
-            controller: _discount,
-            decoration: const InputDecoration(labelText: 'Discount (ETB)'),
-            keyboardType: TextInputType.number,
-            onChanged: (_) => setState(_setPaidToTotal),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                IconButton(
+                  onPressed: () => _change(entry.key, -1),
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                Text('${entry.value}'),
+                IconButton(
+                  onPressed: () => _change(entry.key, 1),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+            ),
           ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _paid,
-            decoration: const InputDecoration(labelText: 'Amount paid'),
-            keyboardType: TextInputType.number,
-          ),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _notes,
-            decoration: const InputDecoration(labelText: 'Notes'),
-            maxLines: 2,
-          ),
-          const SizedBox(height: 12),
-          _totalRow('Subtotal', _subtotal),
-          _totalRow('Discount', -_discountValue),
-          _totalRow('Tax', _tax),
-          const Divider(),
-          _totalRow('Total', _total, bold: true),
-          const SizedBox(height: 12),
-          FilledButton.icon(
-            onPressed: _submitting ? null : _complete,
-            icon: _submitting
-                ? const SizedBox(
-                    width: 18,
-                    height: 18,
-                    child: CircularProgressIndicator(strokeWidth: 2),
-                  )
-                : const Icon(Icons.check_circle_outline),
-            label: Text(_submitting ? 'Completing…' : 'Complete sale'),
-          ),
+      const Divider(),
+      DropdownButtonFormField<String?>(
+        initialValue: _customerId,
+        decoration: const InputDecoration(labelText: 'Customer'),
+        items: [
+          const DropdownMenuItem<String?>(value: null, child: Text('Walk-in')),
+          for (final customer in _customers)
+            DropdownMenuItem<String?>(
+              value: customer['id'] as String,
+              child: Text(asText(customer['full_name'])),
+            ),
         ],
-      );
+        onChanged: (value) => setState(() => _customerId = value),
+      ),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>(
+        initialValue: _storeId,
+        decoration: const InputDecoration(labelText: 'Store'),
+        items: [
+          for (final store in _stores)
+            DropdownMenuItem(
+              value: store['id'] as String,
+              child: Text(asText(store['name'])),
+            ),
+        ],
+        onChanged: (value) => setState(() => _storeId = value),
+      ),
+      const SizedBox(height: 8),
+      DropdownButtonFormField<String>(
+        initialValue: _method,
+        decoration: const InputDecoration(labelText: 'Payment method'),
+        items: const [
+          DropdownMenuItem(value: 'cash', child: Text('Cash')),
+          DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
+          DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
+          DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
+          DropdownMenuItem(value: 'mobile_money', child: Text('Mobile money')),
+          DropdownMenuItem(value: 'card', child: Text('Card')),
+          DropdownMenuItem(value: 'credit', child: Text('Credit')),
+        ],
+        onChanged: (value) => setState(() => _method = value ?? 'cash'),
+      ),
+      if (_method != 'credit') ...[
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: _accountId,
+          decoration: const InputDecoration(labelText: 'Cash account'),
+          items: [
+            for (final account in _accounts)
+              DropdownMenuItem(
+                value: account['id'] as String,
+                child: Text(asText(account['name'])),
+              ),
+          ],
+          onChanged: (value) => setState(() => _accountId = value),
+        ),
+      ],
+      const SizedBox(height: 8),
+      TextField(
+        controller: _discount,
+        decoration: const InputDecoration(labelText: 'Discount (ETB)'),
+        keyboardType: TextInputType.number,
+        onChanged: (_) => setState(_setPaidToTotal),
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        controller: _paid,
+        decoration: const InputDecoration(labelText: 'Amount paid'),
+        keyboardType: TextInputType.number,
+      ),
+      const SizedBox(height: 8),
+      TextField(
+        controller: _notes,
+        decoration: const InputDecoration(labelText: 'Notes'),
+        maxLines: 2,
+      ),
+      const SizedBox(height: 12),
+      _totalRow('Subtotal', _subtotal),
+      _totalRow('Discount', -_discountValue),
+      _totalRow('Tax', _tax),
+      const Divider(),
+      _totalRow('Total', _total, bold: true),
+      const SizedBox(height: 12),
+      FilledButton.icon(
+        onPressed: _submitting ? null : _complete,
+        icon: _submitting
+            ? const SizedBox(
+                width: 18,
+                height: 18,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              )
+            : const Icon(Icons.check_circle_outline),
+        label: Text(_submitting ? 'Completing…' : 'Complete sale'),
+      ),
+    ],
+  );
 
   Widget _totalRow(String label, num value, {bool bold = false}) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 2),
-        child: Row(
-          children: [
-            Expanded(
-              child: Text(
-                label,
-                style:
-                    bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
-              ),
-            ),
-            Text(
-              formatMoney(value),
-              style: bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
-            ),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
+          ),
         ),
-      );
+        Text(
+          formatMoney(value),
+          style: bold ? const TextStyle(fontWeight: FontWeight.w700) : null,
+        ),
+      ],
+    ),
+  );
 }

@@ -33,31 +33,32 @@ class PendingSale {
   String? lastError;
 
   Map<String, dynamic> toJson() => {
-        'client_id': clientId,
-        'branch_id': branchId,
-        'items': items,
-        'payments': payments,
-        'customer_id': customerId,
-        'discount': discount,
-        'notes': notes,
-        'created_at': createdAt.toIso8601String(),
-        'attempts': attempts,
-        'last_error': lastError,
-      };
+    'client_id': clientId,
+    'branch_id': branchId,
+    'items': items,
+    'payments': payments,
+    'customer_id': customerId,
+    'discount': discount,
+    'notes': notes,
+    'created_at': createdAt.toIso8601String(),
+    'attempts': attempts,
+    'last_error': lastError,
+  };
 
   static PendingSale fromJson(Map<String, dynamic> json) => PendingSale(
-        clientId: json['client_id'] as String,
-        branchId: json['branch_id'] as String,
-        items: asMapList(json['items']),
-        payments: asMapList(json['payments']),
-        customerId: json['customer_id'] as String?,
-        discount: asNum(json['discount']),
-        notes: json['notes'] as String? ?? '',
-        createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
-            DateTime.now(),
-        attempts: (json['attempts'] as num?)?.toInt() ?? 0,
-        lastError: json['last_error'] as String?,
-      );
+    clientId: json['client_id'] as String,
+    branchId: json['branch_id'] as String,
+    items: asMapList(json['items']),
+    payments: asMapList(json['payments']),
+    customerId: json['customer_id'] as String?,
+    discount: asNum(json['discount']),
+    notes: json['notes'] as String? ?? '',
+    createdAt:
+        DateTime.tryParse(json['created_at'] as String? ?? '') ??
+        DateTime.now(),
+    attempts: (json['attempts'] as num?)?.toInt() ?? 0,
+    lastError: json['last_error'] as String?,
+  );
 }
 
 /// Durable, client-side queue for sales captured while the device is offline.

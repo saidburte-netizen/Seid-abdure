@@ -32,12 +32,15 @@ class ApprovalsScreen extends StatelessWidget {
     );
     if (note == null) return;
     try {
-      await session.client.from('approvals').update({
-        'status': approve ? 'approved' : 'rejected',
-        'approver_id': session.userId,
-        'decision_note': note['note'],
-        'decided_at': nowIso(),
-      }).eq('id', approval['id']);
+      await session.client
+          .from('approvals')
+          .update({
+            'status': approve ? 'approved' : 'rejected',
+            'approver_id': session.userId,
+            'decision_note': note['note'],
+            'decided_at': nowIso(),
+          })
+          .eq('id', approval['id']);
       if (context.mounted) {
         showSnack(context, approve ? 'Request approved.' : 'Request rejected.');
       }

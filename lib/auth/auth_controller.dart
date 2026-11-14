@@ -29,17 +29,17 @@ class BranchAccess {
   bool get isCustomer => roleCode == 'customer';
 
   String get roleLabel => switch (roleCode) {
-        'admin' => 'Administrator',
-        'manager' => 'Manager',
-        'cashier' => 'Cashier',
-        'baker' => 'Baker',
-        'store_keeper' => 'Store keeper',
-        'hr_officer' => 'HR officer',
-        'accountant' => 'Accountant',
-        'staff' => 'Staff',
-        'customer' => 'Customer',
-        _ => prettyLabel(roleCode),
-      };
+    'admin' => 'Administrator',
+    'manager' => 'Manager',
+    'cashier' => 'Cashier',
+    'baker' => 'Baker',
+    'store_keeper' => 'Store keeper',
+    'hr_officer' => 'HR officer',
+    'accountant' => 'Accountant',
+    'staff' => 'Staff',
+    'customer' => 'Customer',
+    _ => prettyLabel(roleCode),
+  };
 }
 
 class AuthController extends ChangeNotifier {
@@ -157,13 +157,14 @@ class AuthController extends ChangeNotifier {
       final isAdminRole = roleCode == 'admin';
       List<Map<String, dynamic>> branchRows;
       if (isAdminRole) {
-        branchRows = (await client
-                .from('branches')
-                .select('id, name, code')
-                .eq('is_active', true)
-                .order('name'))
-            .map((row) => Map<String, dynamic>.from(row as Map))
-            .toList();
+        branchRows =
+            (await client
+                    .from('branches')
+                    .select('id, name, code')
+                    .eq('is_active', true)
+                    .order('name'))
+                .map((row) => Map<String, dynamic>.from(row as Map))
+                .toList();
       } else {
         final branchId = profile['branch_id'] as String?;
         if (branchId == null) {
@@ -264,7 +265,8 @@ class AuthController extends ChangeNotifier {
     if (userId == null) return;
     await client
         .from('profiles')
-        .update({'full_name': name.trim()}).eq('id', userId!);
+        .update({'full_name': name.trim()})
+        .eq('id', userId!);
     fullName = name.trim();
     _notify();
   }

@@ -85,11 +85,14 @@ class CreditScreen extends StatelessWidget {
     );
     if (!confirmed) return;
     try {
-      await session.client.from('write_offs').update({
-        'status': 'approved',
-        'approved_by': session.userId,
-        'decided_at': nowIso(),
-      }).eq('id', row['id']);
+      await session.client
+          .from('write_offs')
+          .update({
+            'status': 'approved',
+            'approved_by': session.userId,
+            'decided_at': nowIso(),
+          })
+          .eq('id', row['id']);
       if (context.mounted) showSnack(context, 'Write-off approved.');
     } catch (error) {
       if (context.mounted) {
@@ -260,64 +263,65 @@ class _CreditPaymentDialogState extends State<_CreditPaymentDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-        title: Text(widget.title),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            DropdownButtonFormField<String>(
-              initialValue: _account,
-              decoration: const InputDecoration(labelText: 'Cash account'),
-              items: [
-                for (final account in widget.accounts)
-                  DropdownMenuItem(
-                    value: account['id'] as String,
-                    child: Text(asText(account['name'])),
-                  ),
-              ],
-              onChanged: (value) =>
-                  setState(() => _account = value ?? _account),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _amount,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(labelText: 'Amount'),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: _method,
-              decoration: const InputDecoration(labelText: 'Method'),
-              items: const [
-                DropdownMenuItem(value: 'cash', child: Text('Cash')),
-                DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-                DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
-                DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-                DropdownMenuItem(
-                    value: 'mobile_money', child: Text('Mobile money')),
-              ],
-              onChanged: (value) => setState(() => _method = value ?? 'cash'),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: _reference,
-              decoration: const InputDecoration(labelText: 'Reference'),
+    title: Text(widget.title),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        DropdownButtonFormField<String>(
+          initialValue: _account,
+          decoration: const InputDecoration(labelText: 'Cash account'),
+          items: [
+            for (final account in widget.accounts)
+              DropdownMenuItem(
+                value: account['id'] as String,
+                child: Text(asText(account['name'])),
+              ),
+          ],
+          onChanged: (value) => setState(() => _account = value ?? _account),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: _amount,
+          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Amount'),
+        ),
+        const SizedBox(height: 8),
+        DropdownButtonFormField<String>(
+          initialValue: _method,
+          decoration: const InputDecoration(labelText: 'Method'),
+          items: const [
+            DropdownMenuItem(value: 'cash', child: Text('Cash')),
+            DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
+            DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
+            DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
+            DropdownMenuItem(
+              value: 'mobile_money',
+              child: Text('Mobile money'),
             ),
           ],
+          onChanged: (value) => setState(() => _method = value ?? 'cash'),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop({
-              'account': _account,
-              'amount': asNum(_amount.text),
-              'method': _method,
-              'reference': _reference.text.trim(),
-            }),
-            child: const Text('Record payment'),
-          ),
-        ],
-      );
+        const SizedBox(height: 8),
+        TextField(
+          controller: _reference,
+          decoration: const InputDecoration(labelText: 'Reference'),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.of(context).pop(),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(
+        onPressed: () => Navigator.of(context).pop({
+          'account': _account,
+          'amount': asNum(_amount.text),
+          'method': _method,
+          'reference': _reference.text.trim(),
+        }),
+        child: const Text('Record payment'),
+      ),
+    ],
+  );
 }
