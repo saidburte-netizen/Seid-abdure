@@ -171,8 +171,8 @@ insert into public.purchase_orders (
   '00000000-0000-0000-0000-000000000001'
 );
 
-insert into public.purchase_order_items (po_id, item_id, quantity_ordered, quantity_received, unit_cost, line_total)
-values ('ffffffff-ffff-ffff-ffff-ffffffffffff', '55555555-5555-5555-5555-555555555501', 10, 0, 5, 50);
+insert into public.purchase_order_items (po_id, item_id, quantity_ordered, quantity_received, unit_cost)
+values ('ffffffff-ffff-ffff-ffff-ffffffffffff', '55555555-5555-5555-5555-555555555501', 10, 0, 5);
 
 select pg_temp.assert_true(
   (select subtotal = 50 and total_amount = 50 from public.purchase_orders where id = 'ffffffff-ffff-ffff-ffff-ffffffffffff'),
