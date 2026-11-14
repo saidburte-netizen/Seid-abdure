@@ -1,9 +1,14 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_controller.dart';
 import 'brand/brand.dart';
+import 'core/connectivity/offline_banner.dart';
+import 'core/errors/friendly_error.dart';
+import 'core/logging/app_logger.dart';
 import 'l10n/app_localizations.dart';
 import 'screens/approvals_screen.dart';
 import 'screens/cash_screen.dart';
@@ -211,6 +216,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         GoRoute(
           path: '/auth-error',
           builder: (context, state) => AuthErrorScreen(
+            error: _auth?.lastError,
             message: _auth?.errorMessage ?? '',
             onRetry: _auth?.retry ?? () async {},
             onSignOut: () => widget.client!.auth.signOut(),
@@ -253,6 +259,8 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         darkTheme: AppTheme.dark(),
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
+        builder: (context, child) =>
+            OfflineBanner(child: child ?? const SizedBox.shrink()),
         home: const ConfigurationScreen(),
       );
     }
@@ -271,6 +279,10 @@ class _BakeryRouterState extends State<_BakeryRouter> {
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: _router,
           debugShowCheckedModeBanner: false,
+          builder: (context, child) => OfflineBanner(
+            onReconnected: _auth.retry,
+            child: child ?? const SizedBox.shrink(),
+          ),
         ),
       ),
     );
@@ -344,15 +356,8 @@ class ConfigurationScreen extends StatelessWidget {
               const BrandMark(size: 180),
               const SizedBox(height: 24),
               Text(
-                AppLocalizations.of(context).configurationRequired,
+                AppLocalizations.of(context).appNotConfigured,
                 textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 12),
-              Text(
-                'Build with --dart-define=SUPABASE_URL=... '
-                '--dart-define=SUPABASE_ANON_KEY=...',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall,
               ),
             ],
           ),
@@ -372,12 +377,24 @@ class SignInScreen extends StatefulWidget {
 }
 
 class _SignInScreenState extends State<SignInScreen> {
+  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
   bool _submitting = false;
   bool _obscure = true;
-  String? _errorMessage;
+  Object? _error;
+  bool _checkingAccess = true;
+  bool? _hasAdmin;
+  bool _allowCustomerSignup = false;
+  Object? _accessError;
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadAccess());
+  }
 
   @override
   void dispose() {
@@ -386,55 +403,93 @@ class _SignInScreenState extends State<SignInScreen> {
     super.dispose();
   }
 
+  Future<void> _loadAccess() async {
+    if (mounted) {
+      setState(() {
+        _checkingAccess = true;
+        _accessError = null;
+      });
+    }
+    try {
+      final adminResult = await widget.client.rpc('has_admin');
+      final hasAdmin = _readBool(adminResult);
+      if (hasAdmin == null) {
+        throw const FormatException('has_admin returned no value');
+      }
+      var allowCustomerSignup = false;
+      try {
+        final row = await widget.client
+            .from('app_settings')
+            .select('value')
+            .eq('key', 'allow_customer_signup')
+            .maybeSingle();
+        allowCustomerSignup = _readSettingBool(row?['value']);
+      } catch (error, stack) {
+        AppLogger.error('Could not read sign-up setting', error, stack);
+      }
+      if (!mounted) return;
+      setState(() {
+        _hasAdmin = hasAdmin;
+        _allowCustomerSignup = allowCustomerSignup;
+        _checkingAccess = false;
+      });
+    } catch (error, stack) {
+      AppLogger.error('Could not check sign-up options', error, stack);
+      if (!mounted) return;
+      setState(() {
+        _accessError = error;
+        _checkingAccess = false;
+      });
+    }
+  }
+
   Future<void> _signIn() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() {
       _submitting = true;
-      _errorMessage = null;
+      _error = null;
     });
     try {
       await widget.client.auth.signInWithPassword(
         email: _email.text.trim(),
         password: _password.text,
       );
-    } on AuthException catch (exception) {
-      if (mounted) setState(() => _errorMessage = exception.message);
-    } catch (error) {
-      if (mounted) setState(() => _errorMessage = error.toString());
+    } catch (error, stack) {
+      AppLogger.error('Sign-in failed', error, stack);
+      if (mounted) setState(() => _error = error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
   }
 
-  Future<void> _signUp() async {
-    final result = await showDialog<Map<String, String>>(
+  Future<void> _openSignUp({required bool firstAdmin}) async {
+    final strings = AppLocalizations.of(context);
+    final message = await showDialog<String>(
       context: context,
-      builder: (context) => const _SignUpDialog(),
+      barrierDismissible: false,
+      builder: (context) => _SignUpDialog(
+        firstAdmin: firstAdmin,
+        onSubmit: (data) async {
+          final response = await widget.client.auth.signUp(
+            email: data['email']!,
+            password: data['password']!,
+            data: {'full_name': data['name']!},
+          );
+          if (!firstAdmin && response.session != null) {
+            await widget.client.auth.signOut();
+          }
+          if (response.session == null) {
+            return strings.accountCreatedConfirmEmail;
+          }
+          return firstAdmin
+              ? strings.accountCreatedSignIn
+              : strings.accountCreatedAwaitAdmin;
+        },
+      ),
     );
-    if (result == null || !mounted) return;
-    setState(() {
-      _submitting = true;
-      _errorMessage = null;
-    });
-    try {
-      final response = await widget.client.auth.signUp(
-        email: result['email']!,
-        password: result['password']!,
-        data: {'full_name': result['name']!},
-      );
-      if (response.session == null && mounted) {
-        showSnack(
-          context,
-          'Account created. Check your email to confirm it, then sign in.',
-        );
-      }
-    } on AuthException catch (exception) {
-      if (mounted) setState(() => _errorMessage = exception.message);
-    } catch (error) {
-      if (mounted) setState(() => _errorMessage = error.toString());
-    } finally {
-      if (mounted) setState(() => _submitting = false);
-    }
+    if (message == null || !mounted) return;
+    showSnack(context, message);
+    unawaited(_loadAccess());
   }
 
   @override
@@ -480,10 +535,14 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                             keyboardType: TextInputType.emailAddress,
                             autofillHints: const [AutofillHints.email],
-                            validator: (value) =>
-                                value == null || value.trim().isEmpty
-                                ? strings.requiredField
-                                : null,
+                            validator: (value) {
+                              final email = value?.trim() ?? '';
+                              if (email.isEmpty) return strings.requiredField;
+                              if (!_emailPattern.hasMatch(email)) {
+                                return strings.errorInvalidEmail;
+                              }
+                              return null;
+                            },
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
@@ -507,12 +566,9 @@ class _SignInScreenState extends State<SignInScreen> {
                                 : null,
                             onFieldSubmitted: (_) => _signIn(),
                           ),
-                          if (_errorMessage != null) ...[
+                          if (_error != null) ...[
                             const SizedBox(height: 12),
-                            Text(
-                              _errorMessage!,
-                              style: TextStyle(color: scheme.error),
-                            ),
+                            FriendlyErrorBox(error: _error!, onRetry: _signIn),
                           ],
                           const SizedBox(height: 20),
                           SizedBox(
@@ -536,11 +592,61 @@ class _SignInScreenState extends State<SignInScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          TextButton.icon(
-                            onPressed: _submitting ? null : _signUp,
-                            icon: const Icon(Icons.person_add_alt_1),
-                            label: const Text('Create the first account'),
-                          ),
+                          if (_checkingAccess)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Flexible(
+                                    child: Text(
+                                      strings.checkingAccountOptions,
+                                      style: Theme.of(
+                                        context,
+                                      ).textTheme.bodySmall,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else if (_accessError != null)
+                            FriendlyErrorBox(
+                              error: _accessError!,
+                              onRetry: _loadAccess,
+                            )
+                          else if (_hasAdmin == false)
+                            TextButton.icon(
+                              onPressed: _submitting
+                                  ? null
+                                  : () => _openSignUp(firstAdmin: true),
+                              icon: const Icon(Icons.person_add_alt_1),
+                              label: Text(strings.createFirstAccount),
+                            )
+                          else if (_hasAdmin == true && _allowCustomerSignup)
+                            TextButton.icon(
+                              onPressed: _submitting
+                                  ? null
+                                  : () => _openSignUp(firstAdmin: false),
+                              icon: const Icon(Icons.person_add_alt_1),
+                              label: Text(strings.createAccount),
+                            )
+                          else
+                            Padding(
+                              padding: const EdgeInsets.symmetric(vertical: 8),
+                              child: Text(
+                                strings.contactAdminToGetAccount,
+                                textAlign: TextAlign.center,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -556,86 +662,213 @@ class _SignInScreenState extends State<SignInScreen> {
 }
 
 class _SignUpDialog extends StatefulWidget {
-  const _SignUpDialog();
+  const _SignUpDialog({required this.firstAdmin, required this.onSubmit});
+
+  final bool firstAdmin;
+  final Future<String> Function(Map<String, String> data) onSubmit;
 
   @override
   State<_SignUpDialog> createState() => _SignUpDialogState();
 }
 
 class _SignUpDialogState extends State<_SignUpDialog> {
+  static final _emailPattern = RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$');
+
   final _formKey = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _confirm = TextEditingController();
+  bool _submitting = false;
+  Object? _error;
 
   @override
   void dispose() {
     _name.dispose();
     _email.dispose();
     _password.dispose();
+    _confirm.dispose();
     super.dispose();
   }
 
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+    try {
+      final message = await widget.onSubmit({
+        'name': _name.text.trim(),
+        'email': _email.text.trim(),
+        'password': _password.text,
+      });
+      if (mounted) Navigator.of(context).pop(message);
+    } catch (error, stack) {
+      AppLogger.error('Sign-up failed', error, stack);
+      if (mounted) {
+        setState(() {
+          _error = error;
+          _submitting = false;
+        });
+      }
+    }
+  }
+
   @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: const Text('Create the first account'),
-    content: Form(
-      key: _formKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          TextFormField(
-            controller: _name,
-            decoration: const InputDecoration(labelText: 'Full name'),
-            textCapitalization: TextCapitalization.words,
-            validator: (value) =>
-                value == null || value.trim().isEmpty ? 'Required' : null,
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _email,
-            decoration: const InputDecoration(labelText: 'Email'),
-            keyboardType: TextInputType.emailAddress,
-            validator: (value) =>
-                value == null || !value.contains('@') ? 'Enter an email' : null,
-          ),
-          const SizedBox(height: 10),
-          TextFormField(
-            controller: _password,
-            decoration: const InputDecoration(labelText: 'Password'),
-            obscureText: true,
-            validator: (value) => value == null || value.length < 6
-                ? 'Use at least 6 characters'
-                : null,
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'The first account created in a new Supabase project becomes the '
-            'administrator. Later accounts need a profile role assigned by an '
-            'administrator.',
-            style: TextStyle(fontSize: 12),
-          ),
-        ],
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(
+        widget.firstAdmin
+            ? strings.signUpFirstTitle
+            : strings.signUpCustomerTitle,
       ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const Text('Cancel'),
+      content: SizedBox(
+        width: 420,
+        child: SingleChildScrollView(
+          child: Form(
+            key: _formKey,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextFormField(
+                  controller: _name,
+                  decoration: InputDecoration(labelText: strings.fullName),
+                  textCapitalization: TextCapitalization.words,
+                  autofillHints: const [AutofillHints.name],
+                  validator: (value) => value == null || value.trim().isEmpty
+                      ? strings.requiredField
+                      : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _email,
+                  decoration: InputDecoration(labelText: strings.email),
+                  keyboardType: TextInputType.emailAddress,
+                  autofillHints: const [AutofillHints.email],
+                  validator: (value) {
+                    final email = value?.trim() ?? '';
+                    if (email.isEmpty) return strings.requiredField;
+                    if (!_emailPattern.hasMatch(email)) {
+                      return strings.errorInvalidEmail;
+                    }
+                    return null;
+                  },
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _password,
+                  decoration: InputDecoration(labelText: strings.password),
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.newPassword],
+                  validator: (value) => value == null || value.length < 8
+                      ? strings.errorPasswordMin8
+                      : null,
+                ),
+                const SizedBox(height: 10),
+                TextFormField(
+                  controller: _confirm,
+                  decoration: InputDecoration(
+                    labelText: strings.confirmPassword,
+                  ),
+                  obscureText: true,
+                  autofillHints: const [AutofillHints.newPassword],
+                  validator: (value) => value != _password.text
+                      ? strings.errorPasswordsDoNotMatch
+                      : null,
+                  onFieldSubmitted: (_) => _submit(),
+                ),
+                if (_error != null) ...[
+                  const SizedBox(height: 12),
+                  FriendlyErrorBox(error: _error!),
+                ],
+                const SizedBox(height: 12),
+                Text(
+                  widget.firstAdmin
+                      ? strings.signUpFirstHelp
+                      : strings.signUpCustomerHelp,
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+        ),
       ),
-      FilledButton(
-        onPressed: () {
-          if (!_formKey.currentState!.validate()) return;
-          Navigator.of(context).pop({
-            'name': _name.text.trim(),
-            'email': _email.text.trim(),
-            'password': _password.text,
-          });
-        },
-        child: const Text('Create account'),
-      ),
-    ],
-  );
+      actions: [
+        TextButton(
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          child: Text(strings.cancel),
+        ),
+        FilledButton(
+          onPressed: _submitting ? null : _submit,
+          child: _submitting
+              ? Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    ),
+                    const SizedBox(width: 8),
+                    Text(strings.creatingAccount),
+                  ],
+                )
+              : Text(
+                  widget.firstAdmin
+                      ? strings.createFirstAccount
+                      : strings.createAccount,
+                ),
+        ),
+      ],
+    );
+  }
+}
+
+bool? _readBool(Object? value) {
+  if (value is bool) return value;
+  if (value is num) return value != 0;
+  if (value is String) {
+    final text = value.trim().toLowerCase();
+    if (text == 'true' || text == 't' || text == '1' || text == 'yes') {
+      return true;
+    }
+    if (text == 'false' || text == 'f' || text == '0' || text == 'no') {
+      return false;
+    }
+    return null;
+  }
+  if (value is Map) {
+    for (final key in const ['has_admin', 'exists', 'result', 'value']) {
+      if (value.containsKey(key)) {
+        final parsed = _readBool(value[key]);
+        if (parsed != null) return parsed;
+      }
+    }
+    return null;
+  }
+  if (value is List && value.isNotEmpty) return _readBool(value.first);
+  return null;
+}
+
+bool _readSettingBool(Object? value) {
+  if (value is Map) {
+    for (final key in const [
+      'enabled',
+      'allow',
+      'allow_customer_signup',
+      'signup',
+      'value',
+    ]) {
+      if (value.containsKey(key)) {
+        final parsed = _readBool(value[key]);
+        if (parsed != null) return parsed;
+      }
+    }
+    return false;
+  }
+  return _readBool(value) ?? false;
 }
 
 class LoadingScreen extends StatelessWidget {
@@ -685,21 +918,19 @@ class ProfileMissingScreen extends StatelessWidget {
               const SizedBox(height: 20),
               Text(
                 controller.errorMessage ??
-                    'Your account has no staff profile yet.',
+                    AppLocalizations.of(context).membershipRequired,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
-              const Text(
-                'Ask an administrator to create your profile in Supabase and '
-                'assign a role (admin, manager, cashier, baker, store_keeper, '
-                'hr_officer, accountant, staff, or customer).',
+              Text(
+                AppLocalizations.of(context).contactAdminToGetAccount,
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: controller.refresh,
                 icon: const Icon(Icons.refresh),
-                label: const Text('Retry'),
+                label: Text(AppLocalizations.of(context).retry),
               ),
             ],
           ),
@@ -729,8 +960,11 @@ class _BranchSetupScreenState extends State<BranchSetupScreen> {
     });
     try {
       await widget.controller.createFirstBranch();
-    } catch (error) {
-      if (mounted) setState(() => _error = error.toString());
+    } catch (error, stack) {
+      AppLogger.error('Could not create the first branch', error, stack);
+      if (mounted) {
+        setState(() => _error = readableError(context, error));
+      }
     } finally {
       if (mounted) setState(() => _saving = false);
     }
@@ -757,7 +991,10 @@ class _BranchSetupScreenState extends State<BranchSetupScreen> {
                 const SizedBox(height: 12),
                 Text(
                   _error!,
-                  style: TextStyle(color: Theme.of(context).colorScheme.error),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    color: Theme.of(context).colorScheme.onErrorContainer,
+                  ),
                 ),
               ],
               const SizedBox(height: 20),
@@ -817,42 +1054,46 @@ class AuthErrorScreen extends StatelessWidget {
     required this.message,
     required this.onRetry,
     required this.onSignOut,
+    this.error,
     super.key,
   });
 
+  final Object? error;
   final String message;
   final Future<void> Function() onRetry;
   final Future<void> Function() onSignOut;
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: Center(
-      child: Padding(
-        padding: const EdgeInsets.all(24),
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 520),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const BrandMark(size: 120),
-              const SizedBox(height: 20),
-              Text(
-                '${AppLocalizations.of(context).accessLoadFailed}\n$message',
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: 16),
-              FilledButton(
-                onPressed: onRetry,
-                child: Text(AppLocalizations.of(context).retry),
-              ),
-              TextButton(
-                onPressed: onSignOut,
-                child: Text(AppLocalizations.of(context).signOut),
-              ),
-            ],
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    return Scaffold(
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 520),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const BrandMark(size: 120),
+                const SizedBox(height: 20),
+                Text(strings.accessLoadFailed, textAlign: TextAlign.center),
+                const SizedBox(height: 12),
+                if (error != null)
+                  FriendlyErrorBox(error: error!, onRetry: onRetry)
+                else
+                  Text(
+                    message.isEmpty ? strings.errorSomethingWentWrong : message,
+                    textAlign: TextAlign.center,
+                  ),
+                const SizedBox(height: 16),
+                FilledButton(onPressed: onRetry, child: Text(strings.retry)),
+                TextButton(onPressed: onSignOut, child: Text(strings.signOut)),
+              ],
+            ),
           ),
         ),
       ),
-    ),
-  );
+    );
+  }
 }

@@ -251,4 +251,107 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get noBranchSelected => 'ቅርንጫፍ አልተመረጠም';
+
+  @override
+  String get appNotConfigured => 'መተግበሪያው አልተዘጋጀም። እባክዎ ድጋፍን ያግኙ።';
+
+  @override
+  String get errorNoInternet =>
+      'የኢንተርኔት ግንኙነት የለም። እባክዎ ኔትወርክዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get errorServiceUnavailable =>
+      'አገልግሎቱ ለጊዜው አይገኝም። እባክዎ በአጭር ጊዜ ውስጥ እንደገና ይሞክሩ።';
+
+  @override
+  String get errorInvalidCredentials => 'ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።';
+
+  @override
+  String get errorEmailAlreadyRegistered => 'ይህ ኢሜይል አስቀድሞ ተመዝግቧል። እባክዎ ይግቡ።';
+
+  @override
+  String get errorWeakPassword => 'የይለፍ ቃል ቢያንስ 8 ፊደሎች መሆን አለበት።';
+
+  @override
+  String get errorPermissionDenied => 'ይህንን ለማድረግ ፈቃድ የለዎትም።';
+
+  @override
+  String get errorSomethingWentWrong => 'የተሳሳተ ነገር ተከስቷል። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
+  String get errorEmailNotConfirmed => 'ከመግባትዎ በፊት እባክዎ ኢሜይልዎን ያረጋግጡ።';
+
+  @override
+  String get errorDuplicateRecord => 'ይህ መዝገብ አስቀድሞ አለ።';
+
+  @override
+  String get errorRecordInUse => 'ይህ መዝገብ አሁንም ጥቅም ላይ ስለሆነ ሊሰረዝ አይችልም።';
+
+  @override
+  String get errorSessionExpired => 'ክፍለ ጊዜዎ አልቋል። እባክዎ እንደገና ይግቡ።';
+
+  @override
+  String get errorInvalidEmail => 'ትክክለኛ የኢሜይል አድራሻ ያስገቡ።';
+
+  @override
+  String get errorPasswordMin8 => 'የይለፍ ቃል ቢያንስ 8 ፊደሎች መሆን አለበት።';
+
+  @override
+  String get errorPasswordsDoNotMatch => 'የይለፍ ቃላቱ አይመሳሰሉም።';
+
+  @override
+  String get errorTooManyAttempts => 'ብዙ ሙከራዎች። እባክዎ ትንሽ ይጠብቁ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get offlineBanner => 'ከመስመር ውጭ ነዎት';
+
+  @override
+  String get contactAdminToGetAccount => 'መለያ ለማግኘት አስተዳዳሪውን ያነጋግሩ።';
+
+  @override
+  String get createFirstAccount => 'የመጀመሪያውን መለያ ይፍጠሩ';
+
+  @override
+  String get createAccount => 'መለያ ይፍጠሩ';
+
+  @override
+  String get createCustomerAccount => 'የደንበኛ መለያ ይፍጠሩ';
+
+  @override
+  String get signUpFirstTitle => 'የመጀመሪያውን መለያ ይፍጠሩ';
+
+  @override
+  String get signUpCustomerTitle => 'መለያዎን ይፍጠሩ';
+
+  @override
+  String get signUpFirstHelp =>
+      'በአዲስ ንግድ ውስጥ የመጀመሪያው መለያ አስተዳዳሪ ይሆናል። በኋላ የሚፈጠሩ መለያዎች በአስተዳዳሪ ሚና መመደብ ይፈልጋሉ።';
+
+  @override
+  String get signUpCustomerHelp => 'አስተዳዳሪው መለያዎን ገምግሞ የደንበኛ ፈቃድ ይመድባል።';
+
+  @override
+  String get confirmPassword => 'የይለፍ ቃል ያረጋግጡ';
+
+  @override
+  String get creatingAccount => 'መለያ በመፍጠር ላይ…';
+
+  @override
+  String get accountCreatedConfirmEmail =>
+      'መለያ ተፈጥሯል። እባክዎ ኢሜይልዎን ያረጋግጡ፣ ከዚያ ይግቡ።';
+
+  @override
+  String get accountCreatedSignIn => 'መለያ ተፈጥሯል። አሁን መግባት ይችላሉ።';
+
+  @override
+  String get accountCreatedAwaitAdmin => 'መለያ ተፈጥሯል። አስተዳዳሪው የደንበኛ ፈቃድዎን ያነቃል።';
+
+  @override
+  String get checkingAccountOptions => 'የመለያ አማራጮችን በመፈተሽ ላይ…';
+
+  @override
+  String get couldNotCheckSignup => 'የምዝገባ አማራጮችን መጫን አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
+  String get customerSignupDisabled => 'የደንበኛ ምዝገባ በአሁኑ ጊዜ ተዘግቷል።';
 }

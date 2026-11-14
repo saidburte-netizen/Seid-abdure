@@ -67,7 +67,7 @@ class CreditScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Payment recorded.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }
@@ -96,7 +96,7 @@ class CreditScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Write-off approved.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }

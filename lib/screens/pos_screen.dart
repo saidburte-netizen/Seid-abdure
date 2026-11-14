@@ -96,7 +96,7 @@ class _PosScreenState extends State<PosScreen> {
       if (mounted) {
         setState(() {
           _loading = false;
-          _error = readableError(error);
+          _error = readableError(context, error);
         });
       }
     }
@@ -289,7 +289,7 @@ class _PosScreenState extends State<PosScreen> {
       );
       _clear();
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }

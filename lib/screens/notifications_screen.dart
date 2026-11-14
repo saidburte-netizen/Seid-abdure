@@ -48,7 +48,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
             .toList();
       });
     } catch (error) {
-      if (mounted) setState(() => _error = readableError(error));
+      if (mounted) setState(() => _error = readableError(context, error));
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -63,7 +63,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           .eq('id', notification['id']);
       await _load();
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -85,7 +85,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await query;
       await _load();
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -96,7 +96,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       await _load();
       if (mounted) showSnack(context, 'Alerts generated.');
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -275,7 +275,7 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
             .eq('id', id);
       }
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 

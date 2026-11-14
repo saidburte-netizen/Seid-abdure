@@ -253,4 +253,118 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get noBranchSelected => 'No branch selected';
+
+  @override
+  String get appNotConfigured =>
+      'App is not configured, please contact support.';
+
+  @override
+  String get errorNoInternet =>
+      'No internet connection. Please check your network and try again.';
+
+  @override
+  String get errorServiceUnavailable =>
+      'Service is temporarily unavailable. Please try again in a moment.';
+
+  @override
+  String get errorInvalidCredentials => 'Incorrect email or password.';
+
+  @override
+  String get errorEmailAlreadyRegistered =>
+      'This email is already registered. Try signing in.';
+
+  @override
+  String get errorWeakPassword => 'Password must be at least 8 characters.';
+
+  @override
+  String get errorPermissionDenied => 'You do not have permission to do this.';
+
+  @override
+  String get errorSomethingWentWrong =>
+      'Something went wrong. Please try again.';
+
+  @override
+  String get errorEmailNotConfirmed =>
+      'Please confirm your email before signing in.';
+
+  @override
+  String get errorDuplicateRecord => 'This record already exists.';
+
+  @override
+  String get errorRecordInUse =>
+      'This record is still in use and cannot be deleted.';
+
+  @override
+  String get errorSessionExpired =>
+      'Your session has expired. Please sign in again.';
+
+  @override
+  String get errorInvalidEmail => 'Enter a valid email address.';
+
+  @override
+  String get errorPasswordMin8 => 'Password must be at least 8 characters.';
+
+  @override
+  String get errorPasswordsDoNotMatch => 'Passwords do not match.';
+
+  @override
+  String get errorTooManyAttempts =>
+      'Too many attempts. Please wait a moment and try again.';
+
+  @override
+  String get offlineBanner => 'You are offline';
+
+  @override
+  String get contactAdminToGetAccount =>
+      'Contact the administrator to get an account.';
+
+  @override
+  String get createFirstAccount => 'Create the first account';
+
+  @override
+  String get createAccount => 'Create account';
+
+  @override
+  String get createCustomerAccount => 'Create customer account';
+
+  @override
+  String get signUpFirstTitle => 'Create the first account';
+
+  @override
+  String get signUpCustomerTitle => 'Create your account';
+
+  @override
+  String get signUpFirstHelp =>
+      'The first account created in a new business becomes the administrator. Later accounts need a role assigned by an administrator.';
+
+  @override
+  String get signUpCustomerHelp =>
+      'An administrator will review your account and assign customer access.';
+
+  @override
+  String get confirmPassword => 'Confirm password';
+
+  @override
+  String get creatingAccount => 'Creating account…';
+
+  @override
+  String get accountCreatedConfirmEmail =>
+      'Account created. Check your email to confirm it, then sign in.';
+
+  @override
+  String get accountCreatedSignIn => 'Account created. You can sign in now.';
+
+  @override
+  String get accountCreatedAwaitAdmin =>
+      'Account created. An administrator will activate your customer access.';
+
+  @override
+  String get checkingAccountOptions => 'Checking account options…';
+
+  @override
+  String get couldNotCheckSignup =>
+      'Could not load sign-up options. Please try again.';
+
+  @override
+  String get customerSignupDisabled => 'Customer sign-up is currently closed.';
 }

@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../core/errors/friendly_error.dart';
+import '../core/logging/app_logger.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
 
@@ -54,6 +56,7 @@ class AuthController extends ChangeNotifier {
   late final StreamSubscription<AuthState> _subscription;
   AuthStatus status = AuthStatus.loading;
   String? errorMessage;
+  Object? lastError;
   String? userId;
   String? userEmail;
   String? fullName;
@@ -113,6 +116,7 @@ class AuthController extends ChangeNotifier {
   Future<void> _loadSession(Session? session) async {
     final loadId = ++_loadId;
     errorMessage = null;
+    lastError = null;
     if (session == null) {
       userId = null;
       userEmail = null;
@@ -212,13 +216,17 @@ class AuthController extends ChangeNotifier {
         selectedBranchId = branches.first.branchId;
       }
       status = AuthStatus.ready;
-    } on PostgrestException catch (exception) {
+    } on PostgrestException catch (exception, stack) {
       if (loadId != _loadId) return;
-      errorMessage = exception.message;
+      AppLogger.error('Could not load account access', exception, stack);
+      lastError = exception;
+      errorMessage = friendlyMessage(exception);
       status = AuthStatus.error;
-    } catch (exception) {
+    } catch (exception, stack) {
       if (loadId != _loadId) return;
-      errorMessage = readableError(exception);
+      AppLogger.error('Could not load account access', exception, stack);
+      lastError = exception;
+      errorMessage = friendlyMessage(exception);
       status = AuthStatus.error;
     }
     _notify();

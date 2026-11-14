@@ -31,7 +31,7 @@ class CashScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Payable created from bill.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }
@@ -75,7 +75,7 @@ class CashScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Payable payment recorded.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }

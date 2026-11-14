@@ -95,7 +95,7 @@ class _SalesScreenState extends State<SalesScreen> {
         showSnack(context, 'Return $returnNo recorded.');
       }
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -136,7 +136,7 @@ class _SalesScreenState extends State<SalesScreen> {
         subject: 'Brade and Cake House receipt',
       );
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -160,7 +160,7 @@ class _SalesScreenState extends State<SalesScreen> {
       );
       if (mounted) showSnack(context, 'Day closed successfully.');
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -319,7 +319,7 @@ class _ReturnDialogState extends State<_ReturnDialog> {
     } catch (error) {
       if (mounted) {
         setState(() {
-          _error = readableError(error);
+          _error = readableError(context, error);
           _loading = false;
         });
       }

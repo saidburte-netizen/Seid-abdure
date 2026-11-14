@@ -579,6 +579,204 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'No branch selected'**
   String get noBranchSelected;
+
+  /// No description provided for @appNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'App is not configured, please contact support.'**
+  String get appNotConfigured;
+
+  /// No description provided for @errorNoInternet.
+  ///
+  /// In en, this message translates to:
+  /// **'No internet connection. Please check your network and try again.'**
+  String get errorNoInternet;
+
+  /// No description provided for @errorServiceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Service is temporarily unavailable. Please try again in a moment.'**
+  String get errorServiceUnavailable;
+
+  /// No description provided for @errorInvalidCredentials.
+  ///
+  /// In en, this message translates to:
+  /// **'Incorrect email or password.'**
+  String get errorInvalidCredentials;
+
+  /// No description provided for @errorEmailAlreadyRegistered.
+  ///
+  /// In en, this message translates to:
+  /// **'This email is already registered. Try signing in.'**
+  String get errorEmailAlreadyRegistered;
+
+  /// No description provided for @errorWeakPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters.'**
+  String get errorWeakPassword;
+
+  /// No description provided for @errorPermissionDenied.
+  ///
+  /// In en, this message translates to:
+  /// **'You do not have permission to do this.'**
+  String get errorPermissionDenied;
+
+  /// No description provided for @errorSomethingWentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong. Please try again.'**
+  String get errorSomethingWentWrong;
+
+  /// No description provided for @errorEmailNotConfirmed.
+  ///
+  /// In en, this message translates to:
+  /// **'Please confirm your email before signing in.'**
+  String get errorEmailNotConfirmed;
+
+  /// No description provided for @errorDuplicateRecord.
+  ///
+  /// In en, this message translates to:
+  /// **'This record already exists.'**
+  String get errorDuplicateRecord;
+
+  /// No description provided for @errorRecordInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This record is still in use and cannot be deleted.'**
+  String get errorRecordInUse;
+
+  /// No description provided for @errorSessionExpired.
+  ///
+  /// In en, this message translates to:
+  /// **'Your session has expired. Please sign in again.'**
+  String get errorSessionExpired;
+
+  /// No description provided for @errorInvalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Enter a valid email address.'**
+  String get errorInvalidEmail;
+
+  /// No description provided for @errorPasswordMin8.
+  ///
+  /// In en, this message translates to:
+  /// **'Password must be at least 8 characters.'**
+  String get errorPasswordMin8;
+
+  /// No description provided for @errorPasswordsDoNotMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'Passwords do not match.'**
+  String get errorPasswordsDoNotMatch;
+
+  /// No description provided for @errorTooManyAttempts.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please wait a moment and try again.'**
+  String get errorTooManyAttempts;
+
+  /// No description provided for @offlineBanner.
+  ///
+  /// In en, this message translates to:
+  /// **'You are offline'**
+  String get offlineBanner;
+
+  /// No description provided for @contactAdminToGetAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Contact the administrator to get an account.'**
+  String get contactAdminToGetAccount;
+
+  /// No description provided for @createFirstAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create the first account'**
+  String get createFirstAccount;
+
+  /// No description provided for @createAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create account'**
+  String get createAccount;
+
+  /// No description provided for @createCustomerAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Create customer account'**
+  String get createCustomerAccount;
+
+  /// No description provided for @signUpFirstTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create the first account'**
+  String get signUpFirstTitle;
+
+  /// No description provided for @signUpCustomerTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'Create your account'**
+  String get signUpCustomerTitle;
+
+  /// No description provided for @signUpFirstHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'The first account created in a new business becomes the administrator. Later accounts need a role assigned by an administrator.'**
+  String get signUpFirstHelp;
+
+  /// No description provided for @signUpCustomerHelp.
+  ///
+  /// In en, this message translates to:
+  /// **'An administrator will review your account and assign customer access.'**
+  String get signUpCustomerHelp;
+
+  /// No description provided for @confirmPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Confirm password'**
+  String get confirmPassword;
+
+  /// No description provided for @creatingAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Creating account…'**
+  String get creatingAccount;
+
+  /// No description provided for @accountCreatedConfirmEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created. Check your email to confirm it, then sign in.'**
+  String get accountCreatedConfirmEmail;
+
+  /// No description provided for @accountCreatedSignIn.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created. You can sign in now.'**
+  String get accountCreatedSignIn;
+
+  /// No description provided for @accountCreatedAwaitAdmin.
+  ///
+  /// In en, this message translates to:
+  /// **'Account created. An administrator will activate your customer access.'**
+  String get accountCreatedAwaitAdmin;
+
+  /// No description provided for @checkingAccountOptions.
+  ///
+  /// In en, this message translates to:
+  /// **'Checking account options…'**
+  String get checkingAccountOptions;
+
+  /// No description provided for @couldNotCheckSignup.
+  ///
+  /// In en, this message translates to:
+  /// **'Could not load sign-up options. Please try again.'**
+  String get couldNotCheckSignup;
+
+  /// No description provided for @customerSignupDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'Customer sign-up is currently closed.'**
+  String get customerSignupDisabled;
 }
 
 class _AppLocalizationsDelegate

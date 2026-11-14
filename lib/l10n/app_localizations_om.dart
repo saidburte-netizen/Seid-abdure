@@ -255,4 +255,121 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get noBranchSelected => 'Dameen hin filatamne';
+
+  @override
+  String get appNotConfigured =>
+      'Appilikeeshiniin hin qindaa\'in. Maaloo deeggarsa qunnamaa.';
+
+  @override
+  String get errorNoInternet =>
+      'Walqunnamtii intarneetii hin jiru. Maaloo neetwoorkii keessan mirkaneessaa deebi\'ii yaalaa.';
+
+  @override
+  String get errorServiceUnavailable =>
+      'Tajaajilli yeroo ammaa hin argamu. Maaloo daqiiqaa muraasa booda deebi\'ii yaalaa.';
+
+  @override
+  String get errorInvalidCredentials =>
+      'Imeelii yookaan jechi darbii sirrii miti.';
+
+  @override
+  String get errorEmailAlreadyRegistered =>
+      'Imeeliin kun duraan galmaa\'eera. Maaloo seenaa.';
+
+  @override
+  String get errorWeakPassword =>
+      'Jechi darbii yoo xiqqaate qubee 8 ta\'uu qaba.';
+
+  @override
+  String get errorPermissionDenied => 'Kana gochuuf hayyama hin qabdan.';
+
+  @override
+  String get errorSomethingWentWrong =>
+      'Wanti tokko dogoggora ta\'e. Maaloo deebi\'ii yaalaa.';
+
+  @override
+  String get errorEmailNotConfirmed =>
+      'Maaloo dura imeelii keessan mirkaneessaa sana booda seenaa.';
+
+  @override
+  String get errorDuplicateRecord => 'Galmeen kun duraan jira.';
+
+  @override
+  String get errorRecordInUse =>
+      'Galmeen kun amma illee hojii irra waan jiruuf hin haqamu.';
+
+  @override
+  String get errorSessionExpired =>
+      'Yeroon keessan darbeera. Maaloo deebi\'ii seenaa.';
+
+  @override
+  String get errorInvalidEmail => 'Teessoo imeelii sirrii galchaa.';
+
+  @override
+  String get errorPasswordMin8 =>
+      'Jechi darbii yoo xiqqaate qubee 8 ta\'uu qaba.';
+
+  @override
+  String get errorPasswordsDoNotMatch => 'Jechoonni darbii wal hin fakkaatan.';
+
+  @override
+  String get errorTooManyAttempts =>
+      'Yaaliin baay\'ee. Maaloo muraasa eegaa deebi\'ii yaalaa.';
+
+  @override
+  String get offlineBanner => 'Intarneetii ala jirtu';
+
+  @override
+  String get contactAdminToGetAccount => 'Herrega argachuuf bulchaa qunnamaa.';
+
+  @override
+  String get createFirstAccount => 'Herrega jalqabaa uumi';
+
+  @override
+  String get createAccount => 'Herrega uumi';
+
+  @override
+  String get createCustomerAccount => 'Herrega maamila uumi';
+
+  @override
+  String get signUpFirstTitle => 'Herrega jalqabaa uumi';
+
+  @override
+  String get signUpCustomerTitle => 'Herrega keessan uumi';
+
+  @override
+  String get signUpFirstHelp =>
+      'Daldala haaraa keessatti herregni jalqabaa bulchaa ta\'a. Herregni booda uumamu gahee bulchaa irraa barbaada.';
+
+  @override
+  String get signUpCustomerHelp =>
+      'Bulchaan herrega keessan ilaalee hayyama maamila kennuu qaba.';
+
+  @override
+  String get confirmPassword => 'Jecha darbii mirkaneessi';
+
+  @override
+  String get creatingAccount => 'Herrega uumaa jira…';
+
+  @override
+  String get accountCreatedConfirmEmail =>
+      'Herregni uumameera. Maaloo imeelii keessan mirkaneessaa sana booda seenaa.';
+
+  @override
+  String get accountCreatedSignIn =>
+      'Herregni uumameera. Amma seenuu dandeessu.';
+
+  @override
+  String get accountCreatedAwaitAdmin =>
+      'Herregni uumameera. Bulchaan hayyama maamila keessan ni banu.';
+
+  @override
+  String get checkingAccountOptions => 'Filannoo herregaa ilaalaa jira…';
+
+  @override
+  String get couldNotCheckSignup =>
+      'Filannoo galmee fe\'uun hin danda\'amne. Maaloo deebi\'ii yaalaa.';
+
+  @override
+  String get customerSignupDisabled => 'Galmeen maamila yeroo ammaa cufaadha.';
 }

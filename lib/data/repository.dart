@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+export '../core/errors/friendly_error.dart';
+
 /// A thin, branch-scoped data access layer.
 ///
 /// Every write that changes money, stock or credit must use a database RPC.
@@ -120,18 +122,4 @@ class BranchRepository {
 
   Future<Map<String, dynamic>?> appSetting(String key) =>
       first('app_settings', branchScoped: false, equals: {'key': key});
-}
-
-String readableError(Object error) {
-  if (error is PostgrestException) {
-    final message = error.message.trim();
-    if (message.isNotEmpty) return message;
-    return 'The server rejected the request (${error.code ?? 'unknown'}).';
-  }
-  if (error is AuthException) return error.message;
-  final text = error.toString();
-  if (text.contains('SocketException') || text.contains('ClientException')) {
-    return 'Network unavailable. Check your connection and try again.';
-  }
-  return text.replaceFirst('Exception: ', '');
 }

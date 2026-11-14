@@ -30,7 +30,7 @@ class RentalsScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Rent invoices generated.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }
@@ -71,7 +71,7 @@ class RentalsScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Rent payment recorded.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }

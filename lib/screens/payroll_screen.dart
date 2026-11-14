@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
-import '../data/repository.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -33,7 +32,7 @@ class PayrollScreen extends StatelessWidget {
       if (context.mounted) showSnack(context, 'Payslips generated.');
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }
@@ -68,7 +67,7 @@ class PayrollScreen extends StatelessWidget {
       }
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }
@@ -126,7 +125,7 @@ class PayrollScreen extends StatelessWidget {
       );
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }

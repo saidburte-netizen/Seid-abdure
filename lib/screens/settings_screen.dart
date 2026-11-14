@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../brand/brand.dart';
-import '../data/repository.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -137,7 +136,7 @@ class _AccountTabState extends State<_AccountTab> {
       await session.updateProfileName(_name.text);
       if (mounted) showSnack(context, 'Profile updated.');
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     } finally {
       if (mounted) setState(() => _saving = false);
     }

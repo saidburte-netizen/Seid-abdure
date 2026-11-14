@@ -110,7 +110,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
       }
       if (mounted) showSnack(context, 'Goods received as $receiptNo.');
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -132,7 +132,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
           .eq('id', count['id']);
       if (mounted) showSnack(context, 'Stock count approved.');
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 

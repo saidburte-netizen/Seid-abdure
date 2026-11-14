@@ -52,7 +52,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       await session.client.rpc('fn_generate_alerts');
       if (mounted) showSnack(context, 'Alerts generated.');
     } catch (error) {
-      if (mounted) showSnack(context, readableError(error), error: true);
+      if (mounted) showFriendlyError(context, error);
     }
   }
 
@@ -374,7 +374,7 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
             .toList();
       });
     } catch (error) {
-      if (mounted) setState(() => _error = readableError(error));
+      if (mounted) setState(() => _error = readableError(context, error));
     }
   }
 

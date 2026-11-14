@@ -485,7 +485,7 @@ class _CrudTabState extends State<CrudTab> {
                 }
               } catch (error) {
                 if (context.mounted) {
-                  showSnack(context, readableError(error), error: true);
+                  showFriendlyError(context, error);
                 }
               }
             }
@@ -569,7 +569,7 @@ class _CrudTabState extends State<CrudTab> {
       }
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }
@@ -610,7 +610,7 @@ class _CrudTabState extends State<CrudTab> {
       }
     } catch (error) {
       if (context.mounted) {
-        showSnack(context, readableError(error), error: true);
+        showFriendlyError(context, error);
       }
     }
   }

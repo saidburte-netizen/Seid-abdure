@@ -21,6 +21,11 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Verify the main Android manifest allows network access
+        run: |
+          set -euo pipefail
+          grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml
+          grep -q 'android.permission.ACCESS_NETWORK_STATE' android/app/src/main/AndroidManifest.xml
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
       - run: flutter test

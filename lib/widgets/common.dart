@@ -6,6 +6,9 @@ import 'package:flutter/services.dart';
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../l10n/app_localizations.dart';
+
+export '../core/errors/error_ui.dart';
 
 class PageHeader extends StatelessWidget {
   const PageHeader({
@@ -211,31 +214,52 @@ class ErrorView extends StatelessWidget {
   final Future<void> Function()? onRetry;
 
   @override
-  Widget build(BuildContext context) => Center(
-    child: Padding(
-      padding: const EdgeInsets.all(24),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.error_outline,
-            size: 42,
-            color: Theme.of(context).colorScheme.error,
-          ),
-          const SizedBox(height: 12),
-          SelectableText(message, textAlign: TextAlign.center),
-          if (onRetry != null) ...[
-            const SizedBox(height: 16),
-            OutlinedButton.icon(
-              onPressed: onRetry,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Retry'),
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: 520),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: scheme.errorContainer.withValues(alpha: 0.65),
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: scheme.error.withValues(alpha: 0.22)),
             ),
-          ],
-        ],
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.info_outline,
+                  size: 42,
+                  color: scheme.onErrorContainer,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: scheme.onErrorContainer),
+                ),
+                if (onRetry != null) ...[
+                  const SizedBox(height: 16),
+                  OutlinedButton.icon(
+                    onPressed: onRetry,
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: scheme.onErrorContainer,
+                    ),
+                    icon: const Icon(Icons.refresh),
+                    label: Text(AppLocalizations.of(context).retry),
+                  ),
+                ],
+              ],
+            ),
+          ),
+        ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class AsyncView<T> extends StatelessWidget {
@@ -259,7 +283,7 @@ class AsyncView<T> extends StatelessWidget {
       }
       if (snapshot.hasError) {
         return ErrorView(
-          message: readableError(snapshot.error!),
+          message: readableError(context, snapshot.error!),
           onRetry: onRetry,
         );
       }
@@ -297,12 +321,28 @@ Future<bool> confirmAction(
 
 void showSnack(BuildContext context, String message, {bool error = false}) {
   if (!context.mounted) return;
+  final scheme = Theme.of(context).colorScheme;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        content: Text(message),
-        backgroundColor: error ? Theme.of(context).colorScheme.error : null,
+        behavior: SnackBarBehavior.floating,
+        content: error
+            ? Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(Icons.info_outline, color: scheme.onErrorContainer),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: TextStyle(color: scheme.onErrorContainer),
+                    ),
+                  ),
+                ],
+              )
+            : Text(message),
+        backgroundColor: error ? scheme.errorContainer : null,
       ),
     );
 }
