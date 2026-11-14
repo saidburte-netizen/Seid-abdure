@@ -256,6 +256,19 @@ def main() -> int:
         order by sequence_name
         """,
     )
+    base_tables = {
+        row["table_name"]
+        for row in query(
+            token,
+            ref,
+            """
+            select c.relname as table_name
+            from pg_class c
+            join pg_namespace n on n.oid = c.relnamespace
+            where n.nspname = 'public' and c.relkind in ('r', 'p')
+            """,
+        )
+    }
     constraints = query(
         token,
         ref,
@@ -397,6 +410,8 @@ def main() -> int:
     column_groups: Dict[tuple, List[Dict[str, Any]]] = {}
     for row in columns:
         if row["table_schema"] != "public":
+            continue
+        if row["table_name"] not in base_tables:
             continue
         column_groups.setdefault((row["table_schema"], row["table_name"]), []).append(row)
     for (schema_name, table_name), rows in sorted(column_groups.items()):
