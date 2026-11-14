@@ -14,7 +14,7 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: 3.1.0
 
       - name: Show project connection metadata (no secrets)
         env:
@@ -42,6 +42,7 @@ jobs:
             | jq .
 
       - name: Dump the live public schema (read-only, schema only)
+        if: false
         env:
           SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
         shell: bash
@@ -73,6 +74,7 @@ jobs:
           wc -l live-public-schema.sql
 
       - name: Upload the schema-only fixture
+        if: false
         uses: actions/upload-artifact@v4
         with:
           name: live-public-schema
