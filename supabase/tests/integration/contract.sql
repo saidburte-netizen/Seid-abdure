@@ -8,6 +8,10 @@
 
 begin;
 
+-- Keep current_date, sale dates and cash transaction dates on the same
+-- business day. The close-day function reports in Africa/Addis_Ababa.
+set local timezone = 'Africa/Addis_Ababa';
+
 create or replace function pg_temp.assert_true(condition boolean, message text)
 returns void
 language plpgsql
