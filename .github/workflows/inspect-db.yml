@@ -178,6 +178,45 @@ jobs:
               print(exc.read().decode()[:2000])
           PY
 
+
+      - name: Inspect first-user profile trigger
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request, urllib.error
+          url = os.environ['SUPABASE_URL'].rstrip('/')
+          token = os.environ['SUPABASE_ACCESS_TOKEN']
+          ref = url.split('//', 1)[1].split('.', 1)[0]
+          sql = """
+          select p.proname, pg_get_functiondef(p.oid) as definition
+          from pg_proc p
+          join pg_trigger t on t.tgfoid = p.oid
+          join pg_class c on c.oid = t.tgrelid
+          join pg_namespace n on n.oid = c.relnamespace
+          where n.nspname = 'auth' and c.relname = 'users'
+          order by p.proname
+          """
+          req = urllib.request.Request(
+              f'https://api.supabase.com/v1/projects/{ref}/database/query',
+              data=json.dumps({'query': sql}).encode(),
+              headers={'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json'},
+              method='POST',
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=60) as response:
+                  rows = json.load(response)
+              for row in rows:
+                  print('FUNCTION', row['proname'])
+                  print(row['definition'])
+                  print('END FUNCTION')
+          except urllib.error.HTTPError as exc:
+              print('management_query_status:', exc.code)
+              print(exc.read().decode()[:2000])
+          PY
+
       - uses: actions/upload-artifact@v4
         with:
           name: live-db-schema
