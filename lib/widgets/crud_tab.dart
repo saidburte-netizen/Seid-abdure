@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_controller.dart';
 import '../data/export.dart';
 import '../data/formatting.dart';
+import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
 import 'common.dart';
@@ -229,6 +230,13 @@ class _CrudTabState extends State<CrudTab> {
                     icon: const Icon(Icons.download_outlined),
                     label: const Text('CSV'),
                   ),
+                  OutlinedButton.icon(
+                    onPressed: rows.isEmpty
+                        ? null
+                        : () => _exportPdf(context, rows),
+                    icon: const Icon(Icons.picture_as_pdf_outlined),
+                    label: const Text('PDF'),
+                  ),
                   if (_canWrite && widget.spec.canCreate)
                     FilledButton.icon(
                       onPressed: () => _openForm(context, snapshot, null),
@@ -250,30 +258,41 @@ class _CrudTabState extends State<CrudTab> {
                 ),
               ),
             Expanded(
-              child: rows.isEmpty
-                  ? EmptyView(
-                      icon: Icons.table_rows_outlined,
-                      message:
-                          widget.emptyMessage ??
-                          'No ${widget.spec.title.toLowerCase()} found.',
-                      action: _canWrite && widget.spec.canCreate
-                          ? FilledButton(
-                              onPressed: () =>
-                                  _openForm(context, snapshot, null),
-                              child: Text(
-                                'Create ${widget.spec.singular.toLowerCase()}',
-                              ),
-                            )
-                          : null,
-                    )
-                  : LayoutBuilder(
-                      builder: (context, constraints) {
-                        if (constraints.maxWidth < 760) {
-                          return _buildCards(context, snapshot, rows);
-                        }
-                        return _buildTable(context, snapshot, rows);
-                      },
-                    ),
+              child: RefreshIndicator(
+                onRefresh: _refresh,
+                child: rows.isEmpty
+                    ? ListView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        children: [
+                          SizedBox(
+                            height: 320,
+                            child: EmptyView(
+                              icon: Icons.table_rows_outlined,
+                              message:
+                                  widget.emptyMessage ??
+                                  'No ${widget.spec.title.toLowerCase()} found.',
+                              action: _canWrite && widget.spec.canCreate
+                                  ? FilledButton(
+                                      onPressed: () =>
+                                          _openForm(context, snapshot, null),
+                                      child: Text(
+                                        'Create ${widget.spec.singular.toLowerCase()}',
+                                      ),
+                                    )
+                                  : null,
+                            ),
+                          ),
+                        ],
+                      )
+                    : LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth < 760) {
+                            return _buildCards(context, snapshot, rows);
+                          }
+                          return _buildTable(context, snapshot, rows);
+                        },
+                      ),
+              ),
             ),
             if (widget.footer != null) widget.footer!,
           ],
@@ -289,6 +308,7 @@ class _CrudTabState extends State<CrudTab> {
   ) {
     final columns = widget.spec.effectiveListColumns;
     return SingleChildScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       padding: const EdgeInsets.fromLTRB(8, 0, 8, 16),
       child: SingleChildScrollView(
         scrollDirection: Axis.horizontal,
@@ -613,6 +633,40 @@ class _CrudTabState extends State<CrudTab> {
       if (context.mounted) {
         showFriendlyError(context, error);
       }
+    }
+  }
+
+  Future<void> _exportPdf(
+    BuildContext context,
+    List<Map<String, dynamic>> rows,
+  ) async {
+    try {
+      final session = SessionScope.of(context);
+      final keys = widget.spec.effectiveListColumns.take(8).toList();
+      final bytes = await BrandPdf.document(
+        title: widget.spec.title,
+        documentNumber: dateOnly(DateTime.now()),
+        branchName: session.selectedBranch?.branchName ?? '',
+        subtitle: '${rows.length} rows exported from Brade and Cake House',
+        columns: [
+          for (final key in keys)
+            PdfColumn(
+              widget.spec.fields
+                      .where((field) => field.key == key)
+                      .map((field) => field.label)
+                      .firstOrNull ??
+                  key.replaceAll('_', ' ').toUpperCase(),
+              key,
+              numeric: rows.first[key] is num,
+            ),
+        ],
+        rows: rows,
+        footer: 'Brade and Cake House • hani brade and cake',
+      );
+      await BrandPdf.share(fileName: widget.spec.table, bytes: bytes);
+      if (context.mounted) showSnack(context, 'PDF exported.');
+    } catch (error) {
+      if (context.mounted) showFriendlyError(context, error);
     }
   }
 

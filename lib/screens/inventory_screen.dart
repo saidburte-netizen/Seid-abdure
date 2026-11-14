@@ -37,33 +37,38 @@ class _InventoryScreenState extends State<InventoryScreen> {
           .select()
           .eq('po_id', order['id']);
       if (!mounted) return;
+      var selectedStoreId = stores.first['id'] as String;
       final storeId = await showDialog<String>(
         context: context,
-        builder: (context) => AlertDialog(
-          title: Text('Receive ${order['po_number']}'),
-          content: DropdownButtonFormField<String>(
-            initialValue: stores.first['id'] as String,
-            decoration: const InputDecoration(labelText: 'Receiving store'),
-            items: [
-              for (final store in stores)
-                DropdownMenuItem(
-                  value: store['id'] as String,
-                  child: Text(asText(store['name'])),
-                ),
+        builder: (context) => StatefulBuilder(
+          builder: (context, setDialogState) => AlertDialog(
+            title: Text('Receive ${order['po_number']}'),
+            content: DropdownButtonFormField<String>(
+              initialValue: selectedStoreId,
+              decoration: const InputDecoration(labelText: 'Receiving store'),
+              items: [
+                for (final store in stores)
+                  DropdownMenuItem(
+                    value: store['id'] as String,
+                    child: Text(asText(store['name'])),
+                  ),
+              ],
+              onChanged: (value) {
+                if (value == null) return;
+                setDialogState(() => selectedStoreId = value);
+              },
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              FilledButton(
+                onPressed: () => Navigator.of(context).pop(selectedStoreId),
+                child: const Text('Receive all'),
+              ),
             ],
-            onChanged: (_) {},
           ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(stores.first['id'] as String),
-              child: const Text('Receive all'),
-            ),
-          ],
         ),
       );
       if (storeId == null) return;

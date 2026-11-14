@@ -7,7 +7,9 @@ import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({super.key});
+  const NotificationsScreen({super.key, this.initialTab = 0});
+
+  final int initialTab;
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -105,6 +107,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     title: 'Notifications',
     body: DefaultTabController(
       length: 2,
+      initialIndex: widget.initialTab.clamp(0, 1),
       child: Column(
         children: [
           const TabBar(
@@ -223,6 +226,7 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
   ];
   final _rows = <String, Map<String, dynamic>>{};
   bool _loading = true;
+  String? _error;
 
   @override
   void didChangeDependencies() {
@@ -232,6 +236,10 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
 
   Future<void> _load() async {
     final session = SessionScope.of(context);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final rows = await session.client
           .from('notification_settings')
@@ -245,8 +253,13 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
         }
         _loading = false;
       });
-    } catch (_) {
-      if (mounted) setState(() => _loading = false);
+    } catch (error) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = friendlyMessage(error);
+        });
+      }
     }
   }
 
@@ -282,43 +295,50 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
   @override
   Widget build(BuildContext context) {
     if (_loading) return const Center(child: CircularProgressIndicator());
-    return ListView(
-      padding: const EdgeInsets.all(16),
-      children: [
-        const Text(
-          'Choose how you receive each notification type. In-app alerts are '
-          'stored in the notifications inbox.',
-        ),
-        const SizedBox(height: 12),
-        for (final type in _types)
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    prettyLabel(type),
-                    style: Theme.of(context).textTheme.titleMedium,
-                  ),
-                  Wrap(
-                    spacing: 8,
-                    children: [
-                      for (final field in ['in_app', 'push', 'sms', 'email'])
-                        FilterChip(
-                          label: Text(prettyLabel(field)),
-                          selected:
-                              (_rows[type]?[field] as bool?) ??
-                              field == 'in_app',
-                          onSelected: (value) => _set(type, field, value),
-                        ),
-                    ],
-                  ),
-                ],
+    if (_error != null) {
+      return ErrorView(message: _error!, onRetry: _load);
+    }
+    return RefreshIndicator(
+      onRefresh: _load,
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Choose how you receive each notification type. In-app alerts are '
+            'stored in the notifications inbox.',
+          ),
+          const SizedBox(height: 12),
+          for (final type in _types)
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      prettyLabel(type),
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    Wrap(
+                      spacing: 8,
+                      children: [
+                        for (final field in ['in_app', 'push', 'sms', 'email'])
+                          FilterChip(
+                            label: Text(prettyLabel(field)),
+                            selected:
+                                (_rows[type]?[field] as bool?) ??
+                                field == 'in_app',
+                            onSelected: (value) => _set(type, field, value),
+                          ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
-          ),
-      ],
+        ],
+      ),
     );
   }
 }

@@ -45,6 +45,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  void _updateDirty() {
+    final dirty =
+        _name.text.trim() != _savedName || _phone.text.trim() != _savedPhone;
+    if (dirty != _dirty) setState(() => _dirty = dirty);
+  }
+
   Future<void> _save() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _saving = true);
@@ -168,9 +174,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   controller: _name,
                   decoration: InputDecoration(labelText: strings.fullName),
                   textCapitalization: TextCapitalization.words,
-                  onChanged: (_) {
-                    if (!_dirty) setState(() => _dirty = true);
-                  },
+                  onChanged: (_) => _updateDirty(),
                   validator: (value) => value == null || value.trim().isEmpty
                       ? strings.requiredField
                       : null,
@@ -180,9 +184,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   controller: _phone,
                   decoration: InputDecoration(labelText: strings.phone),
                   keyboardType: TextInputType.phone,
-                  onChanged: (_) {
-                    if (!_dirty) setState(() => _dirty = true);
-                  },
+                  onChanged: (_) => _updateDirty(),
                 ),
               ],
             ),
@@ -208,7 +210,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           FilledButton.icon(
             onPressed: _saving ? null : _save,
             icon: const Icon(Icons.save_outlined),
-            label: Text(_saving ? strings.creatingAccount : strings.save),
+            label: Text(_saving ? strings.saving : strings.save),
           ),
         ],
       ),

@@ -398,7 +398,7 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                   ),
                 ),
                 SizedBox(
-                  width: 150,
+                  width: 190,
                   child: ValueListenableBuilder<String?>(
                     valueListenable: _action,
                     builder: (context, value, _) =>

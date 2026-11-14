@@ -99,6 +99,48 @@ class _SalesScreenState extends State<SalesScreen> {
     }
   }
 
+  Future<void> _voidSale(
+    AuthController session,
+    Map<String, dynamic> sale,
+  ) async {
+    final input = await showInputDialog(
+      context,
+      title: 'Void ${asText(sale['receipt_no'])}',
+      fields: const [
+        InputField(
+          'reason',
+          'Void reason',
+          type: FieldType.multiline,
+          required: true,
+          hint: 'Explain why this completed sale is being voided',
+        ),
+      ],
+      submitLabel: 'Void sale',
+    );
+    if (input == null || !mounted) return;
+    final confirmed = await confirmAction(
+      context,
+      title: 'Void this sale?',
+      message:
+          'The database restores stock, cash and credit for this sale. This '
+          'cannot be undone.',
+      confirmLabel: 'Void sale',
+    );
+    if (!confirmed || !mounted) return;
+    try {
+      await session.client.rpc(
+        'void_sale',
+        params: {
+          'target_sale': sale['id'],
+          'reason': (input['reason'] ?? '').toString().trim(),
+        },
+      );
+      if (mounted) showSnack(context, 'Sale voided and stock restored.');
+    } catch (error) {
+      if (mounted) showFriendlyError(context, error);
+    }
+  }
+
   Future<void> _receipt(
     AuthController session,
     Map<String, dynamic> sale,
@@ -215,6 +257,13 @@ class _SalesScreenState extends State<SalesScreen> {
                           label: 'Record return',
                           icon: Icons.assignment_return_outlined,
                           onPressed: (row) => _returnSale(session, row),
+                        ),
+                      if (session.can('sales.void') &&
+                          row['status'] == 'completed')
+                        CrudRowAction(
+                          label: 'Void sale',
+                          icon: Icons.block_outlined,
+                          onPressed: (row) => _voidSale(session, row),
                         ),
                     ],
                   ),

@@ -19,6 +19,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
   final _password = TextEditingController();
   final _confirm = TextEditingController();
   bool _saving = false;
+  bool _signingOut = false;
   bool _dirty = false;
 
   @override
@@ -27,6 +28,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
     _password.dispose();
     _confirm.dispose();
     super.dispose();
+  }
+
+  void _updateDirty() {
+    final dirty =
+        _current.text.isNotEmpty ||
+        _password.text.isNotEmpty ||
+        _confirm.text.isNotEmpty;
+    if (dirty != _dirty) setState(() => _dirty = dirty);
   }
 
   Future<void> _changePassword() async {
@@ -67,7 +76,14 @@ class _SecurityScreenState extends State<SecurityScreen> {
       confirmLabel: strings.signOut,
     );
     if (!confirmed || !mounted) return;
-    await SessionScope.of(context).signOut();
+    setState(() => _signingOut = true);
+    try {
+      await SessionScope.of(context).signOut();
+    } catch (error) {
+      if (mounted) showFriendlyError(context, error);
+    } finally {
+      if (mounted) setState(() => _signingOut = false);
+    }
   }
 
   @override
@@ -91,9 +107,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       labelText: strings.currentPassword,
                     ),
                     obscureText: true,
-                    onChanged: (_) {
-                      if (!_dirty) setState(() => _dirty = true);
-                    },
+                    onChanged: (_) => _updateDirty(),
                     validator: (value) => value == null || value.isEmpty
                         ? strings.requiredField
                         : null,
@@ -103,9 +117,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                     controller: _password,
                     decoration: InputDecoration(labelText: strings.newPassword),
                     obscureText: true,
-                    onChanged: (_) {
-                      if (!_dirty) setState(() => _dirty = true);
-                    },
+                    onChanged: (_) => _updateDirty(),
                     validator: (value) => value == null || value.length < 8
                         ? strings.errorPasswordMin8
                         : null,
@@ -117,9 +129,7 @@ class _SecurityScreenState extends State<SecurityScreen> {
                       labelText: strings.confirmNewPassword,
                     ),
                     obscureText: true,
-                    onChanged: (_) {
-                      if (!_dirty) setState(() => _dirty = true);
-                    },
+                    onChanged: (_) => _updateDirty(),
                     validator: (value) => value != _password.text
                         ? strings.errorPasswordsDoNotMatch
                         : null,
@@ -143,9 +153,15 @@ class _SecurityScreenState extends State<SecurityScreen> {
             child: Align(
               alignment: Alignment.centerLeft,
               child: OutlinedButton.icon(
-                onPressed: _signOut,
-                icon: const Icon(Icons.logout),
-                label: Text(strings.signOut),
+                onPressed: _signingOut ? null : _signOut,
+                icon: _signingOut
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.logout),
+                label: Text(_signingOut ? strings.saving : strings.signOut),
               ),
             ),
           ),

@@ -29,6 +29,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   };
 
   String _selected = 'v_dashboard_kpis';
+  int _refreshSeed = 0;
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
@@ -61,7 +62,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
               ),
               const SizedBox(width: 12),
               OutlinedButton.icon(
-                onPressed: () => setState(() {}),
+                onPressed: () => setState(() => _refreshSeed++),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Refresh'),
               ),
@@ -80,7 +81,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
         ),
         Expanded(
           child: CrudTab(
-            key: ValueKey(_selected),
+            key: ValueKey('$_selected-$_refreshSeed'),
             spec: specFor(_selected),
             readPermission: 'reports.view',
             alwaysReadOnly: true,

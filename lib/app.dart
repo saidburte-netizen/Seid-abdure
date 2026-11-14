@@ -31,6 +31,7 @@ import 'screens/settings/profile_screen.dart';
 import 'screens/settings/security_screen.dart';
 import 'screens/settings_screen.dart';
 import 'theme/app_theme.dart';
+import 'widgets/app_scaffold.dart';
 import 'widgets/common.dart';
 
 class BakeryApp extends StatelessWidget {
@@ -215,7 +216,11 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         ),
         GoRoute(
           path: '/notifications',
-          builder: (context, state) => const NotificationsScreen(),
+          builder: (context, state) => NotificationsScreen(
+            initialTab: state.uri.queryParameters['tab'] == 'preferences'
+                ? 1
+                : 0,
+          ),
         ),
         GoRoute(
           path: '/settings',
@@ -736,7 +741,7 @@ class _SignInScreenState extends State<SignInScreen> {
                                 ],
                               ),
                             )
-                          else if (_accessError != null)
+                          else if (_accessError != null && _error == null)
                             FriendlyErrorBox(
                               error: _accessError!,
                               onRetry: _loadAccess,
@@ -1161,8 +1166,8 @@ class AccessDeniedScreen extends StatelessWidget {
   const AccessDeniedScreen({super.key});
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text(Brand.appName)),
+  Widget build(BuildContext context) => AppScaffold(
+    title: const Text(Brand.appName),
     body: Center(
       child: Padding(
         padding: const EdgeInsets.all(24),

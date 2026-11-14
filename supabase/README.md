@@ -60,3 +60,11 @@ intentional and safe; do not grant public access to the whole settings table.
 The service-role key is not used by the Flutter app and is not required by any
 remaining workflow. Schema inspection was performed once and then removed from
 the repository.
+
+## Profile photo storage
+
+Run `supabase/sql/202611140001_avatars_storage.sql` once in the Supabase SQL
+editor to create the public `avatars` bucket and let each signed-in user upload
+only inside `avatars/<their-user-id>/`. The app uploads the selected photo and
+saves its public URL in `profiles.avatar_url`; if the bucket is missing, the
+Profile screen shows a friendly error and the rest of Settings still works.

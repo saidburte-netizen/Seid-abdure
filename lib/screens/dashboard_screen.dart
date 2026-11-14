@@ -331,6 +331,7 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
   Map<String, dynamic>? _customer;
   List<Map<String, dynamic>> _orders = const [];
   List<Map<String, dynamic>> _receivables = const [];
+  bool _loading = true;
   String? _error;
 
   @override
@@ -344,6 +345,10 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
 
   Future<void> _load() async {
     final session = SessionScope.of(context);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
     try {
       final customer = await session.client
           .from('customers')
@@ -351,7 +356,12 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
           .eq('user_id', session.userId ?? '')
           .maybeSingle();
       if (customer == null) {
-        setState(() => _error = 'No customer record is linked to this login.');
+        if (mounted) {
+          setState(() {
+            _loading = false;
+            _error = 'No customer record is linked to this login.';
+          });
+        }
         return;
       }
       final orders = await session.client
@@ -373,9 +383,15 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
         _receivables = (receivables as List)
             .map((row) => Map<String, dynamic>.from(row as Map))
             .toList();
+        _loading = false;
       });
     } catch (error) {
-      if (mounted) setState(() => _error = readableError(context, error));
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _error = readableError(context, error);
+        });
+      }
     }
   }
 
@@ -385,73 +401,81 @@ class _CustomerDashboardState extends State<_CustomerDashboard> {
     return ModuleScaffold(
       title: 'My account',
       isRoot: true,
-      body: ListView(
-        padding: const EdgeInsets.all(16),
-        children: [
-          SectionCard(
-            title: 'Customer profile',
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  asText(
-                    _customer?['full_name'],
-                    fallback: session.fullName ?? '',
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : RefreshIndicator(
+              onRefresh: _load,
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(16),
+                children: [
+                  SectionCard(
+                    title: 'Customer profile',
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          asText(
+                            _customer?['full_name'],
+                            fallback: session.fullName ?? '',
+                          ),
+                          style: Theme.of(context).textTheme.headlineSmall,
+                        ),
+                        Text(asText(_customer?['phone'])),
+                        Text(asText(_customer?['email'])),
+                      ],
+                    ),
                   ),
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                Text(asText(_customer?['phone'])),
-                Text(asText(_customer?['email'])),
-              ],
-            ),
-          ),
-          if (_error != null)
-            SectionCard(child: Text(_error!))
-          else ...[
-            SectionCard(
-              title: 'Cake orders',
-              child: _orders.isEmpty
-                  ? const EmptyView(message: 'No cake orders yet.')
-                  : Column(
-                      children: [
-                        for (final order in _orders)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(asText(order['order_no'])),
-                            subtitle: Text(
-                              '${formatDate(order['due_at'])} • ${prettyLabel(asText(order['status']))}',
+                  if (_error != null)
+                    ErrorView(message: _error!, onRetry: _load)
+                  else ...[
+                    SectionCard(
+                      title: 'Cake orders',
+                      child: _orders.isEmpty
+                          ? const EmptyView(message: 'No cake orders yet.')
+                          : Column(
+                              children: [
+                                for (final order in _orders)
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(asText(order['order_no'])),
+                                    subtitle: Text(
+                                      '${formatDate(order['due_at'])} • ${prettyLabel(asText(order['status']))}',
+                                    ),
+                                    trailing: Text(
+                                      formatMoney(order['total_amount']),
+                                    ),
+                                  ),
+                              ],
                             ),
-                            trailing: Text(formatMoney(order['total_amount'])),
-                          ),
-                      ],
                     ),
-            ),
-            SectionCard(
-              title: 'Credit balance',
-              child: _receivables.isEmpty
-                  ? const EmptyView(message: 'No outstanding credit.')
-                  : Column(
-                      children: [
-                        for (final row in _receivables)
-                          ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            title: Text(
-                              asText(
-                                row['description'],
-                                fallback: 'Receivable',
-                              ),
+                    SectionCard(
+                      title: 'Credit balance',
+                      child: _receivables.isEmpty
+                          ? const EmptyView(message: 'No outstanding credit.')
+                          : Column(
+                              children: [
+                                for (final row in _receivables)
+                                  ListTile(
+                                    contentPadding: EdgeInsets.zero,
+                                    title: Text(
+                                      asText(
+                                        row['description'],
+                                        fallback: 'Receivable',
+                                      ),
+                                    ),
+                                    subtitle: Text(
+                                      'Due ${formatDate(row['due_date'])}',
+                                    ),
+                                    trailing: Text(formatMoney(row['balance'])),
+                                  ),
+                              ],
                             ),
-                            subtitle: Text(
-                              'Due ${formatDate(row['due_date'])}',
-                            ),
-                            trailing: Text(formatMoney(row['balance'])),
-                          ),
-                      ],
                     ),
+                  ],
+                ],
+              ),
             ),
-          ],
-        ],
-      ),
     );
   }
 }

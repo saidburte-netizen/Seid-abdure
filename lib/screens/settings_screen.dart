@@ -85,7 +85,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             context,
             icon: Icons.tune_outlined,
             title: strings.notificationPreferences,
-            route: '/notifications',
+            route: '/notifications?tab=preferences',
           ),
           _section(context, strings.languageAppearance),
           ListTile(
