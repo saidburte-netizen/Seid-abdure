@@ -115,6 +115,40 @@ jobs:
             brade-cake-house.aab \
             brade-cake-house-web.zip | tee sha256sums.txt
 
+      - name: Record signing status for logs and release notes
+        shell: bash
+        run: |
+          set -euo pipefail
+          VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          if [ "${SIGNING_MODE:-debug}" = "release" ]; then
+            SIGNING_SENTENCE="This release is **release-signed** with the repository Android keystore."
+            SIGNING_DETAIL="The APK and AAB are signed with the release keystore from repository secrets and are suitable for Google Play after the normal review steps."
+          else
+            SIGNING_SENTENCE="This release is **debug-signed**."
+            SIGNING_DETAIL="The APK and AAB were signed with the Android debug key because the four release-signing repository secrets are not configured. Do not upload this build to Google Play. Phones must uninstall the debug-signed app once before installing a future release-signed build."
+          fi
+          {
+            echo "## Signing status"
+            echo
+            echo "$SIGNING_SENTENCE"
+            echo
+            echo "$SIGNING_DETAIL"
+            echo
+            echo "## Build"
+            echo
+            echo "- Version: \`$VERSION\`"
+            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+          } > release-notes.md
+          cat release-notes.md
+          {
+            echo "### Android signing"
+            echo
+            echo "$SIGNING_SENTENCE"
+            echo
+            echo "$SIGNING_DETAIL"
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Verify the APK is a real installable app
         run: |
           set -euo pipefail
@@ -189,7 +223,7 @@ jobs:
           name: Brade and Cake House ${{ github.ref_name }}
           draft: false
           prerelease: false
-          generate_release_notes: true
+          body_path: release-notes.md
           files: |
             brade-cake-house.apk
             brade-cake-house.aab
