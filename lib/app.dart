@@ -29,18 +29,35 @@ import 'theme/app_theme.dart';
 import 'widgets/common.dart';
 
 class BakeryApp extends StatelessWidget {
-  const BakeryApp({this.client, super.key});
+  const BakeryApp({
+    this.client,
+    @visibleForTesting this.authController,
+    @visibleForTesting this.initialLocation = '/',
+    super.key,
+  });
 
   final SupabaseClient? client;
+  final AuthController? authController;
+  final String initialLocation;
 
   @override
-  Widget build(BuildContext context) => _BakeryRouter(client: client);
+  Widget build(BuildContext context) => _BakeryRouter(
+    client: client ?? authController?.client,
+    authController: authController,
+    initialLocation: initialLocation,
+  );
 }
 
 class _BakeryRouter extends StatefulWidget {
-  const _BakeryRouter({required this.client});
+  const _BakeryRouter({
+    required this.client,
+    required this.authController,
+    required this.initialLocation,
+  });
 
   final SupabaseClient? client;
+  final AuthController? authController;
+  final String initialLocation;
 
   @override
   State<_BakeryRouter> createState() => _BakeryRouterState();
@@ -49,6 +66,7 @@ class _BakeryRouter extends StatefulWidget {
 class _BakeryRouterState extends State<_BakeryRouter> {
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   late final AuthController? _auth;
+  late final bool _ownsAuth;
   late final GoRouter _router;
 
   static const _routePermissions = {
@@ -88,10 +106,13 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   @override
   void initState() {
     super.initState();
-    _auth = widget.client == null ? null : AuthController(widget.client!);
+    _ownsAuth = widget.authController == null;
+    _auth =
+        widget.authController ??
+        (widget.client == null ? null : AuthController(widget.client!));
     _router = GoRouter(
       refreshListenable: _auth,
-      initialLocation: '/',
+      initialLocation: widget.initialLocation,
       redirect: (context, state) {
         final location = state.matchedLocation;
         if (_auth == null) return location == '/' ? null : '/';
@@ -248,7 +269,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   @override
   void dispose() {
     _router.dispose();
-    _auth?.dispose();
+    if (_ownsAuth) _auth?.dispose();
     super.dispose();
   }
 
@@ -260,7 +281,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         scaffoldMessengerKey: _scaffoldMessengerKey,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        localizationsDelegates: [
+        localizationsDelegates: const [
           ...oromoFrameworkLocalizationsDelegates,
           ...AppLocalizations.localizationsDelegates,
         ],
@@ -282,7 +303,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
           darkTheme: AppTheme.dark(),
           themeMode: _auth.themeMode,
           locale: _auth.locale,
-          localizationsDelegates: [
+          localizationsDelegates: const [
             ...oromoFrameworkLocalizationsDelegates,
             ...AppLocalizations.localizationsDelegates,
           ],

@@ -112,16 +112,20 @@ class FriendlyCrashView extends StatelessWidget {
   Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.ltr,
     child: ColoredBox(
-      color: Color(0xFFF4E8D8),
+      color: const Color(0xFFF4E8D8),
       child: Center(
         child: Padding(
-          padding: EdgeInsets.all(28),
+          padding: const EdgeInsets.all(28),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(Icons.bakery_dining, size: 56, color: Color(0xFF0B3B17)),
-              SizedBox(height: 16),
-              Text(
+              const Icon(
+                Icons.bakery_dining,
+                size: 56,
+                color: Color(0xFF0B3B17),
+              ),
+              const SizedBox(height: 16),
+              const Text(
                 'Brade and Cake House',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -130,18 +134,18 @@ class FriendlyCrashView extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                 ),
               ),
-              SizedBox(height: 10),
-              Text(
+              const SizedBox(height: 10),
+              const Text(
                 'Something went wrong. Please restart the app and try again.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF3F4A3F), fontSize: 15),
               ),
               if (onRetry != null) ...[
-                SizedBox(height: 18),
+                const SizedBox(height: 18),
                 _CrashAction(label: 'Try again', onPressed: onRetry!),
               ],
               if (onResetLanguage != null) ...[
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 _CrashAction(
                   label: 'Reset language',
                   onPressed: onResetLanguage!,

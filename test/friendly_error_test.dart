@@ -165,6 +165,31 @@ void main() {
           expect(find.textContaining(raw), findsNothing);
         }
       });
+
+      testWidgets('the global crash view offers recovery actions', (
+        tester,
+      ) async {
+        var retried = false;
+        var reset = false;
+        await tester.pumpWidget(
+          MaterialApp(
+            home: FriendlyCrashView(
+              onRetry: () async => retried = true,
+              onResetLanguage: () async => reset = true,
+            ),
+          ),
+        );
+
+        expect(find.text('Try again'), findsOneWidget);
+        expect(find.text('Reset language'), findsOneWidget);
+        expect(find.textContaining('Exception'), findsNothing);
+        await tester.tap(find.text('Try again'));
+        await tester.pump();
+        await tester.tap(find.text('Reset language'));
+        await tester.pump();
+        expect(retried, isTrue);
+        expect(reset, isTrue);
+      });
     }
   });
 }

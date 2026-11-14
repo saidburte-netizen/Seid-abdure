@@ -13,7 +13,7 @@ void main() {
       MaterialApp(
         locale: const Locale('om'),
         supportedLocales: AppLocalizations.supportedLocales,
-        localizationsDelegates: [
+        localizationsDelegates: const [
           ...oromoFrameworkLocalizationsDelegates,
           ...AppLocalizations.localizationsDelegates,
         ],

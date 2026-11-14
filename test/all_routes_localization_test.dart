@@ -1,122 +1,125 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'package:brade_and_cake_house/app.dart';
 import 'package:brade_and_cake_house/auth/auth_controller.dart';
+import 'package:brade_and_cake_house/core/locale/locale_preferences.dart';
 import 'package:brade_and_cake_house/l10n/app_localizations.dart';
 import 'package:brade_and_cake_house/l10n/oromo_framework_localizations.dart';
-import 'package:brade_and_cake_house/screens/approvals_screen.dart';
-import 'package:brade_and_cake_house/screens/cash_screen.dart';
-import 'package:brade_and_cake_house/screens/credit_screen.dart';
-import 'package:brade_and_cake_house/screens/dashboard_screen.dart';
-import 'package:brade_and_cake_house/screens/inventory_screen.dart';
-import 'package:brade_and_cake_house/screens/notifications_screen.dart';
-import 'package:brade_and_cake_house/screens/payroll_screen.dart';
-import 'package:brade_and_cake_house/screens/people_screen.dart';
-import 'package:brade_and_cake_house/screens/pos_screen.dart';
-import 'package:brade_and_cake_house/screens/production_screen.dart';
-import 'package:brade_and_cake_house/screens/rentals_screen.dart';
-import 'package:brade_and_cake_house/screens/reports_screen.dart';
-import 'package:brade_and_cake_house/screens/sales_screen.dart';
-import 'package:brade_and_cake_house/screens/settings_screen.dart';
 
-typedef _RouteCase = ({String path, Widget Function() page});
-
-final _routes = <_RouteCase>[
-  (path: '/', page: DashboardScreen.new),
-  (path: '/pos', page: PosScreen.new),
-  (path: '/sales', page: SalesScreen.new),
-  (path: '/production', page: ProductionScreen.new),
-  (path: '/inventory', page: InventoryScreen.new),
-  (path: '/cash', page: CashScreen.new),
-  (path: '/people', page: PeopleScreen.new),
-  (path: '/payroll', page: PayrollScreen.new),
-  (path: '/rentals', page: RentalsScreen.new),
-  (path: '/credit', page: CreditScreen.new),
-  (path: '/approvals', page: ApprovalsScreen.new),
-  (path: '/reports', page: ReportsScreen.new),
-  (path: '/notifications', page: NotificationsScreen.new),
-  (path: '/settings', page: SettingsScreen.new),
+const _routes = [
+  '/',
+  '/pos',
+  '/sales',
+  '/production',
+  '/inventory',
+  '/cash',
+  '/people',
+  '/payroll',
+  '/rentals',
+  '/credit',
+  '/approvals',
+  '/reports',
+  '/notifications',
+  '/settings',
+  '/module/production',
+  '/module/sales',
+  '/module/pos',
+  '/module/inventory',
+  '/module/cash',
+  '/module/people',
+  '/module/payroll',
+  '/module/rentals',
+  '/module/credit',
+  '/module/approvals',
+  '/module/reports',
+  '/module/notifications',
+  '/module/settings',
+  '/module/audit',
+  '/module/media',
+  '/module/unknown',
+  '/sign-in',
+  '/loading',
+  '/profile-missing',
+  '/branch-setup',
+  '/access-denied',
+  '/auth-error',
 ];
 
 void main() {
+  testWidgets('pending locale recovery restores English and notifies', (
+    tester,
+  ) async {
+    final controller = await _createTestController(
+      tester,
+      preferences: {'locale': 'om', localeRecoveryPreferenceKey: true},
+    );
+    final preferences = await SharedPreferences.getInstance();
+
+    expect(controller.locale?.languageCode, 'en');
+    expect(controller.localeResetNotice, isTrue);
+    expect(preferences.getString('locale'), 'en');
+    expect(preferences.getBool(localeRecoveryPreferenceKey), isNull);
+
+    _setPortal(controller, 'admin');
+    await tester.pumpWidget(
+      BakeryApp(client: controller.client, authController: controller),
+    );
+    await tester.pump(const Duration(milliseconds: 350));
+    expect(find.text('We switched back to English.'), findsOneWidget);
+
+    controller.dispose();
+  });
+
   testWidgets('all portal routes build for en, am and om', (tester) async {
     final controller = await _createTestController(tester);
 
     for (final locale in ['en', 'am', 'om']) {
+      controller.locale = Locale(locale);
       _setPortal(controller, 'admin');
-      final router = GoRouter(
-        initialLocation: '/',
-        routes: [
-          for (final route in _routes)
-            GoRoute(
-              path: route.path,
-              builder: (context, state) => route.page(),
-            ),
-        ],
-      );
-      await tester.pumpWidget(
-        SessionScope(
-          controller: controller,
-          child: MaterialApp.router(
-            locale: Locale(locale),
-            supportedLocales: AppLocalizations.supportedLocales,
-            localizationsDelegates: [
-              ...oromoFrameworkLocalizationsDelegates,
-              ...AppLocalizations.localizationsDelegates,
-            ],
-            routerConfig: router,
-          ),
-        ),
-      );
-      await tester.pump(const Duration(milliseconds: 350));
-
       for (final route in _routes) {
-        if (route.path != '/') router.go(route.path);
+        await tester.pumpWidget(
+          BakeryApp(
+            key: ValueKey('$locale:$route'),
+            client: controller.client,
+            authController: controller,
+            initialLocation: route,
+          ),
+        );
         await tester.pump(const Duration(milliseconds: 350));
         expect(
           tester.takeException(),
           isNull,
-          reason: 'locale=$locale, route=${route.path}',
+          reason: 'locale=$locale, route=$route',
         );
       }
-
-      await tester.pumpWidget(const SizedBox.shrink());
-      router.dispose();
     }
 
     for (final locale in ['en', 'am', 'om']) {
       for (final role in ['admin', 'manager', 'staff']) {
+        controller.locale = Locale(locale);
         _setPortal(controller, role);
         await tester.pumpWidget(
-          SessionScope(
-            controller: controller,
-            child: MaterialApp(
-              locale: Locale(locale),
-              supportedLocales: AppLocalizations.supportedLocales,
-              localizationsDelegates: [
-                ...oromoFrameworkLocalizationsDelegates,
-                ...AppLocalizations.localizationsDelegates,
-              ],
-              home: const DashboardScreen(),
-            ),
+          BakeryApp(
+            key: ValueKey('$locale:$role'),
+            client: controller.client,
+            authController: controller,
           ),
         );
         await tester.pump(const Duration(milliseconds: 350));
         expect(
           tester.takeException(),
           isNull,
-          reason: 'locale=$locale, portal=$role',
+          reason: 'locale=$locale, dashboard portal=$role',
         );
       }
     }
 
     controller.dispose();
-    await controller.client.dispose();
   });
 
   testWidgets('live language changes work in every direction', (tester) async {
@@ -129,7 +132,7 @@ void main() {
         builder: (context, _) => MaterialApp(
           locale: controller.locale,
           supportedLocales: AppLocalizations.supportedLocales,
-          localizationsDelegates: [
+          localizationsDelegates: const [
             ...oromoFrameworkLocalizationsDelegates,
             ...AppLocalizations.localizationsDelegates,
           ],
@@ -153,12 +156,14 @@ void main() {
     }
 
     controller.dispose();
-    await controller.client.dispose();
   });
 }
 
-Future<AuthController> _createTestController(WidgetTester tester) async {
-  SharedPreferences.setMockInitialValues({});
+Future<AuthController> _createTestController(
+  WidgetTester tester, {
+  Map<String, Object> preferences = const {},
+}) async {
+  SharedPreferences.setMockInitialValues(preferences);
   final client = SupabaseClient(
     'https://example.supabase.co',
     'test-anon-key',
@@ -168,6 +173,7 @@ Future<AuthController> _createTestController(WidgetTester tester) async {
         '[]',
         200,
         headers: const {'content-type': 'application/json'},
+        request: request,
       ),
     ),
   );
