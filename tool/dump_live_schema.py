@@ -493,6 +493,11 @@ def main() -> int:
     out.append("grant all on all tables in schema public to anon, authenticated;")
     out.append("grant all on all sequences in schema public to anon, authenticated;")
     out.append("grant execute on all functions in schema public to anon, authenticated;")
+    out.append("-- Local storage grants. The hosted project already has the equivalent")
+    out.append("-- grants; these keep the disposable local stack faithful to it.")
+    out.append("grant usage on schema storage to anon, authenticated;")
+    out.append("grant select on storage.buckets to anon, authenticated;")
+    out.append("grant select, insert, update, delete on storage.objects to anon, authenticated;")
     out.append("")
 
     for table in data_tables:
