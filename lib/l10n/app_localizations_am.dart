@@ -193,6 +193,9 @@ class AppLocalizationsAm extends AppLocalizations {
   String get language => 'ቋንቋ';
 
   @override
+  String get languageResetNotice => 'ወደ እንግሊዝኛ ተመልሰናል።';
+
+  @override
   String get theme => 'ገጽታ';
 
   @override

@@ -197,6 +197,9 @@ class AppLocalizationsOm extends AppLocalizations {
   String get language => 'Afaan';
 
   @override
+  String get languageResetNotice => 'Gara Afaan Ingiliffaatti deebine.';
+
+  @override
   String get theme => 'Bifa';
 
   @override

@@ -10,6 +10,7 @@ import 'core/connectivity/offline_banner.dart';
 import 'core/errors/friendly_error.dart';
 import 'core/logging/app_logger.dart';
 import 'l10n/app_localizations.dart';
+import 'l10n/oromo_framework_localizations.dart';
 import 'screens/approvals_screen.dart';
 import 'screens/cash_screen.dart';
 import 'screens/credit_screen.dart';
@@ -46,6 +47,7 @@ class _BakeryRouter extends StatefulWidget {
 }
 
 class _BakeryRouterState extends State<_BakeryRouter> {
+  final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   late final AuthController? _auth;
   late final GoRouter _router;
 
@@ -255,9 +257,13 @@ class _BakeryRouterState extends State<_BakeryRouter> {
     if (_auth == null) {
       return MaterialApp(
         title: Brand.appName,
+        scaffoldMessengerKey: _scaffoldMessengerKey,
         theme: AppTheme.light(),
         darkTheme: AppTheme.dark(),
-        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        localizationsDelegates: [
+          ...oromoFrameworkLocalizationsDelegates,
+          ...AppLocalizations.localizationsDelegates,
+        ],
         supportedLocales: AppLocalizations.supportedLocales,
         builder: (context, child) =>
             OfflineBanner(child: child ?? const SizedBox.shrink()),
@@ -270,19 +276,33 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         listenable: _auth,
         builder: (context, _) => MaterialApp.router(
           title: Brand.appName,
+          scaffoldMessengerKey: _scaffoldMessengerKey,
           onGenerateTitle: (context) => Brand.appName,
           theme: AppTheme.light(),
           darkTheme: AppTheme.dark(),
           themeMode: _auth.themeMode,
           locale: _auth.locale,
-          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          localizationsDelegates: [
+            ...oromoFrameworkLocalizationsDelegates,
+            ...AppLocalizations.localizationsDelegates,
+          ],
           supportedLocales: AppLocalizations.supportedLocales,
           routerConfig: _router,
           debugShowCheckedModeBanner: false,
-          builder: (context, child) => OfflineBanner(
-            onReconnected: _auth.retry,
-            child: child ?? const SizedBox.shrink(),
-          ),
+          builder: (context, child) {
+            if (_auth.takeLocaleResetNotice()) {
+              final message = AppLocalizations.of(context).languageResetNotice;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _scaffoldMessengerKey.currentState?.showSnackBar(
+                  SnackBar(content: Text(message)),
+                );
+              });
+            }
+            return OfflineBanner(
+              onReconnected: _auth.retry,
+              child: child ?? const SizedBox.shrink(),
+            );
+          },
         ),
       ),
     );

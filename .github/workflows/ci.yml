@@ -28,5 +28,13 @@ jobs:
           grep -q 'android.permission.ACCESS_NETWORK_STATE' android/app/src/main/AndroidManifest.xml
       - run: dart format --output=none --set-exit-if-changed lib test
       - run: flutter analyze
-      - run: flutter test
+      - name: Verify Oromo routes, live switching, formatting, and translations
+        run: |
+          flutter test \
+            test/all_routes_localization_test.dart \
+            test/formatting_test.dart \
+            test/l10n_catalog_test.dart \
+            test/oromo_localizations_test.dart
+      - name: Run full Flutter test suite
+        run: flutter test
       - run: flutter build web --release

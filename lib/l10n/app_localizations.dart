@@ -460,6 +460,12 @@ abstract class AppLocalizations {
   /// **'Language'**
   String get language;
 
+  /// No description provided for @languageResetNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'We switched back to English.'**
+  String get languageResetNotice;
+
   /// No description provided for @theme.
   ///
   /// In en, this message translates to:

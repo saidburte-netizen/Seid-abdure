@@ -1,43 +1,98 @@
 import 'dart:convert';
 
 import 'package:intl/intl.dart';
+import 'package:intl/date_symbol_data_local.dart';
+
+const formattingLocales = ['en', 'am', 'om'];
+
+final Map<String, NumberFormat> _currencyFormats = {};
+final Map<String, NumberFormat> _quantityFormats = {};
+final Map<String, DateFormat> _dateFormats = {};
+final Map<String, DateFormat> _dateTimeFormats = {};
+final Map<String, DateFormat> _timeFormats = {};
+
+Future<void> initializeFormattingData() async {
+  for (final locale in formattingLocales) {
+    await initializeDateFormatting(locale);
+  }
+}
+
+String formattingLocale(String? languageCode) => switch (languageCode) {
+  'om' => 'en',
+  'am' => 'am',
+  _ => 'en',
+};
 
 /// Shared formatting helpers. Money is always displayed in Ethiopian Birr and
 /// numbers are parsed defensively because PostgREST may return numeric columns
 /// as either `num` or `String` depending on the PostgreSQL type.
-final NumberFormat _currency = NumberFormat.currency(
-  locale: 'en',
-  symbol: 'ETB ',
-  decimalDigits: 2,
-);
-final NumberFormat _quantity = NumberFormat('#,##0.###', 'en');
-final DateFormat _date = DateFormat('yyyy-MM-dd');
-final DateFormat _dateTime = DateFormat('yyyy-MM-dd HH:mm');
-final DateFormat _time = DateFormat('HH:mm');
-
-String formatMoney(Object? value) => _currency.format(asNum(value));
-
-String formatQuantity(Object? value) => _quantity.format(asNum(value));
-
-String formatDate(Object? value) {
-  final parsed = asDateTime(value);
-  return parsed == null ? '—' : _date.format(parsed);
+String formatMoney(Object? value, {String? locale}) {
+  final language = formattingLocale(locale);
+  final format = _currencyFormats.putIfAbsent(
+    language,
+    () => NumberFormat.currency(
+      locale: language,
+      symbol: 'ETB ',
+      decimalDigits: 2,
+    ),
+  );
+  return format.format(asNum(value));
 }
 
-String formatDateTime(Object? value) {
-  final parsed = asDateTime(value);
-  return parsed == null ? '—' : _dateTime.format(parsed);
+String formatQuantity(Object? value, {String? locale}) {
+  final language = formattingLocale(locale);
+  final format = _quantityFormats.putIfAbsent(
+    language,
+    () => NumberFormat('#,##0.###', language),
+  );
+  return format.format(asNum(value));
 }
 
-String formatTime(Object? value) {
+String formatDate(Object? value, {String? locale}) {
+  final parsed = asDateTime(value);
+  if (parsed == null) return '—';
+  final language = formattingLocale(locale);
+  final format = _dateFormats.putIfAbsent(
+    language,
+    () => DateFormat('yyyy-MM-dd', language),
+  );
+  return format.format(parsed);
+}
+
+String formatDateTime(Object? value, {String? locale}) {
+  final parsed = asDateTime(value);
+  if (parsed == null) return '—';
+  final language = formattingLocale(locale);
+  final format = _dateTimeFormats.putIfAbsent(
+    language,
+    () => DateFormat('yyyy-MM-dd HH:mm', language),
+  );
+  return format.format(parsed);
+}
+
+String formatTime(Object? value, {String? locale}) {
   final raw = value?.toString() ?? '';
   if (raw.isEmpty) return '—';
   final parsed = DateTime.tryParse('2000-01-01 $raw');
-  if (parsed != null) return _time.format(parsed);
+  if (parsed != null) {
+    final language = formattingLocale(locale);
+    final format = _timeFormats.putIfAbsent(
+      language,
+      () => DateFormat('HH:mm', language),
+    );
+    return format.format(parsed);
+  }
   return raw.length > 5 ? raw.substring(0, 5) : raw;
 }
 
-String dateOnly(DateTime value) => _date.format(value);
+String dateOnly(DateTime value, {String? locale}) {
+  final language = formattingLocale(locale);
+  final format = _dateFormats.putIfAbsent(
+    language,
+    () => DateFormat('yyyy-MM-dd', language),
+  );
+  return format.format(value);
+}
 
 String nowIso() => DateTime.now().toUtc().toIso8601String();
 

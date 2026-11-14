@@ -103,10 +103,13 @@ class FriendlyErrorBox extends StatelessWidget {
 ///
 /// It intentionally contains no exception text, stack trace, URL or table name.
 class FriendlyCrashView extends StatelessWidget {
-  const FriendlyCrashView({super.key});
+  const FriendlyCrashView({this.onRetry, this.onResetLanguage, super.key});
+
+  final Future<void> Function()? onRetry;
+  final Future<void> Function()? onResetLanguage;
 
   @override
-  Widget build(BuildContext context) => const Directionality(
+  Widget build(BuildContext context) => Directionality(
     textDirection: TextDirection.ltr,
     child: ColoredBox(
       color: Color(0xFFF4E8D8),
@@ -133,7 +136,51 @@ class FriendlyCrashView extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Color(0xFF3F4A3F), fontSize: 15),
               ),
+              if (onRetry != null) ...[
+                SizedBox(height: 18),
+                _CrashAction(label: 'Try again', onPressed: onRetry!),
+              ],
+              if (onResetLanguage != null) ...[
+                SizedBox(height: 8),
+                _CrashAction(
+                  label: 'Reset language',
+                  onPressed: onResetLanguage!,
+                ),
+              ],
             ],
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+class _CrashAction extends StatelessWidget {
+  const _CrashAction({required this.label, required this.onPressed});
+
+  final String label;
+  final Future<void> Function() onPressed;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    button: true,
+    label: label,
+    child: GestureDetector(
+      onTap: () => unawaited(onPressed()),
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0B3B17),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ),
       ),

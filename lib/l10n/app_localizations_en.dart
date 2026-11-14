@@ -195,6 +195,9 @@ class AppLocalizationsEn extends AppLocalizations {
   String get language => 'Language';
 
   @override
+  String get languageResetNotice => 'We switched back to English.';
+
+  @override
   String get theme => 'Theme';
 
   @override

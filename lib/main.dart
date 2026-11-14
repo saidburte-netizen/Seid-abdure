@@ -3,38 +3,67 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
 import 'core/errors/error_ui.dart';
+import 'core/locale/locale_preferences.dart';
 import 'core/logging/app_logger.dart';
+import 'data/formatting.dart';
 
 const _rawSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _rawSupabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
 const _rawSupabasePublishableKey = String.fromEnvironment(
   'SUPABASE_PUBLISHABLE_KEY',
 );
-
 Future<void> main() async {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
+      SupabaseClient? client;
+      Future<void> restartApp() async {
+        runApp(ProviderScope(child: BakeryApp(client: client)));
+      }
+
+      Future<void> resetLanguage() async {
+        try {
+          final preferences = await SharedPreferences.getInstance();
+          await preferences.setString('locale', 'en');
+          await preferences.setBool(localeRecoveryPreferenceKey, true);
+          await restartApp();
+        } catch (error, stack) {
+          AppLogger.error('Could not reset the saved language', error, stack);
+        }
+      }
+
+      void reportError(String message, Object error, StackTrace? stack) {
+        AppLogger.error(message, error, stack);
+        unawaited(_markLocaleForRecovery());
+      }
+
       FlutterError.onError = (details) {
-        AppLogger.error(
-          'Uncaught Flutter error',
-          details.exception,
-          details.stack,
-        );
+        reportError('Uncaught Flutter error', details.exception, details.stack);
         if (kDebugMode) FlutterError.presentError(details);
       };
       PlatformDispatcher.instance.onError = (error, stack) {
-        AppLogger.error('Uncaught platform error', error, stack);
+        reportError('Uncaught platform error', error, stack);
         return true;
       };
-      ErrorWidget.builder = (details) => const FriendlyCrashView();
+      ErrorWidget.builder = (details) {
+        reportError(
+          'Widget rendering failed',
+          details.exception,
+          details.stack,
+        );
+        return FriendlyCrashView(
+          onRetry: restartApp,
+          onResetLanguage: resetLanguage,
+        );
+      };
 
-      SupabaseClient? client;
+      await initializeFormattingData();
       final url = _cleanUrl(_rawSupabaseUrl);
       final key = _cleanKey(
         _rawSupabasePublishableKey.isNotEmpty
@@ -49,8 +78,25 @@ Future<void> main() async {
     },
     (error, stack) {
       AppLogger.error('Uncaught zoned error', error, stack);
+      unawaited(_markLocaleForRecovery());
     },
   );
+}
+
+Future<void> _markLocaleForRecovery() async {
+  try {
+    final preferences = await SharedPreferences.getInstance();
+    final savedLocale = preferences.getString('locale');
+    if (savedLocale != null && savedLocale != 'en') {
+      await preferences.setBool(localeRecoveryPreferenceKey, true);
+    }
+  } catch (recoveryError, recoveryStack) {
+    AppLogger.error(
+      'Could not schedule saved-language recovery after an error',
+      recoveryError,
+      recoveryStack,
+    );
+  }
 }
 
 String _cleanUrl(String value) {

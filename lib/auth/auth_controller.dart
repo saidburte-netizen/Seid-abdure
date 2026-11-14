@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/errors/friendly_error.dart';
+import '../core/locale/locale_preferences.dart';
 import '../core/logging/app_logger.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
@@ -64,6 +65,7 @@ class AuthController extends ChangeNotifier {
   List<BranchAccess> branches = const [];
   String? selectedBranchId;
   Locale? locale;
+  bool localeResetNotice = false;
   ThemeMode themeMode = ThemeMode.system;
   bool _initialized = false;
   int _loadId = 0;
@@ -97,15 +99,52 @@ class AuthController extends ChangeNotifier {
       permissions.any((permission) => can(permission));
 
   Future<void> _initialize() async {
-    final preferences = await SharedPreferences.getInstance();
-    final savedLocale = preferences.getString('locale');
-    if (savedLocale != null) locale = Locale(savedLocale);
-    final savedTheme = preferences.getString('theme_mode');
-    if (savedTheme != null) {
-      themeMode = ThemeMode.values.firstWhere(
-        (mode) => mode.name == savedTheme,
-        orElse: () => ThemeMode.system,
-      );
+    SharedPreferences? preferences;
+    try {
+      preferences = await SharedPreferences.getInstance();
+      if (preferences.getBool(localeRecoveryPreferenceKey) ?? false) {
+        locale = const Locale('en');
+        localeResetNotice = true;
+        await preferences.setString('locale', 'en');
+        await preferences.remove(localeRecoveryPreferenceKey);
+      } else {
+        final savedLocale = preferences.getString('locale');
+        if (savedLocale != null) {
+          locale = localeFromLanguageCode(savedLocale);
+          if (locale == null) {
+            AppLogger.error(
+              'Unsupported saved language code',
+              FormatException('Unsupported language code: $savedLocale'),
+            );
+            locale = const Locale('en');
+            localeResetNotice = true;
+            await preferences.setString('locale', 'en');
+          }
+        }
+      }
+      final savedTheme = preferences.getString('theme_mode');
+      if (savedTheme != null) {
+        themeMode = ThemeMode.values.firstWhere(
+          (mode) => mode.name == savedTheme,
+          orElse: () => ThemeMode.system,
+        );
+      }
+    } catch (error, stack) {
+      AppLogger.error('Could not restore saved app preferences', error, stack);
+      locale = const Locale('en');
+      localeResetNotice = true;
+      if (preferences != null) {
+        try {
+          await preferences.setString('locale', 'en');
+          await preferences.remove(localeRecoveryPreferenceKey);
+        } catch (recoveryError, recoveryStack) {
+          AppLogger.error(
+            'Could not save the English language recovery',
+            recoveryError,
+            recoveryStack,
+          );
+        }
+      }
     }
     _initialized = true;
     await _loadSession(client.auth.currentSession);
@@ -252,7 +291,23 @@ class AuthController extends ChangeNotifier {
   Future<void> refresh() => retry();
 
   Future<void> setLocale(String? languageCode) async {
-    locale = languageCode == null ? null : Locale(languageCode);
+    final nextLocale = languageCode == null
+        ? null
+        : localeFromLanguageCode(languageCode);
+    if (languageCode != null && nextLocale == null) {
+      AppLogger.error(
+        'Unsupported language change request',
+        FormatException('Unsupported language code: $languageCode'),
+      );
+      locale = const Locale('en');
+      localeResetNotice = true;
+      _notify();
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('locale', 'en');
+      return;
+    }
+
+    locale = nextLocale;
     _notify();
     final preferences = await SharedPreferences.getInstance();
     if (languageCode == null) {
@@ -260,6 +315,12 @@ class AuthController extends ChangeNotifier {
     } else {
       await preferences.setString('locale', languageCode);
     }
+  }
+
+  bool takeLocaleResetNotice() {
+    final notice = localeResetNotice;
+    localeResetNotice = false;
+    return notice;
   }
 
   Future<void> setThemeMode(ThemeMode mode) async {
