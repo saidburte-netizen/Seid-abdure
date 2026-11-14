@@ -12,72 +12,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: supabase/setup-cli@v1
-        with:
-          version: 3.1.0
-
-      - name: Show project connection metadata (no secrets)
+      - name: Generate a schema-only fixture through the read-only Management API
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+          SUPABASE_PROJECT_REF: nmrpmypgkljmtnsvmcfn
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsS \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            "https://api.supabase.com/v1/projects/nmrpmypgkljmtnsvmcfn" \
-            | jq '{region, database}'
-
-      - name: Verify the read-only Management API SQL endpoint
-        env:
-          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          curl -fsS \
-            -X POST \
-            -H "Authorization: Bearer $SUPABASE_ACCESS_TOKEN" \
-            -H "Content-Type: application/json" \
-            -d '{"query":"select 1 as ok"}' \
-            "https://api.supabase.com/v1/projects/nmrpmypgkljmtnsvmcfn/database/query" \
-            | jq .
-
-      - name: Dump the live public schema (read-only, schema only)
-        if: false
-        env:
-          SUPABASE_DB_PASSWORD: ${{ secrets.SUPABASE_DB_PASSWORD }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          DB_USER="postgres.nmrpmypgkljmtnsvmcfn"
-          DUMPED=0
-          for HOST in \
-            aws-0-eu-central-1.pooler.supabase.com \
-            aws-1-eu-central-1.pooler.supabase.com; do
-            rm -f live-public-schema.sql
-            DB_URL="postgresql://${DB_USER}:${SUPABASE_DB_PASSWORD}@${HOST}:5432/postgres?sslmode=require"
-            echo "Trying pooler host: $HOST"
-            if supabase db dump \
-              --db-url "$DB_URL" \
-              --schema public \
-              --file live-public-schema.sql; then
-              if [ -s live-public-schema.sql ]; then
-                echo "DUMP_HOST=$HOST"
-                DUMPED=1
-                break
-              fi
-            fi
-          done
-          if [ "$DUMPED" -ne 1 ]; then
-            echo "ERROR: Could not dump the live schema through either IPv4 pooler host."
-            exit 1
-          fi
-          wc -l live-public-schema.sql
+          python3 tool/dump_live_schema.py \
+            --project-ref "$SUPABASE_PROJECT_REF" \
+            --out supabase/fixtures/live_schema.sql
+          test -s supabase/fixtures/live_schema.sql
+          wc -l supabase/fixtures/live_schema.sql
 
       - name: Upload the schema-only fixture
-        if: false
         uses: actions/upload-artifact@v4
         with:
-          name: live-public-schema
-          path: live-public-schema.sql
+          name: live-schema-fixture
+          path: supabase/fixtures/live_schema.sql
           if-no-files-found: error
           retention-days: 1
