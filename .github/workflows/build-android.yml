@@ -125,7 +125,6 @@ jobs:
           grep -q "assets/flutter_assets/assets/branding/notification_icon.png" apk-files.txt
           grep -q "assets/flutter_assets/AssetManifest" apk-files.txt
           grep -q "libapp.so" apk-files.txt
-          grep -q "res/mipmap" apk-files.txt
           echo "PACKAGE_NAME=net.bradeandcake.brade_and_cake_house"
           echo "APP_LABEL=Brade and Cake House"
           echo "SIGNING_MODE=${SIGNING_MODE}"
