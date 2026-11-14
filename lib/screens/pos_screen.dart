@@ -189,11 +189,14 @@ class _PosScreenState extends State<PosScreen> {
       showSnack(context, 'Choose a customer for a credit sale.', error: true);
       return;
     }
-    final paid = asNum(_paid.text);
-    if (_method != 'credit' && paid + 0.001 < _total) {
+    final tendered = asNum(_paid.text);
+    if (_method != 'credit' && tendered + 0.001 < _total) {
       showSnack(context, 'Payment does not cover the total.', error: true);
       return;
     }
+    final paid = _method == 'credit'
+        ? 0
+        : (tendered > _total ? _total : tendered);
     final confirmed = await confirmAction(
       context,
       title: 'Complete sale',
@@ -256,7 +259,18 @@ class _PosScreenState extends State<PosScreen> {
         });
       }
       await session.client.from('sale_items').insert(items);
-      if (paid > 0) {
+      if (_method == 'credit') {
+        // The database trigger creates the receivable from this payment row.
+        await session.client.from('sale_payments').insert({
+          'sale_id': saleId,
+          'cash_account_id': null,
+          'method': 'credit',
+          'amount': total,
+          'reference': const Uuid().v4().substring(0, 8),
+          'paid_at': nowIso(),
+          'received_by': session.userId,
+        });
+      } else if (paid > 0) {
         await session.client.from('sale_payments').insert({
           'sale_id': saleId,
           'cash_account_id': _accountId,

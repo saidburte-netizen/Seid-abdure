@@ -76,6 +76,21 @@ class _SalesScreenState extends State<SalesScreen> {
       if (lines.isNotEmpty) {
         await session.client.from('sale_return_items').insert(lines);
       }
+      final refund = asNum(result['refund']);
+      if (refund > 0) {
+        await session.client.from('cash_transactions').insert({
+          'branch_id': branch.branchId,
+          'cash_account_id': accounts.first['id'],
+          'txn_type': 'out',
+          'amount': refund,
+          'txn_date': dateOnly(DateTime.now()),
+          'description': 'Refund for sale return $returnNo',
+          'method': 'cash',
+          'reference_type': 'sale_return',
+          'reference_id': returned['id'],
+          'created_by': session.userId,
+        });
+      }
       if (mounted) {
         showSnack(context, 'Return $returnNo recorded.');
       }
