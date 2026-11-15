@@ -66,6 +66,6 @@ means implemented and covered by a local or CI gate.
   signing notes for the debug-signed sideload decision.
 - [x] Bump the patch version and build number.
 - [x] Run clean format, analyze and the full Flutter test suite.
-- [ ] Build and verify the APK/AAB/web ZIP in CI.
-- [ ] Run the Android emulator smoke test and upload screenshots.
-- [ ] Publish the GitHub Release with checksums.
+- [x] Build and verify the APK/AAB/web ZIP in CI.
+- [x] Run the Android emulator smoke test and upload screenshots.
+- [x] Publish the GitHub Release with checksums.

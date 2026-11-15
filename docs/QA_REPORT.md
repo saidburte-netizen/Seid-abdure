@@ -118,8 +118,8 @@ Verified database results:
 - Cash sale, credit sale and split cash+bank sale
 - Cash transactions, customer ledger, receivables and partial payment
 - Sale return stock restoration, refund and status
-- Void sale stock/cash reversal, audit row, `void`/`refunded` status and
-  idempotency
+- Void sale exact stock/cash restoration, audit row, `void`/`refunded` status,
+  credit receivable/ledger reversal, staff denial and repeat-void rejection
 - Payables, payable payment, supplier ledger and cash transaction
 - Cash transfer both sides
 - Payroll payslip totals, run totals, approval, payment, payslip paid flags and
@@ -201,7 +201,8 @@ friendly offline error box.
    not part of this release.
 2. **New migration** - `20261114000016_void_sale.sql` must be applied to the
    hosted project because the app calls `void_sale` and the live snapshot does
-   not expose it. The fifteen uploaded migrations were not edited.
+   not expose it. The exact copy is in `docs/SQL_TO_RUN.md`. The fifteen
+   uploaded migrations are still absent from `origin/main` and were not edited.
 3. **Deployment settings** - Configure Supabase backups, SMTP and rate limits in
    the deployed project. MFA is not implemented in the app, so do not force it
    yet. See `docs/HOSTED_SETUP.md`.
@@ -215,14 +216,14 @@ friendly offline error box.
 
 ## Release evidence
 
-Published **2026-11-14T23:35:15Z** at
-https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.5
+Published **2026-11-15T06:01:20Z** at
+https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.6
 
 | Item | Size (bytes) | SHA-256 |
 | --- | ---: | --- |
-| `brade-cake-house.apk` | 82,101,418 | `c2e6edbd10d93d10f98582c733bcd31636a2cf15cd94f0ac17a4367e5b87c4cd` |
-| `brade-cake-house.aab` | 67,574,789 | `22e4cd7b3cbebdde66dcb1b08627e62a5a6e18e916175d86f687056dfcc67dc2` |
-| `brade-cake-house-web.zip` | 17,710,413 | `08aebe0e245ba4d18adcd98a98b4550c63afc04b5f3e639b40615351d8bd1cf9` |
+| `brade-cake-house.apk` | 82,117,802 | `425dbeec25b801a3168d1e9fc0ca338a5556c6b4e64156935c62a503bcb1424a` |
+| `brade-cake-house.aab` | 67,578,366 | `542a88810856283654c650208a648d4d0353a1deec3b8a33927af7a6d74b6bc2` |
+| `brade-cake-house-web.zip` | 17,710,596 | `ad983a215e439c8b5f22e40bd5582856ef5e4a2f0be68c36d0ec00a437822ea0` |
 
 `sha256sum -c sha256sums.txt` passed for all three downloaded assets.
 
@@ -230,30 +231,37 @@ Signing: **debug-signed sideload/testing build**. Google Play is not a target.
 The release notes say this explicitly and tell the owner to uninstall the
 previous version first if Android says **App not installed**.
 
-Verification: package `net.bradeandcake.brade_and_cake_house`, label
-`Brade and Cake House`, launcher activity `.MainActivity`, INTERNET and
-ACCESS_NETWORK_STATE permissions, bundled logo/icon/notification icon, and
-`libapp.so` for arm64-v8a, armeabi-v7a and x86_64. The APK contains only the
-public `anon` Supabase JWT (role `anon`, project ref
-`nmrpmypgkljmtnsvmcfn`); no `service_role` string or key was found. Amharic
-strings are present as UTF-16LE and Oromo strings as UTF-8 in `libapp.so`.
+Verification: package `net.bradeandcake.brade_and_cake_house`, versionCode `6`,
+versionName `1.0.6`, label `Brade and Cake House`, launcher activity
+`.MainActivity`, INTERNET and ACCESS_NETWORK_STATE permissions, bundled
+logo/icon/notification icon, and `libapp.so` for arm64-v8a, armeabi-v7a and
+x86_64. The APK contains only the public `anon` Supabase JWT (role `anon`,
+project ref `nmrpmypgkljmtnsvmcfn`); no `service_role` string or key was found.
+Amharic strings are present as UTF-16LE and Oromo strings as UTF-8 in
+`libapp.so`.
 
 Release runs:
 
-- Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653443635
-- Main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653433991
-- Main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653434014
-- Main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653434146
-- Main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43653433988
-- Smoke screenshots artifact: `android-smoke-screenshots` (id `14136849647`)
+- Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43683195143
+- Tag Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43683195141
+- Main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283649
+- Main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283643
+- Main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283725
+- Main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283652
+- Smoke screenshots artifact: `android-smoke-screenshots` (id `14149870773`)
+
+The main Android run had one emulator-launcher flake before the login screen;
+the failed smoke job was rerun without code changes and passed. The tag build
+and smoke passed on the first attempt.
 
 ## Release checklist
 
-- [x] Version bumped to `1.0.5+5`
+- [x] Version bumped to `1.0.6+6`
 - [x] Fresh-checkout workflow runs `flutter clean`, `pub get`, `gen-l10n`
 - [x] Schema, format, placeholder, analyze and full-test gates wired into CI
 - [x] APK/AAB/web build and APK content verification in workflow
 - [x] Local Supabase contract and Android emulator smoke test in CI
 - [x] SHA-256 checksums generated and attached
-- [x] Tag `v1.0.5` pushed and release verified
-- [ ] Android signing secrets configured (release signing)
+- [x] Tag `v1.0.6` pushed and release verified
+- [x] Debug-signed sideload build clearly labelled; no Play Store signing
+  required
