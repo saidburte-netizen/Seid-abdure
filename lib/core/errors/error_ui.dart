@@ -136,10 +136,13 @@ class FriendlyCrashView extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              const Text(
-                'Something went wrong. Please restart the app and try again.',
+              Text(
+                uiText(
+                  context,
+                  'Something went wrong. Please restart the app and try again.',
+                ),
                 textAlign: TextAlign.center,
-                style: TextStyle(color: Color(0xFF3F4A3F), fontSize: 15),
+                style: const TextStyle(color: Color(0xFF3F4A3F), fontSize: 15),
               ),
               if (onRetry != null) ...[
                 const SizedBox(height: 18),

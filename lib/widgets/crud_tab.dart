@@ -157,6 +157,14 @@ class _CrudTabState extends State<CrudTab> {
     await future;
   }
 
+  Future<List<Map<String, dynamic>>> _rowsForExport() => _repo.listAll(
+    widget.spec.table,
+    orderBy: widget.spec.orderBy,
+    ascending: widget.spec.ascending,
+    branchScoped: widget.spec.branchScoped,
+    equals: widget.filters,
+  );
+
   List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> rows) {
     if (_query.trim().isEmpty) return rows;
     final needle = _query.toLowerCase();
@@ -681,9 +689,11 @@ class _CrudTabState extends State<CrudTab> {
 
   Future<void> _exportPdf(
     BuildContext context,
-    List<Map<String, dynamic>> rows,
+    List<Map<String, dynamic>> initialRows,
   ) async {
     try {
+      final rows = _filtered(await _rowsForExport());
+      if (rows.isEmpty) return;
       final session = SessionScope.of(context);
       final keys = widget.spec.effectiveListColumns.take(8).toList();
       final bytes = await BrandPdf.document(
@@ -718,8 +728,10 @@ class _CrudTabState extends State<CrudTab> {
   Future<void> _export(
     BuildContext context,
     _CrudSnapshot snapshot,
-    List<Map<String, dynamic>> rows,
+    List<Map<String, dynamic>> initialRows,
   ) async {
+    final rows = _filtered(await _rowsForExport());
+    if (rows.isEmpty) return;
     final csv = rowsToCsv(rows);
     final path = await saveCsvFile(widget.spec.table, csv);
     if (!context.mounted) return;

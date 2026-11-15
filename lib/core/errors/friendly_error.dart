@@ -24,6 +24,11 @@ enum FriendlyErrorKind {
   recordInUse,
   sessionExpired,
   tooManyAttempts,
+  invalidInput,
+  operationNotAllowed,
+  fileTooLarge,
+  unsupportedFile,
+  uploadFailed,
   unknown,
 }
 
@@ -46,6 +51,11 @@ String friendlyMessage(Object error, {AppLocalizations? strings}) {
     FriendlyErrorKind.recordInUse => l10n.errorRecordInUse,
     FriendlyErrorKind.sessionExpired => l10n.errorSessionExpired,
     FriendlyErrorKind.tooManyAttempts => l10n.errorTooManyAttempts,
+    FriendlyErrorKind.invalidInput => l10n.errorInvalidInput,
+    FriendlyErrorKind.operationNotAllowed => l10n.errorOperationNotAllowed,
+    FriendlyErrorKind.fileTooLarge => l10n.errorFileTooLarge,
+    FriendlyErrorKind.unsupportedFile => l10n.errorUnsupportedFile,
+    FriendlyErrorKind.uploadFailed => l10n.errorUploadFailed,
     FriendlyErrorKind.unknown => l10n.errorSomethingWentWrong,
   };
 }
@@ -130,12 +140,38 @@ FriendlyErrorKind classifyError(Object error) {
         _containsAny(text, const ['jwt expired', 'invalid jwt', 'jwt'])) {
       return FriendlyErrorKind.sessionExpired;
     }
+    if (code == '23502' ||
+        code == '23514' ||
+        code == '22P02' ||
+        code == '22001' ||
+        code == '22003' ||
+        code == '22007' ||
+        code == '22008' ||
+        _containsAny(text, const [
+          'not-null',
+          'null value',
+          'check constraint',
+          'invalid input syntax',
+          'out of range',
+          'value too long',
+          'invalid date',
+        ])) {
+      return FriendlyErrorKind.invalidInput;
+    }
+    if (code == 'P0001' || _containsAny(text, const ['raise exception'])) {
+      return FriendlyErrorKind.operationNotAllowed;
+    }
   }
 
   if (error is StorageException) {
     final status = _statusCode(error);
     if (status == 403) return FriendlyErrorKind.permissionDenied;
+    if (status == 413) return FriendlyErrorKind.fileTooLarge;
+    if (status == 415) return FriendlyErrorKind.unsupportedFile;
     if (status == 429) return FriendlyErrorKind.tooManyAttempts;
+    if (status == 400 || status == 500) {
+      return FriendlyErrorKind.uploadFailed;
+    }
   }
 
   if (error is FormatException) return FriendlyErrorKind.unknown;

@@ -3,8 +3,16 @@ name: CI
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - '**.md'
+      - 'supabase/legacy_migrations/**'
   pull_request:
   workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -12,8 +20,11 @@ permissions:
 jobs:
   flutter:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.35.4"
@@ -51,4 +62,3 @@ jobs:
             test/oromo_localizations_test.dart
       - name: Run full Flutter test suite
         run: flutter test
-      - run: flutter build web --release

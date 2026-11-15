@@ -1,10 +1,13 @@
 name: Supabase integration
 
 on:
-  push:
-    branches: [main]
-  pull_request:
   workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+concurrency:
+  group: supabase-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
@@ -15,6 +18,8 @@ jobs:
     timeout-minutes: 40
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - uses: supabase/setup-cli@v1
         with:
@@ -38,22 +43,17 @@ jobs:
             supabase start
           else
             echo "::warning::The 15 uploaded migrations are not present. Using the read-only live schema fixture for this disposable stack."
-            mkdir -p supabase/migrations.disabled
-            if [ -f supabase/migrations/20261114000016_void_sale.sql ]; then
-              cp supabase/migrations/20261114000016_void_sale.sql /tmp/void_sale.sql
-            fi
+            mkdir -p supabase/migrations.disabled /tmp/after_fixture
+            for migration in supabase/migrations/*.sql; do
+              [ -e "$migration" ] || continue
+              cp "$migration" /tmp/after_fixture/
+            done
             find supabase/migrations -maxdepth 1 -type f -name '*.sql' -exec mv {} supabase/migrations.disabled/ \;
             supabase start
             export PGPASSWORD=postgres
             psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
               -v ON_ERROR_STOP=1 \
               -f supabase/fixtures/live_schema.sql
-            if [ -f /tmp/void_sale.sql ]; then
-              echo "Applying the later void_sale migration after the fixture."
-              psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
-                -v ON_ERROR_STOP=1 \
-                -f /tmp/void_sale.sql
-            fi
           fi
 
       - name: Apply the one-time login and storage helpers
@@ -67,6 +67,21 @@ jobs:
               -v ON_ERROR_STOP=1 \
               -f "$file"
           done
+
+      - name: Apply post-fixture migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d /tmp/after_fixture ]; then
+            export PGPASSWORD=postgres
+            for file in /tmp/after_fixture/*.sql; do
+              [ -e "$file" ] || continue
+              echo "Applying $file"
+              psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+                -v ON_ERROR_STOP=1 \
+                -f "$file"
+            done
+          fi
 
       - name: Seed the integration role and permission catalog
         shell: bash

@@ -70,7 +70,8 @@ class _BakeryRouter extends StatefulWidget {
   State<_BakeryRouter> createState() => _BakeryRouterState();
 }
 
-class _BakeryRouterState extends State<_BakeryRouter> {
+class _BakeryRouterState extends State<_BakeryRouter>
+    with WidgetsBindingObserver {
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   late final AuthController? _auth;
   late final bool _ownsAuth;
@@ -113,6 +114,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ownsAuth = widget.authController == null;
     _auth =
         widget.authController ??
@@ -351,7 +353,15 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   };
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _auth?.checkInactivity();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router.dispose();
     if (_ownsAuth) _auth?.dispose();
     super.dispose();
@@ -377,37 +387,43 @@ class _BakeryRouterState extends State<_BakeryRouter> {
     }
     return SessionScope(
       controller: _auth,
-      child: ListenableBuilder(
-        listenable: _auth,
-        builder: (context, _) => MaterialApp.router(
-          title: Brand.appName,
-          scaffoldMessengerKey: _scaffoldMessengerKey,
-          onGenerateTitle: (context) => Brand.appName,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: _auth.themeMode,
-          locale: _auth.locale,
-          localizationsDelegates: const [
-            ...oromoFrameworkLocalizationsDelegates,
-            ...AppLocalizations.localizationsDelegates,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: _router,
-          debugShowCheckedModeBanner: false,
-          builder: (context, child) {
-            if (_auth.takeLocaleResetNotice()) {
-              final message = AppLocalizations.of(context).languageResetNotice;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _scaffoldMessengerKey.currentState?.showSnackBar(
-                  SnackBar(content: Text(message)),
-                );
-              });
-            }
-            return OfflineBanner(
-              onReconnected: _auth.retry,
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => _auth?.noteActivity(),
+        child: ListenableBuilder(
+          listenable: _auth,
+          builder: (context, _) => MaterialApp.router(
+            title: Brand.appName,
+            scaffoldMessengerKey: _scaffoldMessengerKey,
+            onGenerateTitle: (context) => Brand.appName,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: _auth.themeMode,
+            locale: _auth.locale,
+            localizationsDelegates: const [
+              ...oromoFrameworkLocalizationsDelegates,
+              ...AppLocalizations.localizationsDelegates,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: _router,
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              if (_auth.takeLocaleResetNotice()) {
+                final message = AppLocalizations.of(
+                  context,
+                ).languageResetNotice;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scaffoldMessengerKey.currentState?.showSnackBar(
+                    SnackBar(content: Text(message)),
+                  );
+                });
+              }
+              return OfflineBanner(
+                onReconnected: _auth.retry,
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+          ),
         ),
       ),
     );

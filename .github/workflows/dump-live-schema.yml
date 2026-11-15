@@ -3,14 +3,21 @@ name: dump-live-schema
 on:
   workflow_dispatch:
 
+concurrency:
+  group: dump-live-schema-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
 jobs:
   dump:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
 
       - name: Generate a schema-only fixture through the read-only Management API
         env:

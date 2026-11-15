@@ -141,7 +141,13 @@ String prettyLabel(String key) => key
     .join(' ');
 
 String csvEscape(Object? value) {
-  final text = value == null ? '' : value.toString();
+  var text = value == null ? '' : value.toString();
+  // Prevent CSV formula injection in Excel and similar spreadsheet apps.
+  if (value is String &&
+      text.isNotEmpty &&
+      const ['=', '+', '-', '@', '\t', '\r'].contains(text[0])) {
+    text = "'$text";
+  }
   if (text.contains(',') || text.contains('"') || text.contains('\n')) {
     return '"${text.replaceAll('"', '""')}"';
   }

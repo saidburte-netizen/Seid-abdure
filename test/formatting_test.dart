@@ -24,4 +24,14 @@ void main() {
 
     expect(formattingLocale('om'), 'en');
   });
+
+  test('CSV export neutralises formula injection', () {
+    expect(csvEscape('=1+1'), "'=1+1");
+    expect(csvEscape('+SUM(A1:A2)'), "'+SUM(A1:A2)");
+    expect(csvEscape('-2+3'), "'-2+3");
+    expect(csvEscape('@cmd'), "'@cmd");
+    expect(csvEscape('\t=1+1'), "\"'\t=1+1\"");
+    expect(csvEscape('normal text'), 'normal text');
+    expect(csvEscape(42), '42');
+  });
 }

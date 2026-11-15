@@ -3,17 +3,23 @@ name: Web build
 on:
   workflow_dispatch:
   push:
-    branches: [main]
     tags: ["v*"]
 
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: "3.35.4"
@@ -55,9 +61,10 @@ jobs:
 
 
   deploy-pages:
-    if: vars.ENABLE_PAGES == 'true'
+    if: github.event_name == 'workflow_dispatch' && vars.ENABLE_PAGES == 'true'
     needs: build
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       pages: write
       id-token: write

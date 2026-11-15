@@ -84,11 +84,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
         imageQuality: 88,
       );
       if (picked == null) return;
-      setState(() => _uploading = true);
-      final bytes = await picked.readAsBytes();
       final extension = picked.name.contains('.')
           ? picked.name.split('.').last.toLowerCase()
           : 'jpg';
+      const allowedExtensions = {'jpg', 'jpeg', 'png', 'webp'};
+      if (!allowedExtensions.contains(extension)) {
+        if (mounted) {
+          showSnack(context, strings.errorUnsupportedFile, error: true);
+        }
+        return;
+      }
+      final size = await picked.length();
+      if (size > 5 * 1024 * 1024) {
+        if (mounted) {
+          showSnack(context, strings.errorFileTooLarge, error: true);
+        }
+        return;
+      }
+      setState(() => _uploading = true);
+      final bytes = await picked.readAsBytes();
       final contentType = switch (extension) {
         'png' => 'image/png',
         'webp' => 'image/webp',

@@ -139,7 +139,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       await session.client
           .from('stock_counts')
-          .update({'status': 'approved'})
+          .update({'status': 'completed'})
           .eq('id', count['id']);
       if (mounted) showSnack(context, 'Stock count approved.');
     } catch (error) {
@@ -255,7 +255,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
                     writePermission: 'inventory.manage',
                     actions: (row) {
                       if (!session.can('inventory.manage') ||
-                          row['status'] == 'approved') {
+                          row['status'] == 'completed' ||
+                          row['status'] == 'cancelled') {
                         return const [];
                       }
                       return [
