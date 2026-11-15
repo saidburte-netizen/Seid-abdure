@@ -59,6 +59,7 @@ class AuthController extends ChangeNotifier {
   late final StreamSubscription<AuthState> _subscription;
   AuthStatus status = AuthStatus.loading;
   String? errorMessage;
+  String? signInNotice;
   Object? lastError;
   String? userId;
   String? userEmail;
@@ -159,6 +160,11 @@ class AuthController extends ChangeNotifier {
 
   Future<void> retry() => _loadSession(client.auth.currentSession);
 
+  /// Test hook: drive one session load with an explicit session so tests can
+  /// exercise deactivated-account handling without a live auth server.
+  @visibleForTesting
+  Future<void> debugLoadSession(Session? session) => _loadSession(session);
+
   Future<void> _loadSession(Session? session) async {
     final loadId = ++_loadId;
     errorMessage = null;
@@ -195,6 +201,32 @@ class AuthController extends ChangeNotifier {
         _notify();
         return;
       }
+      if (profile['is_active'] == false) {
+        // A deactivated account must not reach the dashboard even if its
+        // auth token is still valid. Clear the session and show the normal
+        // sign-in screen with an explanation.
+        try {
+          await client.auth.signOut();
+        } catch (_) {
+          // The session is unusable either way; never block the sign-out UI.
+        }
+        _stopInactivityTimer();
+        userId = null;
+        userEmail = null;
+        fullName = null;
+        phone = null;
+        avatarUrl = null;
+        profileLanguage = null;
+        roleCode = null;
+        branches = const [];
+        selectedBranchId = null;
+        status = AuthStatus.signedOut;
+        errorMessage = 'Account deactivated. Contact an administrator.';
+        signInNotice = 'Account deactivated. Contact an administrator.';
+        _notify();
+        return;
+      }
+      signInNotice = null;
       fullName = profile['full_name'] as String?;
       phone = profile['phone'] as String?;
       avatarUrl = profile['avatar_url'] as String?;
@@ -448,6 +480,11 @@ class SessionScope extends InheritedNotifier<AuthController> {
     required super.child,
     super.key,
   }) : super(notifier: controller);
+
+  static AuthController? maybeOf(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<SessionScope>();
+    return scope?.notifier;
+  }
 
   static AuthController of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<SessionScope>();

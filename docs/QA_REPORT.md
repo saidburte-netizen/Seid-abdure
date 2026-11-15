@@ -1,5 +1,8 @@
 # QA report - Brade and Cake House 1.0.7+7
 
+> Historical record for the v1.0.7 sideload release. The authoritative
+> v1.0.8 gate results and GO/NO-GO verdict are in `docs/AUDIT_REPORT.md`.
+
 ## Environment
 
 | Item | Value |
@@ -23,7 +26,7 @@
 | Offline evidence test | `flutter test test/airplane_mode_evidence_test.dart` | PASS |
 | Translation coverage | `flutter test test/ui_text_coverage_test.dart` | PASS, 3 tests |
 | Branch scoping | `flutter test test/branch_repository_test.dart` | PASS |
-| Local database contract | `supabase/tests/integration/contract.sql` | PASS in `supabase-integration.yml` |
+| Local database contract | `supabase/tests/integration/contract.sql` | PASS in the historical integration job (now in `build-android.yml`) |
 | Android emulator smoke | `tool/android_smoke.py` on a Pixel 6 API 34 emulator | PASS: install, launch, en→am→om→en, screenshots |
 
 ### Schema check summary
@@ -101,7 +104,7 @@ green pixels with `g > r * 1.18 && g > b * 1.12 && g > 25`, and fails outside
 ## Database integration contract
 
 The contract runs in a disposable local Supabase stack in
-`.github/workflows/supabase-integration.yml`. It never contacts the hosted
+the `integration` job in `.github/workflows/build-android.yml`. It never contacts the hosted
 project and never uses the `service_role` key. The stack is started from the
 read-only live-schema fixture because the fifteen uploaded migrations are not
 present in this checkout; when they are present the workflow runs them

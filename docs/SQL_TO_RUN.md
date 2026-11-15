@@ -2,6 +2,14 @@
 
 The owner confirmed this corrected function was applied in the Supabase SQL Editor on 2026-11-15. Keep this file as the source of truth and re-run it only for a fresh project, a restored database, or if the `void_sale` function is missing.
 
+The four `20261115*` migrations still need to be applied by the owner, in
+order: `20261115000001_security_hardening.sql`,
+`20261115000002_ethiopian_date_defaults.sql`,
+`20261115000003_performance_indexes.sql`, then
+`20261115000004_business_rule_guards.sql`. They are reviewed in
+`docs/AUDIT_REPORT.md` and are not pushed to the hosted project automatically.
+
+
 - Safe to run more than once: the function uses `create or replace`.
 - It does **not** insert stock movements. The existing `trg_sales_void` trigger restores stock exactly once.
 - It reverses cash payments, writes off linked receivables, posts the matching customer ledger credit, and records the reason.

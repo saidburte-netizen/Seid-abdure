@@ -46,7 +46,7 @@ ledger rows directly; those are owned by the database triggers/RPCs.
 The executable evidence is split between the Flutter suite and the local
 Supabase contract. The contract is
 `supabase/tests/integration/contract.sql`; it wraps everything in a transaction
-and rolls back. The workflow is `.github/workflows/supabase-integration.yml`.
+and rolls back. The workflow is the `integration` job in `.github/workflows/build-android.yml`.
 
 | # | Scenario | Automated evidence |
 | --- | --- | --- |

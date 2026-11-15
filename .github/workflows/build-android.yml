@@ -16,6 +16,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -177,6 +179,7 @@ jobs:
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- The APK is the install file. The AAB and web ZIP are included for completeness; this release is not a Google Play submission."
+            echo "- Emulator smoke: login screen and en/am/om language switch always run; the signed-in dashboard and one POS sale run when the optional SMOKE_EMAIL/SMOKE_PASSWORD repository secrets are configured."
           } > release-notes.md
           cat release-notes.md
           {
@@ -263,20 +266,12 @@ jobs:
           if-no-files-found: error
           path: sha256sums.txt
 
-      - name: Attach Android files to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+      - name: Upload release notes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Brade and Cake House ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          body_path: release-notes.md
-          files: |
-            brade-cake-house.apk
-            brade-cake-house.aab
-            brade-cake-house-web.zip
-            sha256sums.txt
+          name: brade-cake-house-release-notes
+          if-no-files-found: error
+          path: release-notes.md
 
   smoke:
     needs: build
@@ -300,6 +295,9 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Install, launch and switch languages on an emulator
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
         uses: ReactiveCircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
         with:
           api-level: 34
@@ -318,3 +316,144 @@ jobs:
           path: build/evidence/android-smoke
           if-no-files-found: warn
           retention-days: 7
+
+  # Real RLS and the full SQL contract run against a disposable local Supabase
+  # stack. The release job depends on this, so a failing contract cannot
+  # publish a tag.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 3.1.0
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Start a disposable local Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f supabase/migrations/20261114000001_foundation.sql ]; then
+            echo "Using the uploaded 20261114 migrations."
+            mkdir -p supabase/legacy_migrations
+            if [ -f supabase/migrations/20261113020000_organizations_rls.sql ]; then
+              mv supabase/migrations/20261113020000_organizations_rls.sql supabase/legacy_migrations/
+            fi
+            supabase start
+          else
+            echo "::warning::The 15 uploaded migrations are not present. Using the read-only live schema fixture for this disposable stack."
+            mkdir -p supabase/migrations.disabled /tmp/after_fixture
+            for migration in supabase/migrations/*.sql; do
+              [ -e "$migration" ] || continue
+              cp "$migration" /tmp/after_fixture/
+            done
+            find supabase/migrations -maxdepth 1 -type f -name '*.sql' -exec mv {} supabase/migrations.disabled/ \;
+            supabase start
+            export PGPASSWORD=postgres
+            psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+              -v ON_ERROR_STOP=1 \
+              -f supabase/fixtures/live_schema.sql
+          fi
+
+      - name: Apply the one-time login and storage helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          for file in supabase/sql/*.sql; do
+            echo "Applying $file"
+            psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+              -v ON_ERROR_STOP=1 \
+              -f "$file"
+          done
+
+      - name: Apply post-fixture migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d /tmp/after_fixture ]; then
+            export PGPASSWORD=postgres
+            for file in /tmp/after_fixture/*.sql; do
+              [ -e "$file" ] || continue
+              echo "Applying $file"
+              psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+                -v ON_ERROR_STOP=1 \
+                -f "$file"
+            done
+          fi
+
+      - name: Seed the integration role and permission catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/integration/seed.sql
+
+      - name: Run the database integration contract and real RLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/integration/contract.sql
+
+      - name: Show local Supabase status
+        if: always()
+        run: supabase status || true
+
+  # Publishing is a separate job so the APK is only released after the R8
+  # smoke test, APK secret scan and real-RLS contract have all passed.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, smoke, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-apk
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-aab
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-web-release
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-checksums
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-release-notes
+          path: release-assets
+      - name: Publish the verified release assets
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Brade and Cake House ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          body_path: release-assets/release-notes.md
+          files: |
+            release-assets/brade-cake-house.apk
+            release-assets/brade-cake-house.aab
+            release-assets/brade-cake-house-web.zip
+            release-assets/sha256sums.txt

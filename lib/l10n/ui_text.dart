@@ -7,9 +7,9 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Users & roles": "ተጠቃሚዎች እና ሚናዎች",
     "Assign branch, role and active status": "ቅርንጫፍ፣ ሚና እና ንቁ ሁኔታ ይመድቡ",
     "Try again": "እንደገና ሞክር",
+    "Account deactivated. Contact an administrator.":
+        "መለያው ተሰናክሏል። እባክዎ አስተዳዳሪን ያግኙ።",
     "Reset language": "ቋንቋ ዳግም አስጀምር",
-    "Something went wrong. Please restart the app and try again.":
-        "የተሳሳተ ነገር ተከስቷል። እባክዎ መተግበሪያውን እንደገና ያስጀምሩ እና ይሞክሩ።",
     "Approvals": "ማጽደቆች",
     "Approve": "አጽድቅ",
     "Reject": "ውድቅ አድርግ",
@@ -179,9 +179,9 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Assign branch, role and active status":
         "Damee, gahee fi haala socho'aa ramadi",
     "Try again": "Irra deebi'ii yaali",
+    "Account deactivated. Contact an administrator.":
+        "Herregni sun dhaabbateera. Maaloo bulchaa qunnamaa.",
     "Reset language": "Afaan irra deebi'i",
-    "Something went wrong. Please restart the app and try again.":
-        "Wanti tokko dogoggora ta'e. Maaloo appilikeeshinii irra deebi'ii jalqabaa yaalaa.",
     "Approvals": "Mirkaneessaa",
     "Approve": "Mirkaneessi",
     "Reject": "Didi",
@@ -998,8 +998,8 @@ const List<String> uiTextKeys = [
   "Users & roles",
   "Assign branch, role and active status",
   "Try again",
+  "Account deactivated. Contact an administrator.",
   "Reset language",
-  "Something went wrong. Please restart the app and try again.",
   "Approvals",
   "Approve",
   "Reject",

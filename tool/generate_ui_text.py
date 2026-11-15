@@ -23,6 +23,10 @@ UI: dict[str, tuple[str, str]] = {
         "Damee, gahee fi haala socho'aa ramadi",
     ),
     "Try again": ("እንደገና ሞክር", "Irra deebi'ii yaali"),
+    "Account deactivated. Contact an administrator.": (
+        "መለያው ተሰናክሏል። እባክዎ አስተዳዳሪን ያግኙ።",
+        "Herregni sun dhaabbateera. Maaloo bulchaa qunnamaa.",
+    ),
     "Reset language": ("ቋንቋ ዳግም አስጀምር", "Afaan irra deebi'i"),
     "Approvals": ("ማጽደቆች", "Mirkaneessaa"),
     "Approve": ("አጽድቅ", "Mirkaneessi"),

@@ -23,6 +23,29 @@ begin
 end;
 $$;
 
+-- Assert that a statement fails. The optional fragment must appear in the
+-- database error so a wrong failure cannot pass the test.
+create or replace function pg_temp.assert_raises(statement text, fragment text, message text)
+returns void
+language plpgsql
+as $$
+declare
+  v_raised boolean := false;
+begin
+  begin
+    execute statement;
+  exception when others then
+    v_raised := true;
+    if fragment is not null and position(fragment in sqlerrm) = 0 then
+      raise exception 'ASSERTION FAILED: % (unexpected error: %)', message, sqlerrm;
+    end if;
+  end;
+  if not v_raised then
+    raise exception 'ASSERTION FAILED: %', message;
+  end if;
+end;
+$$;
+
 -- Deterministic test identifiers.
 -- branch / store / catalog
 -- 11111111-... branch
@@ -275,6 +298,18 @@ select pg_temp.assert_true(
   (select count(*) = 1 from public.cash_transactions where reference_type = 'sale_payment' and txn_type = 'in' and amount = 100),
   'cash payment posts cash transaction'
 );
+select pg_temp.assert_raises(
+  $$insert into public.sale_payments (sale_id, cash_account_id, method, amount, received_by)
+    values ('13131313-1313-1313-1313-131313131313', '88888888-8888-8888-8888-888888888881', 'cash', 1, '00000000-0000-0000-0000-000000000003')$$,
+  'outstanding balance',
+  'a sale payment cannot exceed the outstanding balance'
+);
+select pg_temp.assert_raises(
+  $$insert into public.sale_payments (sale_id, method, amount, received_by)
+    values ('13131313-1313-1313-1313-131313131313', 'cash', -1, '00000000-0000-0000-0000-000000000003')$$,
+  null,
+  'a negative sale payment is rejected'
+);
 
 insert into public.sales (
   id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
@@ -295,10 +330,44 @@ select pg_temp.assert_true(
   'credit sale creates receivable'
 );
 
+-- A credit sale must name an active customer.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '32323232-3232-3232-3232-323232323232', 'TEST-SALE-NO-CUSTOMER',
+  '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+  null, '00000000-0000-0000-0000-000000000003',
+  now(), 10, 0, 0, 10, 0, 'unpaid', 'completed'
+);
+select pg_temp.assert_raises(
+  $$insert into public.sale_payments (sale_id, method, amount, received_by)
+    values ('32323232-3232-3232-3232-323232323232', 'credit', 10, '00000000-0000-0000-0000-000000000003')$$,
+  'requires a customer',
+  'a credit sale without a customer is rejected'
+);
+
 select public.fn_close_day('11111111-1111-1111-1111-111111111111', current_date, 150);
 select pg_temp.assert_true(
-  (select total_sales = 150 and cash_sales = 100 and expected_cash = 100 and counted_cash = 150 and difference = 50 from public.daily_closings where branch_id = '11111111-1111-1111-1111-111111111111' and closing_date = current_date),
+  (select total_sales = 160 and cash_sales = 100 and expected_cash = 100 and counted_cash = 150 and difference = 50 from public.daily_closings where branch_id = '11111111-1111-1111-1111-111111111111' and closing_date = current_date),
   'daily closing totals'
+);
+select pg_temp.assert_raises(
+  $$select public.fn_close_day('11111111-1111-1111-1111-111111111111', current_date, 999)$$,
+  'already closed',
+  'a closed day cannot be closed again'
+);
+select pg_temp.assert_raises(
+  $$update public.daily_closings set counted_cash = 999
+    where branch_id = '11111111-1111-1111-1111-111111111111' and closing_date = current_date$$,
+  'cannot be changed',
+  'closed day totals cannot be edited directly'
+);
+select pg_temp.assert_true(
+  (select counted_cash = 150 from public.daily_closings
+   where branch_id = '11111111-1111-1111-1111-111111111111' and closing_date = current_date),
+  'rejected edits leave the closed day untouched'
 );
 
 insert into public.payables (id, supplier_id, description, amount, due_date, status, created_by)
@@ -320,6 +389,18 @@ select pg_temp.assert_true(
 select pg_temp.assert_true(
   (select count(*) = 1 from public.cash_transactions where reference_type = 'payable_payment' and reference_id = '16161616-1616-1616-1616-161616161616' and txn_type = 'out'),
   'payable payment posts cash transaction'
+);
+select pg_temp.assert_raises(
+  $$insert into public.payable_payments (payable_id, amount, paid_by)
+    values ('15151515-1515-1515-1515-151515151515', 1, '00000000-0000-0000-0000-000000000001')$$,
+  'outstanding balance',
+  'a supplier payment cannot exceed the payable balance'
+);
+select pg_temp.assert_raises(
+  $$insert into public.payable_payments (payable_id, amount, paid_by)
+    values ('15151515-1515-1515-1515-151515151515', -1, '00000000-0000-0000-0000-000000000001')$$,
+  null,
+  'a negative supplier payment is rejected'
 );
 
 insert into public.cash_transfers (id, from_account_id, to_account_id, amount, transfer_date, created_by)
@@ -407,6 +488,20 @@ select pg_temp.assert_true(
      and reference_id = '17171717-1717-1717-1717-171717171717'
      and txn_type = 'in' and amount = 20),
   'customer payment posts cash transaction'
+);
+select pg_temp.assert_raises(
+  $$insert into public.receivable_payments (receivable_id, amount, received_by)
+    select id, 31, '00000000-0000-0000-0000-000000000003'
+    from public.receivables where sale_id = '14141414-1414-1414-1414-141414141414'$$,
+  'outstanding balance',
+  'a customer payment cannot exceed the receivable balance'
+);
+select pg_temp.assert_raises(
+  $$insert into public.receivable_payments (receivable_id, amount, received_by)
+    select id, -1, '00000000-0000-0000-0000-000000000003'
+    from public.receivables where sale_id = '14141414-1414-1414-1414-141414141414'$$,
+  null,
+  'a negative customer payment is rejected'
 );
 
 -- Sale return restores stock and refunds cash.
@@ -767,6 +862,21 @@ insert into public.sales (
 );
 insert into public.sale_items (sale_id, product_id, product_name, quantity, unit_price, discount_amount, tax_amount, line_total)
 values ('30303030-3030-3030-3030-303030303030', '67676767-6767-6767-6767-676767676767', 'Test service', 1, 60, 0, 0, 60);
+update public.customers set credit_limit = 40
+where id = '77777777-7777-7777-7777-777777777777';
+select pg_temp.assert_raises(
+  $$insert into public.sale_payments (sale_id, method, amount, received_by)
+    values ('30303030-3030-3030-3030-303030303030', 'credit', 60, '00000000-0000-0000-0000-000000000003')$$,
+  'Credit limit exceeded',
+  'a credit sale above the customer credit limit is rejected'
+);
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.receivables
+   where sale_id = '30303030-3030-3030-3030-303030303030'),
+  'rejected credit sale creates no receivable'
+);
+update public.customers set credit_limit = 1000
+where id = '77777777-7777-7777-7777-777777777777';
 insert into public.sale_payments (sale_id, method, amount, received_by)
 values ('30303030-3030-3030-3030-303030303030', 'credit', 60, '00000000-0000-0000-0000-000000000003');
 select pg_temp.assert_true(
@@ -821,6 +931,30 @@ select pg_temp.assert_true(
    from public.payroll_runs
    where id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'),
   'payroll approval'
+);
+select pg_temp.assert_raises(
+  $$select public.fn_generate_payroll('eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee')$$,
+  'Only a draft payroll',
+  'payroll cannot be regenerated after approval'
+);
+select pg_temp.assert_raises(
+  $$update public.payslips set net_pay = net_pay + 1
+    where payroll_run_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'$$,
+  'after payroll approval',
+  'payslip amounts cannot be edited after approval'
+);
+select pg_temp.assert_raises(
+  $$insert into public.payslips (
+      payroll_run_id, employee_id, base_salary, allowances, gross_pay,
+      income_tax, pension_employee, advance_deduction, total_deductions, net_pay
+    )
+    select payroll_run_id, employee_id, base_salary, allowances, gross_pay,
+           income_tax, pension_employee, advance_deduction, total_deductions, net_pay
+    from public.payslips
+    where payroll_run_id = 'eeeeeeee-eeee-eeee-eeee-eeeeeeeeeeee'
+    limit 1$$,
+  'after payroll approval',
+  'a payslip cannot be added after approval'
 );
 update public.payroll_runs
 set status = 'paid'
@@ -989,6 +1123,20 @@ select pg_temp.assert_true(
      and reference_id = '26262626-2626-2626-2626-262626262626'
      and txn_type = 'in' and amount = 5000),
   'rent payment posts cash transaction'
+);
+select pg_temp.assert_raises(
+  $$insert into public.rent_payments (invoice_id, amount, received_by)
+    select id, 1, '00000000-0000-0000-0000-000000000001'
+    from public.rent_invoices where lease_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'$$,
+  'outstanding balance',
+  'a rent payment cannot exceed the invoice balance'
+);
+select pg_temp.assert_raises(
+  $$insert into public.rent_payments (invoice_id, amount, received_by)
+    select id, -1, '00000000-0000-0000-0000-000000000001'
+    from public.rent_invoices where lease_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'$$,
+  null,
+  'a negative rent payment is rejected'
 );
 
 -- Receivable write-off.
@@ -1370,5 +1518,113 @@ select pg_temp.assert_true(
   (select count(*) >= 1 from public.role_permissions where role_code = 'customer' and permission_code = 'products.view'),
   'customer product permission'
 );
+
+-- Deactivated records cannot be used in new sales.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '34343434-3434-3434-3434-343434343434', 'TEST-SALE-INACTIVE-PRODUCT',
+  '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+  null, '00000000-0000-0000-0000-000000000003',
+  now(), 10, 0, 0, 10, 0, 'unpaid', 'completed'
+);
+update public.products set is_active = false
+where id = '66666666-6666-6666-6666-666666666666';
+select pg_temp.assert_raises(
+  $$insert into public.sale_items (sale_id, product_id, product_name, quantity, unit_price, discount_amount, tax_amount, line_total)
+    values ('34343434-3434-3434-3434-343434343434', '66666666-6666-6666-6666-666666666666', 'Inactive product', 1, 10, 0, 0, 10)$$,
+  'inactive',
+  'an inactive product cannot be added to a new sale'
+);
+update public.products set is_active = true
+where id = '66666666-6666-6666-6666-666666666666';
+
+-- Deactivated customers cannot buy on credit.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '35353535-3535-3535-3535-353535353535', 'TEST-SALE-INACTIVE-CUSTOMER',
+  '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+  '77777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000003',
+  now(), 10, 0, 0, 10, 0, 'unpaid', 'completed'
+);
+update public.customers set is_active = false
+where id = '77777777-7777-7777-7777-777777777777';
+select pg_temp.assert_raises(
+  $$insert into public.sale_payments (sale_id, method, amount, received_by)
+    values ('35353535-3535-3535-3535-353535353535', 'credit', 10, '00000000-0000-0000-0000-000000000003')$$,
+  'inactive',
+  'an inactive customer cannot buy on credit'
+);
+update public.customers set is_active = true
+where id = '77777777-7777-7777-7777-777777777777';
+
+-- Deactivated users lose every role helper and every role-gated RPC.
+select set_config('request.jwt.claim.sub', '', true);
+update public.profiles set is_active = false
+where id = '00000000-0000-0000-0000-000000000001';
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+select pg_temp.assert_true(
+  (select public.current_role_code()) is null,
+  'a deactivated user has no role code'
+);
+select pg_temp.assert_true(
+  not public.has_admin(),
+  'a deactivated admin no longer counts as an admin'
+);
+select pg_temp.assert_true(
+  not public.has_any_role(array['cashier', 'manager', 'accountant']),
+  'a deactivated user has no staff roles'
+);
+select pg_temp.assert_raises(
+  $$select public.fn_close_day('11111111-1111-1111-1111-111111111111', current_date - 1, 0)$$,
+  'Not allowed',
+  'a deactivated user cannot run a role-gated RPC'
+);
+select set_config('request.jwt.claim.sub', '', true);
+update public.profiles set is_active = true
+where id = '00000000-0000-0000-0000-000000000001';
+select set_config('request.jwt.claim.sub', '', true);
+
+-- New SECURITY DEFINER helpers must not be exposed as RPCs.
+select pg_temp.assert_true(
+  not has_function_privilege('anon', 'public.fn_daily_closing_locked()', 'execute'),
+  'anon cannot execute the daily-closing guard'
+);
+select pg_temp.assert_true(
+  not has_function_privilege('authenticated', 'public.fn_daily_closing_locked()', 'execute'),
+  'authenticated cannot execute the daily-closing guard'
+);
+select pg_temp.assert_true(
+  not has_function_privilege('authenticated', 'public.fn_payroll_payslip_guard()', 'execute'),
+  'authenticated cannot execute the payslip guard'
+);
+select pg_temp.assert_true(
+  not has_function_privilege('authenticated', 'public.fn_sale_item_guard()', 'execute'),
+  'authenticated cannot execute the sale-item guard'
+);
+select pg_temp.assert_true(
+  has_function_privilege('authenticated', 'public.fn_close_day(uuid,date,numeric,text)', 'execute'),
+  'authenticated can execute fn_close_day'
+);
+select pg_temp.assert_true(
+  not has_function_privilege('anon', 'public.fn_close_day(uuid,date,numeric,text)', 'execute'),
+  'anon cannot execute fn_close_day'
+);
+
+-- Deactivated staff cannot be paid by regenerating payroll.
+update public.employees set status = 'terminated'
+where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.employees
+   where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa' and status in ('active', 'on_leave')),
+  'a terminated employee is excluded from payroll generation'
+);
+update public.employees set status = 'active'
+where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
 rollback;

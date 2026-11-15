@@ -651,6 +651,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final signInNotice = SessionScope.maybeOf(context)?.signInNotice;
     return Scaffold(
       body: Column(
         children: [
@@ -726,6 +727,24 @@ class _SignInScreenState extends State<SignInScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (signInNotice != null) ...[
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: scheme.errorContainer,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    uiText(context, signInNotice),
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: scheme.onErrorContainer,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               TextFormField(
                                 controller: _email,
                                 decoration: InputDecoration(

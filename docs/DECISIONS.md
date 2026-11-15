@@ -65,8 +65,18 @@ draft of this file was wrong, the correction is stated explicitly.
   the RLS helpers and `next_number` only to `authenticated`, keeps
   `void_sale`/`fn_generate_*`/`fn_close_day` authenticated-only, and sets every
   view to `security_invoker`. These rules are asserted by the contract.
-- The three `20261115*` migrations have **not** been applied to the hosted
+- The four `20261115*` migrations have **not** been applied to the hosted
   project. The owner applies them in the SQL Editor.
+- `20261115000004_business_rule_guards.sql` adds database-level guards that were
+  previously UI-only: no negative or over-balance payments; a closed day is
+  immutable (notes may still be appended); payroll money freezes after draft;
+  credit sales need an active customer and fit `credit_limit`; inactive
+  products/customers cannot be sold. Its three new trigger helpers are
+  `SECURITY DEFINER` and explicitly revoked from `public`, `anon` and
+  `authenticated`.
+- A credit limit counts the customer's open/partial receivable balances, so the
+  new credit amount must fit `outstanding + amount <= credit_limit`. A limit of
+  `0` therefore blocks new credit until the owner raises it.
 - `void_sale` restores stock through `trg_sales_void`/`fn_sale_void`; returns
   post refund cash through `trg_returns_cash` and stock through
   `trg_return_items_stock`. The app must not duplicate those rows.
@@ -100,6 +110,11 @@ draft of this file was wrong, the correction is stated explicitly.
 ## CI / supply chain
 
 - All workflow actions are pinned to commit SHAs with the version in a comment.
+- The release pipeline is three workflows on a tag: `ci` runs on the `main`
+  push, and `build-android`/`build-web` run on the tag. The real-Supabase
+  integration job is inside `build-android`, and its separate `release` job
+  needs `build`, `smoke` and `integration`, so publishing cannot happen before
+  RLS, the R8 smoke and the APK scan pass.
   `supabase/setup-cli@v1` did not exist as a ref and was corrected to `v1.7.3`.
 - CI runs static analysis, the full test suite, formatting, schema checks, OSV
   dependency scanning and a Gitleaks history scan.
