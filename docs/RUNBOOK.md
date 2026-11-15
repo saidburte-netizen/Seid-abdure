@@ -4,12 +4,16 @@
 
 1. Create the Supabase project and set a strong database password.
 2. Apply the fifteen uploaded migrations plus the later void-sale migration
-   from a trusted workstation:
+   from a trusted workstation. If the fifteen files are not in the repository
+   yet, upload them first; the read-only `supabase/fixtures/live_schema.sql`
+   is only for disposable tests and must never be applied to the hosted project.
    ```sh
    supabase link --project-ref <ref>
    supabase db push
    ```
-   The exact new SQL is `supabase/migrations/20261114000016_void_sale.sql`.
+   The exact new SQL is in `docs/SQL_TO_RUN.md` and
+   `supabase/migrations/20261114000016_void_sale.sql`. Run it in the SQL Editor
+   before installing an APK that uses void sale.
 3. Create the first Auth user (email/password or invite). The first profile is
    promoted to admin by the live `handle_new_user` trigger.
 4. Build the client with the project URL and public publishable/anon key:
@@ -58,9 +62,11 @@
 
 ## Void and return policy
 
-- A completed sale can be voided once through `void_sale`. It restores stock,
-  reverses direct cash and received credit payments, writes off the remaining
-  receivable with a balancing ledger credit, and records an audit row.
+- A completed sale can be voided once through `void_sale`. It restores stock
+  exactly once through `trg_sales_void`, reverses direct cash and received
+  credit payments, writes off the remaining receivable with a balancing ledger
+  credit, and records an audit row. A second void is rejected with a friendly
+  message. The RPC itself never inserts a stock movement.
 - A return is recorded through `sale_returns` and `sale_return_items`; the
   triggers restore stock and post the refund cash movement.
 - Do not delete sales or cash rows. Use void/return so the audit trail remains
@@ -68,23 +74,26 @@
 
 ## Backup and restore
 
-- Enable Supabase daily backups/PITR for production.
+- The Supabase **Free** plan has no automatic backups. Export regularly with
+  `supabase db dump` and keep a copy off Supabase.
+- **Pro** includes 7 days of daily backups. Point-in-time recovery is a paid
+  add-on. Database backups do not include Storage objects.
 - Before a major migration, take an on-demand backup and export a full branch
   JSON from **Reports → Full branch export**.
 - Restore to a staging project first; run the local contract and verify RLS.
 - Never restore production data into a public or shared project.
+- See `docs/HOSTED_SETUP.md` for the plain-English plan comparison.
 
-## Android release signing
+## Android sideload build
 
-1. Run **Actions → generate-keystore → Run workflow**.
-2. Download the `android-signing-secrets` artifact before its one-day expiry.
-3. Back up the JKS and both passwords in a password manager. Losing the
-   keystore prevents future Play Store updates.
-4. Add the four repository secrets listed in `docs/ANDROID_SIGNING.md`.
-5. Re-run **Android build**. The log and release notes state
-   `SIGNING_MODE=release` or `SIGNING_MODE=debug`.
-6. Switching an installed app from debug to release signing requires one
-   uninstall/reinstall.
+This app is not published on Google Play. The release APK is a debug-signed
+sideload/testing build. You do not need a keystore for it. If Android says
+**App not installed**, uninstall the previous version first; data is safe in
+Supabase.
+
+The optional `generate-keystore` workflow and the four signing secrets remain
+available if you later decide to sign release builds. They are not part of the
+normal sideload release.
 
 ## Incident checklist
 

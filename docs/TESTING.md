@@ -47,7 +47,10 @@ The contract covers auth users/profiles for all nine roles, RLS probes,
 purchasing/receipts, stock counts, production, cash/credit/split sales, returns,
 voids, customer payments, payables, cash transfers, payroll approval/payment,
 rent invoices/payments, alerts, expenses, bills, approvals, stock transfers,
-write-offs, role permissions, audit logs, translation columns and avatars.
+write-offs, role permissions, audit logs, translation columns and avatars. The
+void checks prove exact pre-sale stock and cash restoration, a single stock
+movement, credit receivable/ledger reversal, staff denial, and rejection of a
+second void.
 
 ## Android emulator smoke test
 
@@ -86,6 +89,8 @@ logo, signing mode and SHA-256 checksums.
 - [x] Android emulator smoke green.
 - [x] APK/AAB/web build and content verification green.
 - [x] Checksums generated and attached.
-- [x] Tag `v1.0.5` pushed and release verified.
-- [ ] Android signing secrets configured (release signing).
-- [ ] PITR/backups enabled and restore tested in the hosted project.
+- [ ] Tag `v1.0.6` pushed and release verified.
+- [x] Debug-signed sideload build clearly labelled; no Play Store signing
+  required.
+- [ ] Owner: configure SMTP/rate limits and test a restore from a manual export
+  or a Pro daily backup.

@@ -26,7 +26,10 @@ The active folder also contains:
 
 - `20261114000016_void_sale.sql` — the only added migration. It creates
   `public.void_sale(uuid, text)` because the app calls it and the live snapshot
-  does not expose it. Apply it with `supabase db push` or:
+  does not expose it. It allows admin, manager, accountant and cashier roles,
+  rejects an already-void sale, restores stock only through `trg_sales_void`,
+  reverses cash and credit, and revokes execute from `public` and `anon`. Apply
+  the copy in `docs/SQL_TO_RUN.md`, with `supabase db push`, or with:
   ```bash
   psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
     -f supabase/migrations/20261114000016_void_sale.sql

@@ -2,11 +2,15 @@
 
 ## Current CI behavior
 
-If all four signing secrets exist, CI builds a release-signed APK/AAB. If any is
-missing, CI still builds and uploads artifacts, but they are **debug-signed** and
-must not be published to Google Play. The workflow log and the generated
-`release-notes.md` state `SIGNING_MODE=release` or `SIGNING_MODE=debug` so a
-debug build cannot be mistaken for a Play Store build.
+The app is distributed as a **debug-signed sideload/testing build**. Google Play
+is not a target for this release, so you do not need to create or configure a
+keystore.
+
+The workflow still supports optional release signing. If all four signing
+secrets exist, CI builds a release-signed APK/AAB; if any is missing, it builds
+and uploads a debug-signed APK/AAB. The workflow log and the generated
+`release-notes.md` state `SIGNING_MODE=release` or `SIGNING_MODE=debug`, and both
+are labelled as sideload/testing builds.
 
 | Secret | Purpose |
 | --- | --- |
@@ -27,9 +31,10 @@ Run **Actions → generate-keystore → Run workflow**. The workflow:
   containing `android-signing-secrets.txt` (base64 keystore, alias, store
   password, key password) and `keystore-check.txt`.
 
-The run summary warns that the keystore must be backed up safely. Losing it
-prevents future Play Store updates. Switching an installed app from debug to
-release signing also requires one uninstall/reinstall.
+The run summary warns that the keystore must be backed up safely. This workflow
+is optional and is not needed for the normal sideload build. If you later switch
+an installed app from debug to release signing, uninstall the old app once;
+data is safe in Supabase.
 
 Download the artifact, store the `.jks` and passwords in a password manager, and
 then add the four repository secrets under **Settings → Secrets and variables →

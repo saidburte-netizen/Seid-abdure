@@ -93,14 +93,19 @@ does not expose that RPC. One later-timestamp migration was added:
 
 - `supabase/migrations/20261114000016_void_sale.sql`
 
-It creates `public.void_sale(uuid, text)`, checks the admin/manager/cashier
-role, reverses cash sale payments and received credit payments, writes off the
-remaining receivable with a balancing customer-ledger credit, updates the sale
-to `void`/`refunded`, and lets the existing `trg_sales_void` and
-`trg_sales_audit` triggers restore stock and write the audit row. The local
-contract calls it twice to prove idempotency.
+It creates `public.void_sale(uuid, text)`, checks the
+admin/manager/accountant/cashier role with `has_any_role`, rejects a sale that
+is already void, reverses cash sale payments and received credit payments,
+writes off the remaining receivable with a balancing customer-ledger credit,
+updates the sale to `void`/`refunded`, and lets the existing `trg_sales_void`
+and `trg_sales_audit` triggers restore stock and write the audit row. The RPC
+never inserts a stock movement itself, so stock is restored exactly once. The
+local contract proves stock and cash return to their exact pre-sale values,
+credit receivables and the customer ledger are reversed, staff are denied, and
+a second void is rejected with a friendly message.
 
-Apply the exact SQL to the hosted project with the Supabase CLI or SQL editor:
+Apply the exact SQL to the hosted project with the Supabase CLI or SQL editor.
+The copy-paste version is in `docs/SQL_TO_RUN.md`:
 
 ```bash
 supabase db push
@@ -112,6 +117,11 @@ psql "$SUPABASE_DB_URL" -v ON_ERROR_STOP=1 \
 No other migration is required. The read-only live-schema fixture under
 `supabase/fixtures/live_schema.sql` is used only for disposable local/CI runs
 and must never be applied to the hosted project.
+
+**The fifteen uploaded migrations are still not on `origin/main`.** The
+repository currently contains only `20261114000016_void_sale.sql` and the
+migration README. Upload the fifteen files before relying on `supabase db push`
+as the authoritative migration run. They were not edited.
 
 ## Remaining limitations
 
@@ -128,19 +138,23 @@ silently treated as complete:
   covered in en/am/om. ARB key/placeholder parity and live locale switching are
   tested. A native-speaker review of domain wording is still recommended before
   an Amharic/Oromo-only rollout.
-- **Android signing:** the `generate-keystore` workflow produces one
-  password-protected JKS artifact with a one-day retention and a backup
-  warning. Until the four repository secrets (`ANDROID_KEYSTORE_BASE64`,
-  `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`, `ANDROID_KEY_PASSWORD`) are
-  configured, release artifacts are debug-signed and must not be uploaded to
-  Google Play. Switching to release signing requires one uninstall/reinstall.
-- **Backups and account security:** enable/verify Supabase PITR/backups, SMTP,
-  MFA and rate limits in the deployed Supabase project.
+- **Android distribution:** this release is a debug-signed sideload/testing
+  build. Google Play is not a target, and no keystore work is required. If
+  Android says **App not installed**, uninstall the previous version first;
+  data is safe in Supabase. The optional `generate-keystore` workflow remains
+  available for a future release-signed build.
+- **Backups and account security:** the Supabase Free plan has no automatic
+  backups; export regularly or upgrade to Pro for 7-day daily backups. PITR is
+  a paid add-on. SMTP and rate limits still need to be configured in the hosted
+  project. MFA is not implemented in the app, so do not force it yet. See
+  `docs/HOSTED_SETUP.md`.
 - **Business rules:** payroll tax/deduction defaults require review by a local
   accountant.
 - **Additional user onboarding:** later users sign up, then an administrator
   assigns their branch and role under **Settings → Users**. Only first-admin
-  setup is self-service.
+  setup is self-service. To create staff only from the admin account, disable
+  public signups in Supabase Auth and in app settings as described in
+  `docs/HOSTED_SETUP.md`.
 - **Role-wide notification receipts:** the live RLS update policy only lets a
   user mark their own notifications read, so role-wide notifications remain
   unread until addressed to a specific user.

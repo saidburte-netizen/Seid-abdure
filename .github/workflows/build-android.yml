@@ -64,7 +64,7 @@ jobs:
             echo "Release signing configured from repository secrets."
           else
             echo "SIGNING_MODE=debug" >> "$GITHUB_ENV"
-            echo "::warning title=Debug-signed build::Android signing secrets are missing. The APK/AAB will be debug-signed and must not be uploaded to Google Play."
+            echo "::warning title=Debug-signed build::Android signing secrets are missing. The APK/AAB will be a debug-signed sideload/testing build. Google Play is not a target."
           fi
 
       - name: Build universal release APK
@@ -121,11 +121,11 @@ jobs:
           set -euo pipefail
           VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
           if [ "${SIGNING_MODE:-debug}" = "release" ]; then
-            SIGNING_SENTENCE="This release is **release-signed** with the repository Android keystore."
-            SIGNING_DETAIL="The APK and AAB are signed with the release keystore from repository secrets and are suitable for Google Play after the normal review steps."
+            SIGNING_SENTENCE="This release is a **release-signed sideload/testing build**."
+            SIGNING_DETAIL="The APK and AAB are signed with the repository Android keystore. This app is distributed by sideloading; Google Play is not a target for this release."
           else
-            SIGNING_SENTENCE="This release is **debug-signed**."
-            SIGNING_DETAIL="The APK and AAB were signed with the Android debug key because the four release-signing repository secrets are not configured. Do not upload this build to Google Play. Phones must uninstall the debug-signed app once before installing a future release-signed build."
+            SIGNING_SENTENCE="This release is a **debug-signed sideload/testing build**."
+            SIGNING_DETAIL="The APK and AAB were signed with the Android debug key because the four release-signing repository secrets are not configured. This is not a Play Store build. If Android says \"App not installed\", uninstall the previous version first; your data is safe in Supabase."
           fi
           {
             echo "## Signing status"
@@ -139,6 +139,7 @@ jobs:
             echo "- Version: \`$VERSION\`"
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
+            echo "- The APK is the install file. The AAB and web ZIP are included for completeness; this release is not a Google Play submission."
           } > release-notes.md
           cat release-notes.md
           {

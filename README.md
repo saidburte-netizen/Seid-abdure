@@ -11,14 +11,16 @@ interfaces with light and dark themes.
 
 The GitHub Release contains the three compiled deliverables:
 
-- `brade-cake-house.apk` — install this on an Android phone.
-- `brade-cake-house.aab` — upload this to Google Play.
+- `brade-cake-house.apk` — the sideload/testing build for an Android phone.
+- `brade-cake-house.aab` — included for completeness; this release is not a
+  Google Play submission.
 - `brade-cake-house-web.zip` — unzip and serve `index.html` for the web admin
   portal.
 
 Install the APK by opening it on the phone and allowing installs from the
-browser or file manager. If Android warns that the app is debug-signed, that is
-expected until the four Android signing secrets are added to the repository.
+browser or file manager. This is a **debug-signed sideload/testing build**;
+Google Play is not a target for this app. If Android says **App not installed**,
+uninstall the previous version first. Your data is safe in Supabase.
 
 ## Included modules
 
@@ -43,9 +45,13 @@ allows; the admin role can use every module.
 2. Enter a name, email and password. The live `handle_new_user` trigger makes
    the first profile `admin` automatically.
 3. If Supabase email confirmation is enabled, confirm the email and sign in.
+   If confirmation emails do not arrive, see
+   [docs/HOSTED_SETUP.md](docs/HOSTED_SETUP.md).
 4. If no branch exists yet, the app offers **Create the first branch**.
 5. Add later users by having them sign up, then open **Settings → Users** as an
-   administrator and set their branch and role.
+   administrator and set their branch and role. To create staff only from the
+   admin account, disable public signups as described in
+   [docs/HOSTED_SETUP.md](docs/HOSTED_SETUP.md).
 6. Roles are `admin`, `manager`, `cashier`, `baker`, `store_keeper`,
    `hr_officer`, `accountant`, `staff` and `customer`.
 
@@ -89,20 +95,29 @@ flutter build web --release \
   and a web build.
 - `.github/workflows/build-android.yml` builds one universal APK and one AAB,
   renames them, verifies the APK with `aapt`, checks the 15 MB minimum, checks
-  the package/label, checks the bundled logo, and uploads only those files.
+  the package/label, checks the bundled logo, and uploads only those files. The
+  AAB is included for completeness; this release is not a Google Play
+  submission.
 - `.github/workflows/build-web.yml` builds and zips the web app, uploads only
   `brade-cake-house-web.zip`, and optionally deploys to GitHub Pages when the
   repository variable `ENABLE_PAGES` is `true`.
 - Pushing a `v*` tag creates/updates the GitHub Release and attaches the APK,
   AAB and web ZIP.
 
-Android release signing uses `ANDROID_KEYSTORE_BASE64`,
-`ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and `ANDROID_KEY_PASSWORD`.
-If they are absent, the workflow produces a clearly labelled debug-signed build.
+The app is distributed as a debug-signed sideload/testing build. Google Play is
+not a target. The workflow still supports optional release signing through
+`ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS` and
+`ANDROID_KEY_PASSWORD`, but you do not need to configure them for this release.
 See [docs/ANDROID_SIGNING.md](docs/ANDROID_SIGNING.md).
 
 ## Documentation
 
+- [docs/OWNER_TEST_CHECKLIST.md](docs/OWNER_TEST_CHECKLIST.md) — 15-minute
+  phone test against the real Supabase project.
+- [docs/HOSTED_SETUP.md](docs/HOSTED_SETUP.md) — SMTP, rate limits, backups and
+  disabling public signups.
+- [docs/SQL_TO_RUN.md](docs/SQL_TO_RUN.md) — the void-sale SQL to run before
+  installing.
 - [docs/GAP_REPORT.md](docs/GAP_REPORT.md) — live-schema audit and known limits.
 - [docs/BUILD_DIAGNOSIS.md](docs/BUILD_DIAGNOSIS.md) — why the old artifact was
   not one app.

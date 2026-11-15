@@ -1,4 +1,4 @@
-# QA report - Brade and Cake House 1.0.5+5
+# QA report - Brade and Cake House 1.0.6+6
 
 ## Environment
 
@@ -8,7 +8,7 @@
 | Dart | 3.9.2 |
 | Test surface | 390 x 844 logical pixels, light theme |
 | Live Supabase project | `nmrpmypgkljmtnsvmcfn` |
-| Build version | `1.0.5+5` |
+| Build version | `1.0.6+6` |
 
 ## Gate results
 
@@ -194,17 +194,17 @@ friendly offline error box.
 
 ## Known limitations / owner actions
 
-1. **Android signing** - The release workflow uses repository secrets when
-   `ANDROID_KEYSTORE_BASE64`, `ANDROID_KEYSTORE_PASSWORD`, `ANDROID_KEY_ALIAS`
-   and `ANDROID_KEY_PASSWORD` are configured. Without them the APK/AAB is
-   debug-signed and is not Play-Store ready. The manually triggered
-   `generate-keystore` workflow produces one JKS artifact with a one-day
-   retention and a backup warning.
+1. **Android distribution** - This is a debug-signed sideload/testing build.
+   Google Play is not a target, and no keystore is required. If Android says
+   **App not installed**, uninstall the previous version first; data is safe in
+   Supabase. The optional `generate-keystore` workflow remains available but is
+   not part of this release.
 2. **New migration** - `20261114000016_void_sale.sql` must be applied to the
    hosted project because the app calls `void_sale` and the live snapshot does
    not expose it. The fifteen uploaded migrations were not edited.
-3. **Deployment settings** - Enable/verify Supabase PITR/backups, SMTP, MFA and
-   rate limits in the deployed project.
+3. **Deployment settings** - Configure Supabase backups, SMTP and rate limits in
+   the deployed project. MFA is not implemented in the app, so do not force it
+   yet. See `docs/HOSTED_SETUP.md`.
 4. **Business rules** - Payroll tax/deduction defaults require review by a local
    accountant.
 5. **Role-wide notification receipts** - The live RLS update policy only lets a
@@ -226,9 +226,9 @@ https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.5
 
 `sha256sum -c sha256sums.txt` passed for all three downloaded assets.
 
-Signing: **debug-signed**. The release notes state this explicitly because the
-four release-signing repository secrets are not configured. Do not upload this
-build to Google Play.
+Signing: **debug-signed sideload/testing build**. Google Play is not a target.
+The release notes say this explicitly and tell the owner to uninstall the
+previous version first if Android says **App not installed**.
 
 Verification: package `net.bradeandcake.brade_and_cake_house`, label
 `Brade and Cake House`, launcher activity `.MainActivity`, INTERNET and
