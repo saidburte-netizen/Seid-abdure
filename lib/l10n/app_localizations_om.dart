@@ -551,4 +551,11 @@ class AppLocalizationsOm extends AppLocalizations {
 
   @override
   String get approvals => 'Mirkaneessaa';
+
+  @override
+  String get voidSaleAlreadyVoided => 'Gurgurtaan kun duraan haqameera.';
+
+  @override
+  String get voidSaleFailed =>
+      'Gurgurtaa haquun hin danda\'amne. Maaloo gurgurtaa mirkaneessii irra deebi\'ii yaali.';
 }

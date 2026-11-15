@@ -1131,6 +1131,18 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Approvals'**
   String get approvals;
+
+  /// No description provided for @voidSaleAlreadyVoided.
+  ///
+  /// In en, this message translates to:
+  /// **'This sale has already been voided.'**
+  String get voidSaleAlreadyVoided;
+
+  /// No description provided for @voidSaleFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The sale could not be voided. Please check the sale and try again.'**
+  String get voidSaleFailed;
 }
 
 class _AppLocalizationsDelegate

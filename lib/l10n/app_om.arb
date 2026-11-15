@@ -171,5 +171,7 @@
   "pressBackToReturn": "Deebi'uuf deebi'ii tuqi.",
   "saving": "Olkaa'aa jira…",
   "signOutConfirmation": "Herrega kana irraa ba'uu?",
-  "approvals": "Mirkaneessaa"
+  "approvals": "Mirkaneessaa",
+  "voidSaleAlreadyVoided": "Gurgurtaan kun duraan haqameera.",
+  "voidSaleFailed": "Gurgurtaa haquun hin danda'amne. Maaloo gurgurtaa mirkaneessii irra deebi'ii yaali."
 }

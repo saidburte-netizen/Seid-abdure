@@ -171,5 +171,7 @@
   "pressBackToReturn": "ለመመለስ ተመለስ ይጫኑ።",
   "saving": "በመቀመጥ ላይ…",
   "signOutConfirmation": "ከዚህ መለያ ውጣ?",
-  "approvals": "ማጽደቆች"
+  "approvals": "ማጽደቆች",
+  "voidSaleAlreadyVoided": "ይህ ሽያጭ አስቀድሞ ተሰርዟል።",
+  "voidSaleFailed": "ሽያጩን መሰረዝ አልተቻለም። እባክዎ ሽያጩን ያረጋግጡ እና እንደገና ይሞክሩ።"
 }

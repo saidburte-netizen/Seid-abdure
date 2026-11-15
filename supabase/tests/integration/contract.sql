@@ -69,12 +69,14 @@ insert into public.items (id, sku, name, item_type, category_id, unit_id, cost_p
 values
   ('55555555-5555-5555-5555-555555555501', 'TEST-PO-ITEM', 'PO item', 'raw_material', '44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333', 5, 0, true),
   ('55555555-5555-5555-5555-555555555502', 'TEST-SALE-ITEM', 'Sale item', 'finished_good', '44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333', 20, 1, true),
-  ('55555555-5555-5555-5555-555555555503', 'TEST-RAW-ITEM', 'Raw item', 'raw_material', '44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333', 2, 0, true);
+  ('55555555-5555-5555-5555-555555555503', 'TEST-RAW-ITEM', 'Raw item', 'raw_material', '44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333', 2, 0, true),
+  ('55555555-5555-5555-5555-555555555504', 'TEST-VOID-ITEM', 'Void test item', 'finished_good', '44444444-4444-4444-4444-444444444444', '33333333-3333-3333-3333-333333333333', 20, 0, true);
 
 insert into public.products (id, sku, name, name_am, name_om, category_id, item_id, unit_id, price, cost, tax_rate, is_active)
 values
   ('66666666-6666-6666-6666-666666666666', 'TEST-PROD-1', 'Test product', 'የሙከራ ምርት', 'Oomisha qorannoo', '44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555502', '33333333-3333-3333-3333-333333333333', 50, 20, 0, true),
-  ('67676767-6767-6767-6767-676767676767', 'TEST-SERVICE-1', 'Test service', 'የሙከራ አገልግሎት', 'Tajaajila qorannoo', '44444444-4444-4444-4444-444444444444', null, '33333333-3333-3333-3333-333333333333', 60, 0, 0, true);
+  ('67676767-6767-6767-6767-676767676767', 'TEST-SERVICE-1', 'Test service', 'የሙከራ አገልግሎት', 'Tajaajila qorannoo', '44444444-4444-4444-4444-444444444444', null, '33333333-3333-3333-3333-333333333333', 60, 0, 0, true),
+  ('68686868-6868-6868-6868-686868686868', 'TEST-VOID-PROD', 'Void test product', 'የሙከራ ስረዛ ምርት', 'Oomisha qorannoo haqaa', '44444444-4444-4444-4444-444444444444', '55555555-5555-5555-5555-555555555504', '33333333-3333-3333-3333-333333333333', 50, 20, 0, true);
 
 insert into public.customers (id, code, full_name, phone, customer_type, credit_limit, is_active)
 values ('77777777-7777-7777-7777-777777777777', 'TEST-CUST-1', 'Test customer', '0911000000', 'retail', 1000, true);
@@ -82,7 +84,8 @@ values ('77777777-7777-7777-7777-777777777777', 'TEST-CUST-1', 'Test customer', 
 insert into public.cash_accounts (id, branch_id, name, account_type, opening_balance, is_active)
 values
   ('88888888-8888-8888-8888-888888888881', '11111111-1111-1111-1111-111111111111', 'Test cash drawer', 'cash_drawer', 0, true),
-  ('88888888-8888-8888-8888-888888888882', '11111111-1111-1111-1111-111111111111', 'Test safe', 'safe', 0, true);
+  ('88888888-8888-8888-8888-888888888882', '11111111-1111-1111-1111-111111111111', 'Test safe', 'safe', 0, true),
+  ('88888888-8888-8888-8888-888888888883', '11111111-1111-1111-1111-111111111111', 'Void test drawer', 'cash_drawer', 0, true);
 
 insert into public.suppliers (id, name, payment_terms_days, is_active)
 values ('99999999-9999-9999-9999-999999999999', 'Test supplier', 30, true);
@@ -223,6 +226,13 @@ values ('22222222-2222-2222-2222-222222222222', '55555555-5555-5555-5555-5555555
 select pg_temp.assert_true(
   (select quantity = 8 from public.stock_levels where store_id = '22222222-2222-2222-2222-222222222222' and item_id = '55555555-5555-5555-5555-555555555502'),
   'stock movement ledger accumulates'
+);
+
+insert into public.stock_movements (store_id, item_id, movement_type, quantity, unit_cost, created_by)
+values ('22222222-2222-2222-2222-222222222222', '55555555-5555-5555-5555-555555555504', 'purchase', 10, 20, '00000000-0000-0000-0000-000000000001');
+select pg_temp.assert_true(
+  (select quantity = 10 from public.stock_levels where store_id = '22222222-2222-2222-2222-222222222222' and item_id = '55555555-5555-5555-5555-555555555504'),
+  'void fixture opening stock'
 );
 
 insert into public.recipes (id, product_id, name, yield_quantity, is_active)
@@ -439,6 +449,36 @@ select pg_temp.assert_true(
   'sale return updates sale status'
 );
 
+-- Staff cannot void sales; the RPC is limited to cashier, manager,
+-- accountant and admin roles.
+do $$
+declare
+  v_denied boolean := false;
+begin
+  perform set_config(
+    'request.jwt.claim.sub',
+    '00000000-0000-0000-0000-000000000008',
+    true
+  );
+  execute 'set local role authenticated';
+  begin
+    perform public.void_sale(
+      '13131313-1313-1313-1313-131313131313', 'staff attempt'
+    );
+  exception when others then
+    if position('permission' in lower(sqlerrm)) > 0 then
+      v_denied := true;
+    else
+      raise;
+    end if;
+  end;
+  execute 'reset role';
+  perform set_config('request.jwt.claim.sub', '', true);
+  if not v_denied then
+    raise exception 'ASSERTION FAILED: staff could void a sale';
+  end if;
+end $$;
+
 -- Voiding a completed cash sale reverses stock and cash exactly once.
 select public.void_sale(
   '13131313-1313-1313-1313-131313131313', 'QA void'
@@ -471,14 +511,172 @@ select pg_temp.assert_true(
      and new_data->>'status' = 'void'),
   'void sale is audited'
 );
-select public.void_sale(
-  '13131313-1313-1313-1313-131313131313', 'QA void again'
-);
+
+-- A second void is rejected and must not add another stock or cash reversal.
+do $$
+declare
+  v_rejected boolean := false;
+begin
+  begin
+    perform public.void_sale(
+      '13131313-1313-1313-1313-131313131313', 'QA void again'
+    );
+  exception when others then
+    if position('already been voided' in lower(sqlerrm)) > 0 then
+      v_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_rejected then
+    raise exception 'ASSERTION FAILED: second void was not rejected';
+  end if;
+end $$;
 select pg_temp.assert_true(
   (select count(*) = 1 from public.cash_transactions
    where reference_type = 'sale_void'
      and reference_id = '13131313-1313-1313-1313-131313131313'),
-  'void sale is idempotent'
+  'second void adds no cash reversal'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.stock_movements
+   where reference_type = 'sale_void'
+     and reference_id = '13131313-1313-1313-1313-131313131313'),
+  'second void adds no stock movement'
+);
+
+-- Isolated cash sale: stock and cash must return to their exact pre-sale
+-- values, proving the trigger restores stock once and the RPC never inserts a
+-- stock movement itself.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '29292929-2929-2929-2929-292929292929', 'TEST-SALE-VOID',
+  '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+  '77777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000003',
+  now(), 100, 0, 0, 100, 0, 'unpaid', 'completed'
+);
+insert into public.sale_items (sale_id, product_id, product_name, quantity, unit_price, discount_amount, tax_amount, line_total)
+values ('29292929-2929-2929-2929-292929292929', '68686868-6868-6868-6868-686868686868', 'Void test product', 2, 50, 0, 0, 100);
+insert into public.sale_payments (sale_id, cash_account_id, method, amount, received_by)
+values ('29292929-2929-2929-2929-292929292929', '88888888-8888-8888-8888-888888888883', 'cash', 100, '00000000-0000-0000-0000-000000000003');
+select pg_temp.assert_true(
+  (select quantity = 8 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555504'),
+  'void test sale reduces stock'
+);
+select pg_temp.assert_true(
+  (select balance = 100 from public.v_cash_account_balances
+   where id = '88888888-8888-8888-8888-888888888883'),
+  'void test sale increases cash'
+);
+select public.void_sale(
+  '29292929-2929-2929-2929-292929292929', 'QA isolated void'
+);
+select pg_temp.assert_true(
+  (select quantity = 10 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555504'),
+  'void restores stock to exact pre-sale quantity'
+);
+select pg_temp.assert_true(
+  (select balance = 0 from public.v_cash_account_balances
+   where id = '88888888-8888-8888-8888-888888888883'),
+  'void restores cash to exact pre-sale balance'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.stock_movements
+   where reference_type = 'sale_void'
+     and reference_id = '29292929-2929-2929-2929-292929292929'
+     and movement_type = 'return_in' and quantity = 2),
+  'void inserts exactly one stock restoration through the trigger'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'sale_void'
+     and reference_id = '29292929-2929-2929-2929-292929292929'
+     and txn_type = 'out' and amount = 100),
+  'void inserts exactly one cash reversal'
+);
+do $$
+declare
+  v_rejected boolean := false;
+begin
+  begin
+    perform public.void_sale(
+      '29292929-2929-2929-2929-292929292929', 'QA isolated void again'
+    );
+  exception when others then
+    if position('already been voided' in lower(sqlerrm)) > 0 then
+      v_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_rejected then
+    raise exception 'ASSERTION FAILED: repeat void was not rejected';
+  end if;
+end $$;
+
+-- Credit sale: void writes off the receivable, refunds any credit payments,
+-- and posts the matching customer ledger credit.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '30303030-3030-3030-3030-303030303030', 'TEST-SALE-CREDIT-VOID',
+  '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+  '77777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000003',
+  now(), 60, 0, 0, 60, 0, 'unpaid', 'completed'
+);
+insert into public.sale_items (sale_id, product_id, product_name, quantity, unit_price, discount_amount, tax_amount, line_total)
+values ('30303030-3030-3030-3030-303030303030', '67676767-6767-6767-6767-676767676767', 'Test service', 1, 60, 0, 0, 60);
+insert into public.sale_payments (sale_id, method, amount, received_by)
+values ('30303030-3030-3030-3030-303030303030', 'credit', 60, '00000000-0000-0000-0000-000000000003');
+select pg_temp.assert_true(
+  (select amount = 60 and balance = 60 and status = 'open'
+   from public.receivables
+   where sale_id = '30303030-3030-3030-3030-303030303030'),
+  'void credit fixture creates receivable'
+);
+select public.void_sale(
+  '30303030-3030-3030-3030-303030303030', 'QA credit void'
+);
+select pg_temp.assert_true(
+  (select status = 'void' and payment_status = 'refunded'
+   from public.sales
+   where id = '30303030-3030-3030-3030-303030303030'),
+  'void credit sale updates sale status'
+);
+select pg_temp.assert_true(
+  (select status = 'written_off' and balance = 0 and paid_amount = 60
+   from public.receivables
+   where sale_id = '30303030-3030-3030-3030-303030303030'),
+  'void credit sale writes off receivable'
+);
+select pg_temp.assert_true(
+  (select coalesce(sum(debit), 0) = 60 and coalesce(sum(credit), 0) = 60
+   from public.ledger_entries
+   where customer_id = '77777777-7777-7777-7777-777777777777'
+     and (
+       (reference_type = 'receivable' and reference_id = (
+         select id from public.receivables
+         where sale_id = '30303030-3030-3030-3030-303030303030'
+       ))
+       or (reference_type = 'sale_void'
+         and reference_id = '30303030-3030-3030-3030-303030303030')
+     )),
+  'void credit sale balances customer ledger'
+);
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.cash_transactions
+   where reference_type = 'sale_void'
+     and reference_id = '30303030-3030-3030-3030-303030303030'),
+  'void credit sale creates no cash reversal without cash payment'
 );
 
 -- Payroll approval and payment.

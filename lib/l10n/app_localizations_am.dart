@@ -532,4 +532,11 @@ class AppLocalizationsAm extends AppLocalizations {
 
   @override
   String get approvals => 'ማጽደቆች';
+
+  @override
+  String get voidSaleAlreadyVoided => 'ይህ ሽያጭ አስቀድሞ ተሰርዟል።';
+
+  @override
+  String get voidSaleFailed =>
+      'ሽያጩን መሰረዝ አልተቻለም። እባክዎ ሽያጩን ያረጋግጡ እና እንደገና ይሞክሩ።';
 }

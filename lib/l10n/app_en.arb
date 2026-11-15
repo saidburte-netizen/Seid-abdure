@@ -171,5 +171,7 @@
   "pressBackToReturn": "Press back to return.",
   "saving": "Saving…",
   "signOutConfirmation": "Sign out of this account?",
-  "approvals": "Approvals"
+  "approvals": "Approvals",
+  "voidSaleAlreadyVoided": "This sale has already been voided.",
+  "voidSaleFailed": "The sale could not be voided. Please check the sale and try again."
 }

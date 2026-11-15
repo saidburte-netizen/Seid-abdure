@@ -546,4 +546,11 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get approvals => 'Approvals';
+
+  @override
+  String get voidSaleAlreadyVoided => 'This sale has already been voided.';
+
+  @override
+  String get voidSaleFailed =>
+      'The sale could not be voided. Please check the sale and try again.';
 }

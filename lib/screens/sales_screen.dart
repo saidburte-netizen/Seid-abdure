@@ -9,6 +9,7 @@ import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
 import 'pos_screen.dart';
+import '../l10n/app_localizations.dart';
 import '../l10n/ui_text.dart';
 
 class SalesScreen extends StatefulWidget {
@@ -139,7 +140,17 @@ class _SalesScreenState extends State<SalesScreen> {
       );
       if (mounted) showSnack(context, 'Sale voided and stock restored.');
     } catch (error) {
-      if (mounted) showFriendlyError(context, error);
+      if (!mounted) return;
+      final strings = AppLocalizations.of(context);
+      final message = error.toString().toLowerCase();
+      if (message.contains('already been voided')) {
+        showSnack(context, strings.voidSaleAlreadyVoided);
+      } else if (message.contains('permission') ||
+          message.contains('not authorized')) {
+        showSnack(context, strings.errorPermissionDenied);
+      } else {
+        showSnack(context, strings.voidSaleFailed);
+      }
     }
   }
 

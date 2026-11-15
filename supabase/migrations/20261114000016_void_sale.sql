@@ -3,8 +3,9 @@
 -- The live schema snapshot does not expose a void_sale RPC even though the
 -- Flutter app calls one. This migration adds the missing RPC without editing
 -- the fifteen earlier migrations. It relies on the existing trg_sales_void
--- trigger to restore finished-goods stock and on trg_sales_audit to record the
--- status change.
+-- trigger to restore finished-goods stock exactly once and on trg_sales_audit
+-- to record the status change. This function must never insert stock movements
+-- itself, otherwise stock would be restored twice.
 
 create or replace function public.void_sale(
   target_sale uuid,
@@ -23,7 +24,9 @@ declare
   v_balance numeric;
 begin
   if auth.uid() is not null
-     and not public.has_any_role(array['admin', 'manager', 'cashier']) then
+     and not public.has_any_role(
+       array['admin', 'manager', 'accountant', 'cashier']
+     ) then
     raise exception 'You do not have permission to void sales.';
   end if;
 
@@ -37,7 +40,7 @@ begin
   end if;
 
   if v_sale.status = 'void' then
-    return;
+    raise exception 'This sale has already been voided.';
   end if;
 
   if v_sale.status <> 'completed' then
@@ -103,7 +106,7 @@ begin
     v_balance := v_receivable.amount - v_receivable.paid_amount;
 
     update public.receivables
-    set paid_amount = 0,
+    set paid_amount = v_receivable.amount,
         status = 'written_off'
     where id = v_receivable.id;
 
@@ -132,4 +135,6 @@ begin
 end;
 $$;
 
+revoke all on function public.void_sale(uuid, text) from public;
+revoke all on function public.void_sale(uuid, text) from anon;
 grant execute on function public.void_sale(uuid, text) to authenticated;
