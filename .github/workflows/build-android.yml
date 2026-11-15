@@ -452,6 +452,13 @@ jobs:
           draft: false
           prerelease: false
           body_path: release-assets/release-notes.md
+          # The release and its tag may already exist because the owner publishes
+          # the release from the GitHub web UI (tag created on publish). This
+          # action updates an existing release by tag instead of failing, and
+          # overwrite_files replaces same-named assets on a re-run. The unmatched
+          # guard fails loudly rather than publishing an incomplete release.
+          overwrite_files: true
+          fail_on_unmatched_files: true
           files: |
             release-assets/brade-cake-house.apk
             release-assets/brade-cake-house.aab
