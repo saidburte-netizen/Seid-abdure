@@ -90,7 +90,7 @@ logo, signing mode and SHA-256 checksums.
 - [x] Android emulator smoke green.
 - [x] APK/AAB/web build and content verification green.
 - [x] Checksums generated and attached.
-- [x] Tag `v1.0.6` pushed and release verified.
+- [x] Tag `v1.0.7` pushed and release verified.
 - [x] Debug-signed sideload build clearly labelled; no Play Store signing
   required.
 - [ ] Owner: configure SMTP/rate limits and test a restore from a manual export

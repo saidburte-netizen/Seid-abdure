@@ -1,6 +1,6 @@
 # SQL to run in Supabase
 
-Run this in the Supabase SQL Editor on the hosted project **before** installing the APK that uses void sale. It is the only new SQL for this release.
+The owner confirmed this corrected function was applied in the Supabase SQL Editor on 2026-11-15. Keep this file as the source of truth and re-run it only for a fresh project, a restored database, or if the `void_sale` function is missing.
 
 - Safe to run more than once: the function uses `create or replace`.
 - It does **not** insert stock movements. The existing `trg_sales_void` trigger restores stock exactly once.

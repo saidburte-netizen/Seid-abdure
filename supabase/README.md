@@ -12,8 +12,9 @@ The deployed app targets the existing Supabase project
 The application was written against an introspection of that live project
 (PostgREST OpenAPI plus read-only SQL inspection). The live schema remains
 authoritative. No live object is modified by this repository; the one required
-new migration adds the missing `void_sale` RPC and must be applied by the
-project owner.
+new migration adds the missing `void_sale` RPC. The owner confirmed it was
+applied on 2026-11-15; apply it again only for a fresh project, a restored
+database, or if the function is missing.
 
 ## Migrations
 

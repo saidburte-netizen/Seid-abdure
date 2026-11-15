@@ -12,8 +12,9 @@
    supabase db push
    ```
    The exact new SQL is in `docs/SQL_TO_RUN.md` and
-   `supabase/migrations/20261114000016_void_sale.sql`. Run it in the SQL Editor
-   before installing an APK that uses void sale.
+   `supabase/migrations/20261114000016_void_sale.sql`. The owner confirmed it
+   was applied on 2026-11-15; re-run it only for a fresh project, a restored
+   database, or if the function is missing.
 3. Create the first Auth user (email/password or invite). The first profile is
    promoted to admin by the live `handle_new_user` trigger.
 4. Build the client with the project URL and public publishable/anon key:

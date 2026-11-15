@@ -168,6 +168,8 @@ silently treated as complete:
 - **Optional web deployment:** GitHub Pages runs only when `ENABLE_PAGES` is
   `true`; the complete web ZIP is built independently.
 
-One later-timestamp migration (`20261114000016_void_sale.sql`) is committed and
-must be applied to the hosted project; the fifteen uploaded migrations were not
-edited. The live schema remains authoritative for every other object.
+One later-timestamp migration (`20261114000016_void_sale.sql`) is committed.
+The owner confirmed it was applied to the hosted project on 2026-11-15; apply it
+again only for a fresh project, a restored database, or if the function is
+missing. The fifteen uploaded migrations were not edited. The live schema
+remains authoritative for every other object.

@@ -1,7 +1,9 @@
 # Owner phone test - 15 minutes
 
 Use your real phone and your real Supabase project. Use test data, not real
-money. Run the SQL in [SQL_TO_RUN.md](SQL_TO_RUN.md) first.
+money. The corrected `void_sale` SQL in [SQL_TO_RUN.md](SQL_TO_RUN.md) was
+already applied by the owner on 2026-11-15; re-run it only for a fresh project,
+a restored database, or if Void is missing.
 
 If Android says **App not installed**, uninstall the old app first. Your data is
 safe in Supabase.

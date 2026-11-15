@@ -137,7 +137,7 @@ Verified database results:
 - RLS probes for anon and all nine roles
 - Avatars bucket and own-folder storage policy
 
-Run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43684189505
+Run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130425
 
 ## Android emulator smoke test
 
@@ -148,7 +148,7 @@ English → አማርኛ → Afaan Oromoo → English. It captures one screensho
 language and fails on any visible `SocketException`, `ClientException`,
 `SUPABASE_URL`, `service_role` or stack-trace text.
 
-Evidence run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43683195143
+Evidence run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840456
 
 ## Translation coverage
 
@@ -200,10 +200,12 @@ friendly offline error box.
    **App not installed**, uninstall the previous version first; data is safe in
    Supabase. The optional `generate-keystore` workflow remains available but is
    not part of this release.
-2. **New migration** - `20261114000016_void_sale.sql` must be applied to the
-   hosted project because the app calls `void_sale` and the live snapshot does
-   not expose it. The exact copy is in `docs/SQL_TO_RUN.md`. The fifteen
-   uploaded migrations are still absent from `origin/main` and were not edited.
+2. **New migration** - `20261114000016_void_sale.sql` is the source of truth
+   for the `void_sale` RPC. The owner confirmed the corrected function was
+   applied to the hosted project on 2026-11-15. Re-run it only for a fresh
+   project, a restored database, or if the function is missing; the exact copy
+   is in `docs/SQL_TO_RUN.md`. The fifteen uploaded migrations are still absent
+   from `origin/main` and were not edited.
 3. **Deployment settings** - Configure Supabase backups, SMTP and rate limits in
    the deployed project. MFA is not implemented in the app, so do not force it
    yet. See `docs/HOSTED_SETUP.md`.
@@ -217,14 +219,14 @@ friendly offline error box.
 
 ## Release evidence
 
-Published **2026-11-15T06:01:20Z** at
-https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.6
+Published **2026-11-15T08:23:54Z** at
+https://github.com/saidburte-netizen/Seid-abdure/releases/tag/v1.0.7
 
 | Item | Size (bytes) | SHA-256 |
 | --- | ---: | --- |
-| `brade-cake-house.apk` | 82,117,802 | `425dbeec25b801a3168d1e9fc0ca338a5556c6b4e64156935c62a503bcb1424a` |
-| `brade-cake-house.aab` | 67,578,366 | `542a88810856283654c650208a648d4d0353a1deec3b8a33927af7a6d74b6bc2` |
-| `brade-cake-house-web.zip` | 17,710,596 | `ad983a215e439c8b5f22e40bd5582856ef5e4a2f0be68c36d0ec00a437822ea0` |
+| `brade-cake-house.apk` | 82,117,802 | `9fca853e5f62fbd4e9379f5efd65926ef16dde7cb18ac10144bd425285799ca0` |
+| `brade-cake-house.aab` | 67,581,636 | `1b5e0d96dd82ffb152797b99c8de487ce291d23183d0d4b004f8d3a1e67c2e91` |
+| `brade-cake-house-web.zip` | 17,711,217 | `05163e2c39b6b47be0f4db6c24361057dfd472f662f8ef0ee62b6ef3b2d583ab` |
 
 `sha256sum -c sha256sums.txt` passed for all three downloaded assets.
 
@@ -232,37 +234,37 @@ Signing: **debug-signed sideload/testing build**. Google Play is not a target.
 The release notes say this explicitly and tell the owner to uninstall the
 previous version first if Android says **App not installed**.
 
-Verification: package `net.bradeandcake.brade_and_cake_house`, versionCode `6`,
-versionName `1.0.6`, label `Brade and Cake House`, launcher activity
+Verification: package `net.bradeandcake.brade_and_cake_house`, versionCode `7`,
+versionName `1.0.7`, label `Brade and Cake House`, launcher activity
 `.MainActivity`, INTERNET and ACCESS_NETWORK_STATE permissions, bundled
 logo/icon/notification icon, and `libapp.so` for arm64-v8a, armeabi-v7a and
 x86_64. The APK contains only the public `anon` Supabase JWT (role `anon`,
 project ref `nmrpmypgkljmtnsvmcfn`); no `service_role` string or key was found.
 Amharic strings are present as UTF-16LE and Oromo strings as UTF-8 in
-`libapp.so`.
+`libapp.so`, including the new void success and failure messages.
 
 Release runs:
 
-- Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43683195143
-- Tag Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43683195141
-- Main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283649
-- Main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283643
-- Main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283725
-- Main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43682283652
-- Smoke screenshots artifact: `android-smoke-screenshots` (id `14149870773`)
+- Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840456
+- Tag Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840505
+- Main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130433
+- Main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130456
+- Main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130455
+- Main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130425
+- Smoke screenshots artifact: `android-smoke-screenshots` (id `14153932513`)
 
-The main Android run had one emulator-launcher flake before the login screen;
-the failed smoke job was rerun without code changes and passed. The tag build
-and smoke passed on the first attempt.
+The main and tag Android builds and smoke jobs passed on the first attempt.
+The screenshots were checked visually: English, Amharic, Oromo and English
+again all render correctly.
 
 ## Release checklist
 
-- [x] Version bumped to `1.0.6+6`
+- [x] Version bumped to `1.0.7+7`
 - [x] Fresh-checkout workflow runs `flutter clean`, `pub get`, `gen-l10n`
 - [x] Schema, format, placeholder, analyze and full-test gates wired into CI
 - [x] APK/AAB/web build and APK content verification in workflow
 - [x] Local Supabase contract and Android emulator smoke test in CI
 - [x] SHA-256 checksums generated and attached
-- [x] Tag `v1.0.6` pushed and release verified
+- [x] Tag `v1.0.7` pushed and release verified
 - [x] Debug-signed sideload build clearly labelled; no Play Store signing
   required
