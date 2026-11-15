@@ -247,13 +247,16 @@ Release runs:
 
 - Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840456
 - Tag Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840505
-- Main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130433
-- Main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130456
-- Main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130455
-- Main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693130425
+- Final main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409597
+- Final main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409573
+- Final main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409583
+- Final main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409591
 - Smoke screenshots artifact: `android-smoke-screenshots` (id `14153932513`)
 
-The main and tag Android builds and smoke jobs passed on the first attempt.
+The release binary was built from tag `v1.0.7` at commit `79c0ffd`. Final main
+`efbb5b5` adds the Dart unit test for the void role gate and error mapping; the
+final main CI rerun passed all 92 tests, and Android, Web and Supabase
+integration stayed green. The app binary is unchanged by that test-only commit.
 The screenshots were checked visually: English, Amharic, Oromo and English
 again all render correctly.
 
