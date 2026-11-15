@@ -247,18 +247,18 @@ Release runs:
 
 - Tag Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840456
 - Tag Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43693840505
-- Final main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409597
-- Final main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409573
-- Final main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409583
-- Final main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43706409591
+- Validated main Android build + smoke: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43707303005
+- Validated main CI: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43707303016
+- Validated main Web: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43707303026
+- Validated main Supabase integration: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43707302955
 - Smoke screenshots artifact: `android-smoke-screenshots` (id `14153932513`)
 
-The release binary was built from tag `v1.0.7` at commit `79c0ffd`. Final main
-`efbb5b5` adds the Dart unit test for the void role gate and error mapping; the
-final main CI rerun passed all 92 tests, and Android, Web and Supabase
-integration stayed green. The app binary is unchanged by that test-only commit.
-The screenshots were checked visually: English, Amharic, Oromo and English
-again all render correctly.
+The release binary was built from tag `v1.0.7` at commit `79c0ffd`. Validated
+main `34e619c` includes the Dart unit test for the void role gate and error
+mapping; its CI rerun passed all 92 tests, and Android, Web and Supabase
+integration stayed green. The app binary is unchanged by the test-only and
+documentation commits. The screenshots were checked visually: English, Amharic,
+Oromo and English again all render correctly.
 
 ## Release checklist
 
