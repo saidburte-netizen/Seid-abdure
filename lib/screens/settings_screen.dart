@@ -270,13 +270,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
     required String title,
     required String route,
     String? subtitle,
-  }) => ListTile(
-    leading: Icon(icon),
-    title: Text(title),
-    subtitle: subtitle == null || subtitle.isEmpty ? null : Text(subtitle),
-    trailing: const Icon(Icons.chevron_right),
-    onTap: () => context.push(route),
-  );
+  }) =>
+      ListTile(
+        leading: Icon(icon),
+        title: Text(title),
+        subtitle: subtitle == null || subtitle.isEmpty ? null : Text(subtitle),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => context.push(route),
+      );
 }
 
 class BrandingScreen extends StatelessWidget {
@@ -284,9 +285,9 @@ class BrandingScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => AppScaffold(
-    title: Text(AppLocalizations.of(context).about),
-    body: const _BrandingTab(),
-  );
+        title: Text(AppLocalizations.of(context).about),
+        body: const _BrandingTab(),
+      );
 }
 
 class StorageScreen extends StatelessWidget {
@@ -302,47 +303,48 @@ class _BrandingTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      SectionCard(
-        title: uiText(context, 'Official brand'),
-        child: Column(
-          children: [
-            Image.asset(Brand.logoAsset, width: 180, height: 180),
-            const SizedBox(height: 12),
-            Text(
-              Brand.appName,
-              style: Theme.of(context).textTheme.headlineSmall,
+        padding: const EdgeInsets.all(16),
+        children: [
+          SectionCard(
+            title: uiText(context, 'Official brand'),
+            child: Column(
+              children: [
+                Image.asset(Brand.logoAsset, width: 180, height: 180),
+                const SizedBox(height: 12),
+                Text(
+                  Brand.appName,
+                  style: Theme.of(context).textTheme.headlineSmall,
+                ),
+                Text(
+                  Brand.slogan,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+                ),
+              ],
             ),
-            Text(
-              Brand.slogan,
-              style: Theme.of(
-                context,
-              ).textTheme.bodyMedium?.copyWith(fontStyle: FontStyle.italic),
+          ),
+          SectionCard(
+            title: uiText(context, 'Brand assets'),
+            child: const Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Logo: assets/branding/logo.png'),
+                Text(
+                  'Adaptive icon foreground: assets/branding/icon_foreground.png',
+                ),
+                Text(
+                    'Notification icon: assets/branding/notification_icon.png'),
+                SizedBox(height: 8),
+                Text(
+                  'The uploaded logo is used exactly as supplied for the app icon, '
+                  'splash screen, receipt, invoice, payslip, and report headers.',
+                ),
+              ],
             ),
-          ],
-        ),
-      ),
-      SectionCard(
-        title: uiText(context, 'Brand assets'),
-        child: const Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text('Logo: assets/branding/logo.png'),
-            Text(
-              'Adaptive icon foreground: assets/branding/icon_foreground.png',
-            ),
-            Text('Notification icon: assets/branding/notification_icon.png'),
-            SizedBox(height: 8),
-            Text(
-              'The uploaded logo is used exactly as supplied for the app icon, '
-              'splash screen, receipt, invoice, payslip, and report headers.',
-            ),
-          ],
-        ),
-      ),
-    ],
-  );
+          ),
+        ],
+      );
 }
 
 class _StorageTab extends StatefulWidget {
@@ -383,58 +385,59 @@ class _StorageTabState extends State<_StorageTab> {
 
   @override
   Widget build(BuildContext context) => ListView(
-    padding: const EdgeInsets.all(16),
-    children: [
-      const Text(
-        'Supabase Storage buckets used by the application. Public buckets can '
-        'be read directly; private buckets require authenticated access and '
-        'storage policies.',
-      ),
-      const SizedBox(height: 12),
-      for (final bucket in _buckets)
-        Card(
-          child: ExpansionTile(
-            title: Text(bucket.$1),
-            subtitle: Text(bucket.$2),
-            children: [
-              FutureBuilder<List<Map<String, dynamic>>>(
-                future: _list(bucket.$1),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: CircularProgressIndicator(),
-                    );
-                  }
-                  if (snapshot.hasError) {
-                    return Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: FriendlyErrorBox(error: snapshot.error!),
-                    );
-                  }
-                  final files = snapshot.data ?? const [];
-                  if (files.isEmpty) {
-                    return const Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Text('No files in this bucket.'),
-                    );
-                  }
-                  return Column(
-                    children: [
-                      for (final file in files.take(20))
-                        ListTile(
-                          dense: true,
-                          leading: const Icon(Icons.insert_drive_file_outlined),
-                          title: Text(file['name'] as String),
-                          subtitle: Text(file['bucket'] as String),
-                        ),
-                    ],
-                  );
-                },
-              ),
-            ],
+        padding: const EdgeInsets.all(16),
+        children: [
+          const Text(
+            'Supabase Storage buckets used by the application. Public buckets can '
+            'be read directly; private buckets require authenticated access and '
+            'storage policies.',
           ),
-        ),
-    ],
-  );
+          const SizedBox(height: 12),
+          for (final bucket in _buckets)
+            Card(
+              child: ExpansionTile(
+                title: Text(bucket.$1),
+                subtitle: Text(bucket.$2),
+                children: [
+                  FutureBuilder<List<Map<String, dynamic>>>(
+                    future: _list(bucket.$1),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: CircularProgressIndicator(),
+                        );
+                      }
+                      if (snapshot.hasError) {
+                        return Padding(
+                          padding: const EdgeInsets.all(16),
+                          child: FriendlyErrorBox(error: snapshot.error!),
+                        );
+                      }
+                      final files = snapshot.data ?? const [];
+                      if (files.isEmpty) {
+                        return const Padding(
+                          padding: EdgeInsets.all(16),
+                          child: Text('No files in this bucket.'),
+                        );
+                      }
+                      return Column(
+                        children: [
+                          for (final file in files.take(20))
+                            ListTile(
+                              dense: true,
+                              leading:
+                                  const Icon(Icons.insert_drive_file_outlined),
+                              title: Text(file['name'] as String),
+                              subtitle: Text(file['bucket'] as String),
+                            ),
+                        ],
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+        ],
+      );
 }

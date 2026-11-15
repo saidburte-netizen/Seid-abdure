@@ -18,10 +18,10 @@ Future<void> initializeFormattingData() async {
 }
 
 String formattingLocale(String? languageCode) => switch (languageCode) {
-  'om' => 'en',
-  'am' => 'am',
-  _ => 'en',
-};
+      'om' => 'en',
+      'am' => 'am',
+      _ => 'en',
+    };
 
 /// Shared formatting helpers. Money is always displayed in Ethiopian Birr and
 /// numbers are parsed defensively because PostgREST may return numeric columns
@@ -164,15 +164,13 @@ String rowsToCsv(List<Map<String, dynamic>> rows) {
   final buffer = StringBuffer()..writeln(ordered.map(csvEscape).join(','));
   for (final row in rows) {
     buffer.writeln(
-      ordered
-          .map((column) {
-            final value = row[column];
-            if (value is Map || value is List) {
-              return csvEscape(jsonEncode(value));
-            }
-            return csvEscape(value);
-          })
-          .join(','),
+      ordered.map((column) {
+        final value = row[column];
+        if (value is Map || value is List) {
+          return csvEscape(jsonEncode(value));
+        }
+        return csvEscape(value);
+      }).join(','),
     );
   }
   return buffer.toString();

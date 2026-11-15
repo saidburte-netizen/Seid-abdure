@@ -80,7 +80,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
         receiptNo = (await session.client.rpc(
           'next_number',
           params: {'p_prefix': 'GRN'},
-        )).toString();
+        ))
+            .toString();
       } catch (_) {
         receiptNo = 'GRN-${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -139,8 +140,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       await session.client
           .from('stock_counts')
-          .update({'status': 'completed'})
-          .eq('id', count['id']);
+          .update({'status': 'completed'}).eq('id', count['id']);
       if (mounted) showSnack(context, 'Stock count approved.');
     } catch (error) {
       if (mounted) showFriendlyError(context, error);

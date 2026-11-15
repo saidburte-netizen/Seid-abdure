@@ -111,59 +111,60 @@ class FriendlyCrashView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Directionality(
-    textDirection: TextDirection.ltr,
-    child: ColoredBox(
-      color: const Color(0xFFF4E8D8),
-      child: Center(
-        child: Padding(
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(
-                Icons.bakery_dining,
-                size: 56,
-                color: Color(0xFF0B3B17),
+        textDirection: TextDirection.ltr,
+        child: ColoredBox(
+          color: const Color(0xFFF4E8D8),
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(
+                    Icons.bakery_dining,
+                    size: 56,
+                    color: Color(0xFF0B3B17),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Brade and Cake House',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: Color(0xFF0B3B17),
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    uiText(
+                      context,
+                      'Something went wrong. Please restart the app and try again.',
+                    ),
+                    textAlign: TextAlign.center,
+                    style:
+                        const TextStyle(color: Color(0xFF3F4A3F), fontSize: 15),
+                  ),
+                  if (onRetry != null) ...[
+                    const SizedBox(height: 18),
+                    _CrashAction(
+                      label: uiText(context, 'Try again'),
+                      onPressed: onRetry!,
+                    ),
+                  ],
+                  if (onResetLanguage != null) ...[
+                    const SizedBox(height: 8),
+                    _CrashAction(
+                      label: uiText(context, 'Reset language'),
+                      onPressed: onResetLanguage!,
+                    ),
+                  ],
+                ],
               ),
-              const SizedBox(height: 16),
-              const Text(
-                'Brade and Cake House',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Color(0xFF0B3B17),
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 10),
-              Text(
-                uiText(
-                  context,
-                  'Something went wrong. Please restart the app and try again.',
-                ),
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF3F4A3F), fontSize: 15),
-              ),
-              if (onRetry != null) ...[
-                const SizedBox(height: 18),
-                _CrashAction(
-                  label: uiText(context, 'Try again'),
-                  onPressed: onRetry!,
-                ),
-              ],
-              if (onResetLanguage != null) ...[
-                const SizedBox(height: 8),
-                _CrashAction(
-                  label: uiText(context, 'Reset language'),
-                  onPressed: onResetLanguage!,
-                ),
-              ],
-            ],
+            ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class _CrashAction extends StatelessWidget {
@@ -174,27 +175,27 @@ class _CrashAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Semantics(
-    button: true,
-    label: label,
-    child: GestureDetector(
-      onTap: () => unawaited(onPressed()),
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          color: const Color(0xFF0B3B17),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
+        button: true,
+        label: label,
+        child: GestureDetector(
+          onTap: () => unawaited(onPressed()),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: const Color(0xFF0B3B17),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              child: Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
             ),
           ),
         ),
-      ),
-    ),
-  );
+      );
 }

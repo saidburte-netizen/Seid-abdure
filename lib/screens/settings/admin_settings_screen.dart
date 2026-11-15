@@ -206,49 +206,52 @@ class _RolePermissionsScreenState extends State<RolePermissionsScreen> {
       body: !isAdmin
           ? EmptyView(message: strings.noPermissionForArea)
           : _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? ErrorView(message: _error!, onRetry: _load)
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(12),
-                children: [
-                  for (final role in _roles)
-                    SectionCard(
-                      title: role['name'] as String? ?? role['code'] as String?,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? ErrorView(message: _error!, onRetry: _load)
+                  : RefreshIndicator(
+                      onRefresh: _load,
+                      child: ListView(
+                        padding: const EdgeInsets.all(12),
                         children: [
-                          for (final entry in grouped.entries) ...[
-                            Padding(
-                              padding: const EdgeInsets.only(
-                                top: 10,
-                                bottom: 4,
-                              ),
-                              child: Text(
-                                entry.key.toUpperCase(),
-                                style: Theme.of(context).textTheme.labelSmall,
+                          for (final role in _roles)
+                            SectionCard(
+                              title: role['name'] as String? ??
+                                  role['code'] as String?,
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  for (final entry in grouped.entries) ...[
+                                    Padding(
+                                      padding: const EdgeInsets.only(
+                                        top: 10,
+                                        bottom: 4,
+                                      ),
+                                      child: Text(
+                                        entry.key.toUpperCase(),
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .labelSmall,
+                                      ),
+                                    ),
+                                    Wrap(
+                                      spacing: 6,
+                                      runSpacing: 4,
+                                      children: [
+                                        for (final permission in entry.value)
+                                          _permissionChip(
+                                            role['code'] as String,
+                                            permission,
+                                          ),
+                                      ],
+                                    ),
+                                  ],
+                                ],
                               ),
                             ),
-                            Wrap(
-                              spacing: 6,
-                              runSpacing: 4,
-                              children: [
-                                for (final permission in entry.value)
-                                  _permissionChip(
-                                    role['code'] as String,
-                                    permission,
-                                  ),
-                              ],
-                            ),
-                          ],
                         ],
                       ),
                     ),
-                ],
-              ),
-            ),
     );
   }
 
@@ -404,31 +407,31 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
                     valueListenable: _action,
                     builder: (context, value, _) =>
                         DropdownButtonFormField<String?>(
-                          initialValue: value,
-                          decoration: InputDecoration(
-                            labelText: uiText(context, 'Action'),
-                            isDense: true,
-                          ),
-                          items: const [
-                            DropdownMenuItem(value: null, child: Text('All')),
-                            DropdownMenuItem(
-                              value: 'INSERT',
-                              child: Text('Insert'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'UPDATE',
-                              child: Text('Update'),
-                            ),
-                            DropdownMenuItem(
-                              value: 'DELETE',
-                              child: LText('Delete'),
-                            ),
-                          ],
-                          onChanged: (value) {
-                            _action.value = value;
-                            _load();
-                          },
+                      initialValue: value,
+                      decoration: InputDecoration(
+                        labelText: uiText(context, 'Action'),
+                        isDense: true,
+                      ),
+                      items: const [
+                        DropdownMenuItem(value: null, child: Text('All')),
+                        DropdownMenuItem(
+                          value: 'INSERT',
+                          child: Text('Insert'),
                         ),
+                        DropdownMenuItem(
+                          value: 'UPDATE',
+                          child: Text('Update'),
+                        ),
+                        DropdownMenuItem(
+                          value: 'DELETE',
+                          child: LText('Delete'),
+                        ),
+                      ],
+                      onChanged: (value) {
+                        _action.value = value;
+                        _load();
+                      },
+                    ),
                   ),
                 ),
                 OutlinedButton.icon(
@@ -464,43 +467,45 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                ? ErrorView(message: _error!, onRetry: _load)
-                : _rows.isEmpty
-                ? EmptyView(
-                    message: uiText(
-                      context,
-                      'No audit entries match these filters.',
-                    ),
-                  )
-                : RefreshIndicator(
-                    onRefresh: _load,
-                    child: ListView.separated(
-                      padding: const EdgeInsets.all(12),
-                      itemCount: _rows.length,
-                      separatorBuilder: (_, _) => const Divider(height: 1),
-                      itemBuilder: (context, index) {
-                        final row = _rows[index];
-                        return ListTile(
-                          leading: Icon(_actionIcon(row['action'] as String?)),
-                          title: Text(
-                            '${row['action'] ?? ''} • ${row['table_name'] ?? ''}',
+                    ? ErrorView(message: _error!, onRetry: _load)
+                    : _rows.isEmpty
+                        ? EmptyView(
+                            message: uiText(
+                              context,
+                              'No audit entries match these filters.',
+                            ),
+                          )
+                        : RefreshIndicator(
+                            onRefresh: _load,
+                            child: ListView.separated(
+                              padding: const EdgeInsets.all(12),
+                              itemCount: _rows.length,
+                              separatorBuilder: (_, _) =>
+                                  const Divider(height: 1),
+                              itemBuilder: (context, index) {
+                                final row = _rows[index];
+                                return ListTile(
+                                  leading: Icon(
+                                      _actionIcon(row['action'] as String?)),
+                                  title: Text(
+                                    '${row['action'] ?? ''} • ${row['table_name'] ?? ''}',
+                                  ),
+                                  subtitle: Text(
+                                    [
+                                      if (row['record_id'] != null)
+                                        'Record ${row['record_id']}',
+                                      if (row['created_at'] != null)
+                                        formatDateTime(row['created_at']),
+                                      if (row['user_id'] != null)
+                                        'User ${row['user_id']}',
+                                    ].join('\n'),
+                                  ),
+                                  isThreeLine: true,
+                                  onTap: () => _showDetails(row),
+                                );
+                              },
+                            ),
                           ),
-                          subtitle: Text(
-                            [
-                              if (row['record_id'] != null)
-                                'Record ${row['record_id']}',
-                              if (row['created_at'] != null)
-                                formatDateTime(row['created_at']),
-                              if (row['user_id'] != null)
-                                'User ${row['user_id']}',
-                            ].join('\n'),
-                          ),
-                          isThreeLine: true,
-                          onTap: () => _showDetails(row),
-                        );
-                      },
-                    ),
-                  ),
           ),
         ],
       ),
@@ -508,32 +513,32 @@ class _AuditLogScreenState extends State<AuditLogScreen> {
   }
 
   IconData _actionIcon(String? action) => switch (action) {
-    'INSERT' => Icons.add_circle_outline,
-    'UPDATE' => Icons.edit_outlined,
-    'DELETE' => Icons.delete_outline,
-    _ => Icons.history,
-  };
+        'INSERT' => Icons.add_circle_outline,
+        'UPDATE' => Icons.edit_outlined,
+        'DELETE' => Icons.delete_outline,
+        _ => Icons.history,
+      };
 
   Future<void> _showDetails(Map<String, dynamic> row) => showDialog<void>(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('${row['action'] ?? ''} ${row['table_name'] ?? ''}'),
-      content: SizedBox(
-        width: 560,
-        child: SingleChildScrollView(
-          child: SelectableText(
-            const JsonEncoder.withIndent('  ').convert(row),
+        context: context,
+        builder: (context) => AlertDialog(
+          title: Text('${row['action'] ?? ''} ${row['table_name'] ?? ''}'),
+          content: SizedBox(
+            width: 560,
+            child: SingleChildScrollView(
+              child: SelectableText(
+                const JsonEncoder.withIndent('  ').convert(row),
+              ),
+            ),
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const LText('Close'),
+            ),
+          ],
         ),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: const LText('Close'),
-        ),
-      ],
-    ),
-  );
+      );
 }
 
 class DataExportScreen extends StatefulWidget {
