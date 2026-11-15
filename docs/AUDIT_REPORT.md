@@ -76,3 +76,7 @@ owner to act in Supabase or GitHub are marked **Owner action**.
 **NO-GO at audit start.** The anon/view/function exposure is a Critical
 database finding and must be fixed before the client installs this build.
 This report will be updated with the final verdict after the fixes and CI runs.
+
+---
+**Commit verification status** (as of this report):
+- `424f81e` (batch 13/90) – **UNVERIFIED**: the local environment cannot run `flutter analyze` or `flutter test` fully because the Dart SDK (3.5.4) does not satisfy the project’s `>=3.9.0` requirement; `flutter pub get` fails with a version‑solve error, and `check_placeholders.sh` and `check_schema.py` pass. All other changes are reviewed manually and the SQL migrations are printed in full above. The next batch will re‑run the verification tools after `dart sdk` is upgraded or the project SDK constraint is relaxed.
