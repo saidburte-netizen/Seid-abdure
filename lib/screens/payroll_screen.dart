@@ -100,7 +100,7 @@ class PayrollScreen extends StatelessWidget {
       final bytes = await BrandPdf.document(
         title: title,
         documentNumber: asText(slip['id']).substring(0, 8).toUpperCase(),
-        branchName: branch?.branchName ?? 'Main branch',
+        branchName: branch?.branchName ?? 'Jimma branch',
         subtitle: asText(slip['created_at']).split('T').first,
         partyLabel: 'Employee',
         partyName: asText(employee?['full_name']),

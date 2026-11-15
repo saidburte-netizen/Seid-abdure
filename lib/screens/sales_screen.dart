@@ -169,7 +169,7 @@ class _SalesScreenState extends State<SalesScreen> {
       final bytes = await BrandPdf.document(
         title: title,
         documentNumber: asText(sale['receipt_no']),
-        branchName: branch?.branchName ?? 'Main branch',
+        branchName: branch?.branchName ?? 'Jimma branch',
         subtitle: formatDate(sale['sale_date']),
         details: [
           ('Total', formatMoney(sale['total_amount'])),

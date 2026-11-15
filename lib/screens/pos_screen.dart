@@ -303,7 +303,7 @@ class _PosScreenState extends State<PosScreen> {
     final bytes = await BrandPdf.document(
       title: uiText(context, 'Sales receipt'),
       documentNumber: asText(sale['receipt_no']),
-      branchName: branch?.branchName ?? 'Main branch',
+      branchName: branch?.branchName ?? 'Jimma branch',
       subtitle: formatDate(sale['sale_date']),
       details: [
         ('Customer', _customerName()),

@@ -276,7 +276,7 @@ class AuthController extends ChangeNotifier {
         for (final row in branchRows)
           BranchAccess(
             branchId: row['id'] as String,
-            branchName: row['name'] as String? ?? 'Main branch',
+            branchName: row['name'] as String? ?? 'Jimma branch',
             branchCode: row['code'] as String? ?? '',
             roleCode: roleCode!,
             permissions: isAdminRole ? const {} : permissions,
@@ -367,7 +367,7 @@ class AuthController extends ChangeNotifier {
   Future<void> createFirstBranch() async {
     await client.from('branches').insert({
       'code': 'MAIN',
-      'name': 'Main branch',
+      'name': 'Jimma branch',
       'is_active': true,
     });
     await retry();
