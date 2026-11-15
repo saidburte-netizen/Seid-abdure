@@ -136,7 +136,7 @@ Verified database results:
 - RLS probes for anon and all nine roles
 - Avatars bucket and own-folder storage policy
 
-Run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43652662785
+Run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43684189505
 
 ## Android emulator smoke test
 
@@ -147,7 +147,7 @@ English → አማርኛ → Afaan Oromoo → English. It captures one screensho
 language and fails on any visible `SocketException`, `ClientException`,
 `SUPABASE_URL`, `service_role` or stack-trace text.
 
-Evidence run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43652065434
+Evidence run: https://github.com/saidburte-netizen/Seid-abdure/actions/runs/43683195143
 
 ## Translation coverage
 
