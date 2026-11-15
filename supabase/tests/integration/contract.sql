@@ -329,6 +329,16 @@ select pg_temp.assert_true(
   (select amount = 50 and balance = 50 and status = 'open' from public.receivables where sale_id = '14141414-1414-1414-1414-141414141414'),
   'credit sale creates receivable'
 );
+select pg_temp.assert_raises(
+  $$insert into public.sale_payments (sale_id, method, amount, received_by)
+    values ('14141414-1414-1414-1414-141414141414', 'credit', 10, '00000000-0000-0000-0000-000000000003')$$,
+  'outstanding balance',
+  'a credit payment cannot exceed the sale balance'
+);
+select pg_temp.assert_true(
+  (select amount = 50 and balance = 50 from public.receivables where sale_id = '14141414-1414-1414-1414-141414141414'),
+  'rejected credit payment leaves the receivable unchanged'
+);
 
 -- A credit sale must name an active customer.
 insert into public.sales (

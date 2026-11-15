@@ -314,13 +314,13 @@ declare
   v_cust uuid;
   v_cat uuid;
   v_total numeric;
-  v_paid numeric;
+  v_paid_total numeric;
   v_limit numeric;
   v_active boolean;
   v_outstanding numeric;
 begin
-  select branch_id, customer_id, total_amount, paid_amount
-  into v_branch, v_cust, v_total, v_paid
+  select branch_id, customer_id, total_amount
+  into v_branch, v_cust, v_total
   from public.sales
   where id = new.sale_id
   for update;
@@ -328,6 +328,12 @@ begin
   if not found then
     raise exception 'Sale not found.';
   end if;
+
+  select coalesce(sum(amount), 0) into v_paid_total
+  from public.sale_payments
+  where sale_id = new.sale_id;
+  -- The live trigger is AFTER INSERT, so this sum already includes the new
+  -- payment. Compare it directly with the sale total.
 
   if new.method = 'credit' then
     if v_cust is null then
@@ -346,6 +352,10 @@ begin
       raise exception 'This customer is inactive and cannot buy on credit.';
     end if;
 
+    if v_paid_total > v_total then
+      raise exception 'Payment exceeds the outstanding balance.';
+    end if;
+
     select coalesce(sum(balance), 0) into v_outstanding
     from public.receivables
     where customer_id = v_cust
@@ -358,7 +368,7 @@ begin
     insert into public.receivables (customer_id, sale_id, description, amount, due_date, created_by)
     values (v_cust, new.sale_id, 'Credit sale', new.amount, current_date + 30, new.received_by);
   else
-    if v_paid + new.amount > v_total then
+    if v_paid_total > v_total then
       raise exception 'Payment exceeds the outstanding balance.';
     end if;
 

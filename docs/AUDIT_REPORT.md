@@ -23,7 +23,7 @@ produced the stated result. Anything not yet executed is listed under
 | Schema snapshot check | `python3 tool/check_schema.py` | `PASS` (21 expected warnings for live-only objects) |
 | Dependency vulnerabilities | `osv-scanner scan source -L pubspec.lock` | `Scanned pubspec.lock and found 136 packages` … `No issues found` |
 | Secret history scan (v1.0.7) | Gitleaks full history | clean |
-| SQL contract suite | `./tool/run_contract_local.sh` | `CONTRACT PASSED` (exit 0; 114 `assert_true`/`assert_raises` calls, including the new business-rule guards) |
+| SQL contract suite | `./tool/run_contract_local.sh` | `CONTRACT PASSED` (exit 0; 116 `assert_true`/`assert_raises` calls, including the new business-rule guards) |
 | Accessibility | `flutter test test/accessibility_test.dart` | 66 tests pass: 51 routes at 200% text, 3 small-phone routes, 6 am/om routes, 1 negative control, 5 icon-target routes |
 | Colour balance | `flutter test test/colour_probe_test.dart` | 51 route probes pass, every green ratio inside 52–68% |
 | Translation coverage | 4 localisation test files | 10 tests pass; every schema/UI phrase has am and om text and placeholders are preserved |
@@ -71,7 +71,7 @@ produced the stated result. Anything not yet executed is listed under
 | WIRE-01 | Low | Dead/empty handlers | Static placeholder check passes | **Verified** |
 | WIRE-02 | High | No automated button walkthrough | `test/button_walkthrough_test.dart`: 17 routes and 9 role dashboards, every visible control tapped, no exception. It found and fixed two real bugs (app-bar overflow; `setState` returning a `Future`) | **Fixed** |
 | WIRE-03 | Medium | No wiring documentation | `docs/WIRING.md` exists and maps screens to tables/RPCs | **Verified** |
-| MOD-01 | High | Contract did not cover enough module rules | Contract now runs 114 `assert_true`/`assert_raises` calls covering void/stock/cash/credit/payroll/rent/close-day/payment limits/active records/RLS/storage and passes locally | **Fixed** |
+| MOD-01 | High | Contract did not cover enough module rules | Contract now runs 116 `assert_true`/`assert_raises` calls covering void/stock/cash/credit/payroll/rent/close-day/payment limits/active records/RLS/storage and passes locally | **Fixed** |
 | MOD-02 | Medium | Payroll/rent generation could duplicate | Duplicate guards asserted by the contract; UI buttons guard while a request is running | **Fixed** |
 | BUS-01 | High | Payments could exceed the outstanding balance, and supplier payments had no positive-amount check | `20261115000004_business_rule_guards.sql`; contract asserts sale, customer, supplier and rent payments reject overpayment and negatives | **Fixed** |
 | BUS-02 | High | A closed day could be silently overwritten by calling `fn_close_day` again or updating the row | Guard raises on a second close; `trg_daily_closing_locked` blocks edits/deletes except the notes field; contract verifies the value is unchanged | **Fixed** |
@@ -172,7 +172,8 @@ the named test file.
 57. Contract rejects negative/zero payments for sales, customer credit,
     supplier payables and rent.
 58. Contract rejects any payment larger than the outstanding balance on all
-    four payment paths, and proves the balance is unchanged after rejection.
+    five payment paths (including a second credit line), and proves the balance
+    is unchanged after rejection.
 59. Contract rejects a second close of the same day and a direct edit of a
     closed row; the counted cash stays at its original value.
 60. Contract rejects payroll regeneration after approval, payslip money edits
@@ -189,7 +190,7 @@ the named test file.
 68. Contract asserts the three new `SECURITY DEFINER` trigger helpers are not
     executable by anon or authenticated; `fn_close_day` stays auth-only.
 69. `./tool/run_contract_local.sh` applies `live_schema.sql`, all five committed
-    migrations and 114 assertion calls; result `CONTRACT PASSED`.
+    migrations and 116 assertion calls; result `CONTRACT PASSED`.
 70. Colour probe passes on all 51 routes; green share is 52–68% everywhere.
 71. Translation coverage passes 10 tests across en/am/om catalogs, UI phrases
     and templates.
