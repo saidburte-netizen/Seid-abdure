@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'app.dart';
+import 'auth/secure_local_storage.dart';
 import 'core/errors/error_ui.dart';
 import 'core/locale/locale_preferences.dart';
 import 'core/logging/app_logger.dart';
@@ -28,7 +28,7 @@ Future<void> main() async {
 
       SupabaseClient? client;
       Future<void> restartApp() async {
-        runApp(ProviderScope(child: BakeryApp(client: client)));
+        runApp(BakeryApp(client: client));
       }
 
       Future<void> resetLanguage() async {
@@ -75,10 +75,18 @@ Future<void> main() async {
             : _rawSupabaseAnonKey,
       );
       if (_isValidSupabaseUrl(url) && key.isNotEmpty) {
-        await Supabase.initialize(url: url, publishableKey: key);
+        await Supabase.initialize(
+          url: url,
+          publishableKey: key,
+          authOptions: FlutterAuthClientOptions(
+            localStorage: SecureLocalStorage(
+              persistSessionKey: _sessionStorageKey(url),
+            ),
+          ),
+        );
         client = Supabase.instance.client;
       }
-      runApp(ProviderScope(child: BakeryApp(client: client)));
+      runApp(BakeryApp(client: client));
     },
     (error, stack) {
       AppLogger.error('Uncaught zoned error', error, stack);
@@ -111,6 +119,9 @@ String _cleanUrl(String value) {
 }
 
 String _cleanKey(String value) => value.trim();
+
+String _sessionStorageKey(String url) =>
+    'sb-${Uri.parse(url).host.split('.').first}-auth-token';
 
 bool _isValidSupabaseUrl(String value) {
   final uri = Uri.tryParse(value);

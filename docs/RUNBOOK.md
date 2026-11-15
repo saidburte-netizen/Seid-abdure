@@ -110,8 +110,8 @@ normal sideload release.
 ## Health checks
 
 - `flutter analyze`, `flutter test`, `flutter build web`.
-- Run `.github/workflows/supabase-integration.yml` and confirm the contract is
-  green.
+- Confirm the `integration` job in `.github/workflows/build-android.yml` is
+  green; it runs the contract against a disposable local Supabase stack.
 - Confirm RLS is enabled on every public table:
   ```sql
   select c.relname

@@ -1,9 +1,12 @@
 #!/usr/bin/env python3
-"""Install the release APK on an emulator and smoke-test the login screen.
+"""Install the release APK on an emulator and smoke-test the app.
 
 The script uses the Android accessibility hierarchy so it does not depend on
-screen coordinates. It confirms the login screen, switches English -> Amharic
--> Oromo -> English, and captures a screenshot after each language change.
+screen coordinates. It always confirms the login screen and switches
+English -> Amharic -> Oromo -> English. When SMOKE_EMAIL and SMOKE_PASSWORD
+are provided it also signs in, opens the dashboard, and completes one POS
+cash sale. Without those credentials the signed-in phase is skipped with an
+explicit warning, so a release is never blocked by smoke-test credentials.
 """
 
 from __future__ import annotations
@@ -156,6 +159,121 @@ def choose_language(item_label: str, expected_label: str) -> None:
     print(f"LANGUAGE {item_label} -> {expected_label} OK")
 
 
+def find_clickable_label(root: ET.Element, labels: list[str]) -> ET.Element | None:
+    wanted = set(labels)
+    for node in visible_nodes(root):
+        if node.get("clickable") == "true" and label(node) in wanted:
+            return node
+    for node in visible_nodes(root):
+        if node.get("clickable") == "true" and any(
+            text in label(node) for text in labels
+        ):
+            return node
+    return None
+
+
+def type_into(node: ET.Element, value: str) -> None:
+    tap(node)
+    # adb shell input text uses %s for a space and cannot reliably pass shell
+    # metacharacters. Smoke credentials are documented as letters/digits only.
+    escaped = value.replace(" ", "%s")
+    adb("shell", "input", "text", escaped)
+
+
+def sign_in_and_sell() -> None:
+    email = os.environ.get("SMOKE_EMAIL", "").strip()
+    password = os.environ.get("SMOKE_PASSWORD", "")
+    if not email or not password:
+        print(
+            "SMOKE SKIP: SMOKE_EMAIL/SMOKE_PASSWORD are not set; "
+            "signed-in dashboard and POS sale were not exercised."
+        )
+        return
+    if not re.fullmatch(r"[A-Za-z0-9@._+\-]+", email) or not re.fullmatch(
+        r"[A-Za-z0-9@._+\-]+", password
+    ):
+        raise RuntimeError(
+            "SMOKE_EMAIL/SMOKE_PASSWORD must be letters, digits or @ . _ + - only."
+        )
+
+    email_field = wait_for(lambda r: find_text(r, "Email"), "email field")
+    type_into(email_field, email)
+    password_field = wait_for(lambda r: find_text(r, "Password"), "password field")
+    type_into(password_field, password)
+    sign_in = wait_for(lambda r: find_text(r, "Sign in"), "sign in button")
+    tap(sign_in)
+    dashboard = wait_for(
+        lambda r: (
+            find_text(r, "Dashboard")
+            or find_text(r, "Point of sale")
+            or find_text(r, "New sale")
+        ),
+        "dashboard after sign-in",
+        timeout=90,
+    )
+    screenshot("05-dashboard-en.png")
+    assert_no_raw_errors(dashboard)
+
+    menu = find_clickable_label(
+        dashboard, ["Menu", "Open navigation menu", "Navigation menu"]
+    )
+    if menu is None:
+        raise RuntimeError("Could not open the navigation drawer after sign-in.")
+    tap(menu)
+    pos = wait_for(
+        lambda r: find_clickable_label(r, ["Point of sale", "POS"]),
+        "POS navigation item",
+    )
+    tap(pos)
+    wait_for(lambda r: find_text(r, "Search products"), "POS product list")
+    screenshot("06-pos-before-sale.png")
+
+    chrome = {
+        "Point of sale", "Search products", "Current sale", "Customer",
+        "Store", "Payment method", "Cash account", "Discount (ETB)",
+        "Amount paid", "Notes", "Subtotal", "Discount", "Tax", "Total",
+        "Complete sale", "Menu", "Back", "Notifications", "Sign out",
+        "Walk-in", "Cash", "Clear cart",
+    }
+    product = None
+    for node in visible_nodes(dump_xml()):
+        if node.get("clickable") != "true":
+            continue
+        text = label(node)
+        if not text or text in chrome or len(text) < 2:
+            continue
+        product = node
+        break
+    if product is None:
+        raise RuntimeError("No product tile was available in the POS grid.")
+    print(f"POS PRODUCT {label(product)!r}")
+    tap(product)
+
+    paid = wait_for(lambda r: find_text(r, "Amount paid"), "amount paid field")
+    type_into(paid, "999999")
+    complete = wait_for(
+        lambda r: find_clickable_label(r, ["Complete sale"]),
+        "complete sale button",
+    )
+    tap(complete)
+    confirm = wait_for(
+        lambda r: find_clickable_label(r, ["Complete"]),
+        "sale confirmation dialog",
+    )
+    tap(confirm)
+    wait_for(
+        lambda r: (
+            find_text(r, "Sales receipt")
+            or find_text(r, "Sale completed")
+            or find_text(r, "Receipt")
+        ),
+        "completed sale receipt",
+        timeout=90,
+    )
+    screenshot("07-pos-sale-completed.png")
+    print("SMOKE SIGNED-IN OK: dashboard opened and one POS cash sale completed.")
+
+
 def main() -> None:
     apk = sys.argv[1] if len(sys.argv) > 1 else "brade-cake-house.apk"
     print(f"Installing {apk}")
@@ -183,6 +301,8 @@ def main() -> None:
     choose_language("English", "Sign in")
     screenshot("04-login-en-again.png")
     assert_no_raw_errors(dump_xml())
+
+    sign_in_and_sell()
 
     print(
         "SMOKE OK: installed, launched, login screen shown, "

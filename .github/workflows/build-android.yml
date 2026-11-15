@@ -3,8 +3,11 @@ name: Android build
 on:
   workflow_dispatch:
   push:
-    branches: [main]
     tags: ["v*"]
+
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: write
@@ -12,19 +15,24 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
 
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: "17"
 
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@0b6dd653ba04f4f93bf581ec31e66cbd7dcb644d # v4
         with:
           cache-read-only: false
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2
         with:
           flutter-version: "3.35.4"
           channel: stable
@@ -67,6 +75,24 @@ jobs:
             echo "::warning title=Debug-signed build::Android signing secrets are missing. The APK/AAB will be a debug-signed sideload/testing build. Google Play is not a target."
           fi
 
+      - name: Verify the embedded Supabase key is the anon key
+        env:
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          set -euo pipefail
+          python3 - "$SUPABASE_ANON_KEY" <<'PY'
+          import base64, json, sys
+          key = sys.argv[1]
+          parts = key.split('.')
+          if len(parts) != 3:
+              raise SystemExit('SUPABASE_ANON_KEY is not a JWT; refusing to build')
+          payload = json.loads(base64.urlsafe_b64decode(parts[1] + '=='))
+          role = payload.get('role')
+          if role != 'anon':
+              raise SystemExit(f'SUPABASE_ANON_KEY role is {role!r}, expected anon')
+          print('Embedded Supabase key role:', role)
+          PY
+
       - name: Build universal release APK
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
@@ -74,9 +100,20 @@ jobs:
         run: |
           set -euo pipefail
           flutter build apk --release \
+            --obfuscate \
+            --split-debug-info=build/symbols \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           cp build/app/outputs/flutter-apk/app-release.apk brade-cake-house.apk
+
+      - name: Scan the release APK for leaked secrets
+        run: |
+          set -euo pipefail
+          if strings brade-cake-house.apk | grep -E -q 'sb_secret_|SUPABASE_SERVICE_ROLE|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}'; then
+            echo '::error::The APK contains a secret-like string.' >&2
+            exit 1
+          fi
+          echo 'No secret-like strings found in the APK.'
 
       - name: Build release AAB
         env:
@@ -85,6 +122,8 @@ jobs:
         run: |
           set -euo pipefail
           flutter build appbundle --release \
+            --obfuscate \
+            --split-debug-info=build/symbols \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
             --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
           cp build/app/outputs/bundle/release/app-release.aab brade-cake-house.aab
@@ -140,6 +179,7 @@ jobs:
             echo "- Commit: \`$GITHUB_SHA\`"
             echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- The APK is the install file. The AAB and web ZIP are included for completeness; this release is not a Google Play submission."
+            echo "- Emulator smoke: login screen and en/am/om language switch always run; the signed-in dashboard and one POS sale run when the optional SMOKE_EMAIL/SMOKE_PASSWORD repository secrets are configured."
           } > release-notes.md
           cat release-notes.md
           {
@@ -171,9 +211,19 @@ jobs:
           "$AAPT" dump badging "$APK" | tee apk-badging.txt
           grep -q "package: name='net.bradeandcake.brade_and_cake_house'" apk-badging.txt
           grep -q "application-label:'Brade and Cake House'" apk-badging.txt
+          if grep -q "application-debuggable" apk-badging.txt; then
+            echo "ERROR: release APK is marked debuggable."
+            exit 1
+          fi
           "$AAPT" dump permissions "$APK" | tee apk-permissions.txt
           grep -q "android.permission.INTERNET" apk-permissions.txt
           grep -q "android.permission.ACCESS_NETWORK_STATE" apk-permissions.txt
+          if unzip -p "$APK" lib/arm64-v8a/libapp.so 2>/dev/null \
+              | strings \
+              | grep -Eq 'SUPABASE_SERVICE_ROLE_KEY|"role"[[:space:]]*:[[:space:]]*"service_role"'; then
+            echo "ERROR: a service_role key or service-role JWT is embedded in the APK."
+            exit 1
+          fi
           unzip -l "$APK" | tee apk-files.txt
           grep -q "assets/flutter_assets/assets/branding/logo.png" apk-files.txt
           grep -q "assets/flutter_assets/assets/branding/icon_foreground.png" apk-files.txt
@@ -189,56 +239,52 @@ jobs:
           echo "Translations: en, am, om (compiled into libapp.so by flutter gen-l10n)."
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: brade-cake-house-apk
           if-no-files-found: error
           path: brade-cake-house.apk
 
       - name: Upload AAB
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: brade-cake-house-aab
           if-no-files-found: error
           path: brade-cake-house.aab
 
       - name: Upload web ZIP
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: brade-cake-house-web-release
           if-no-files-found: error
           path: brade-cake-house-web.zip
 
       - name: Upload SHA-256 checksums
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: brade-cake-house-checksums
           if-no-files-found: error
           path: sha256sums.txt
 
-      - name: Attach Android files to GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
-        uses: softprops/action-gh-release@v2
+      - name: Upload release notes
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          tag_name: ${{ github.ref_name }}
-          name: Brade and Cake House ${{ github.ref_name }}
-          draft: false
-          prerelease: false
-          body_path: release-notes.md
-          files: |
-            brade-cake-house.apk
-            brade-cake-house.aab
-            brade-cake-house-web.zip
-            sha256sums.txt
+          name: brade-cake-house-release-notes
+          if-no-files-found: error
+          path: release-notes.md
 
   smoke:
     needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    permissions:
+      contents: read
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
 
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
         with:
           name: brade-cake-house-apk
 
@@ -249,7 +295,10 @@ jobs:
           sudo udevadm trigger --name-match=kvm
 
       - name: Install, launch and switch languages on an emulator
-        uses: ReactiveCircus/android-emulator-runner@v2
+        env:
+          SMOKE_EMAIL: ${{ secrets.SMOKE_EMAIL }}
+          SMOKE_PASSWORD: ${{ secrets.SMOKE_PASSWORD }}
+        uses: ReactiveCircus/android-emulator-runner@4c44018e59b437e86cdfc41da381398f93ed8808 # v2
         with:
           api-level: 34
           target: google_apis
@@ -261,9 +310,157 @@ jobs:
 
       - name: Upload smoke screenshots
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: android-smoke-screenshots
           path: build/evidence/android-smoke
           if-no-files-found: warn
           retention-days: 7
+
+  # Real RLS and the full SQL contract run against a disposable local Supabase
+  # stack. The release job depends on this, so a failing contract cannot
+  # publish a tag.
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 1
+
+      - uses: supabase/setup-cli@1dedf2c611547ede7232d26866dd3c56ab903bbb # v1.7.3
+        with:
+          version: 3.1.0
+
+      - name: Install PostgreSQL client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client
+
+      - name: Start a disposable local Supabase stack
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f supabase/migrations/20261114000001_foundation.sql ]; then
+            echo "Using the uploaded 20261114 migrations."
+            mkdir -p supabase/legacy_migrations
+            if [ -f supabase/migrations/20261113020000_organizations_rls.sql ]; then
+              mv supabase/migrations/20261113020000_organizations_rls.sql supabase/legacy_migrations/
+            fi
+            supabase start
+          else
+            echo "::warning::The 15 uploaded migrations are not present. Using the read-only live schema fixture for this disposable stack."
+            mkdir -p supabase/migrations.disabled /tmp/after_fixture
+            for migration in supabase/migrations/*.sql; do
+              [ -e "$migration" ] || continue
+              cp "$migration" /tmp/after_fixture/
+            done
+            find supabase/migrations -maxdepth 1 -type f -name '*.sql' -exec mv {} supabase/migrations.disabled/ \;
+            supabase start
+            export PGPASSWORD=postgres
+            psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+              -v ON_ERROR_STOP=1 \
+              -f supabase/fixtures/live_schema.sql
+          fi
+
+      - name: Apply the one-time login and storage helpers
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          for file in supabase/sql/*.sql; do
+            echo "Applying $file"
+            psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+              -v ON_ERROR_STOP=1 \
+              -f "$file"
+          done
+
+      - name: Apply post-fixture migrations
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -d /tmp/after_fixture ]; then
+            export PGPASSWORD=postgres
+            for file in /tmp/after_fixture/*.sql; do
+              [ -e "$file" ] || continue
+              echo "Applying $file"
+              psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+                -v ON_ERROR_STOP=1 \
+                -f "$file"
+            done
+          fi
+
+      - name: Seed the integration role and permission catalog
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/integration/seed.sql
+
+      - name: Run the database integration contract and real RLS
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/integration/contract.sql
+
+      - name: Show local Supabase status
+        if: always()
+        run: supabase status || true
+
+  # Publishing is a separate job so the APK is only released after the R8
+  # smoke test, APK secret scan and real-RLS contract have all passed.
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, smoke, integration]
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-apk
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-aab
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-web-release
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-checksums
+          path: release-assets
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
+        with:
+          name: brade-cake-house-release-notes
+          path: release-assets
+      - name: Publish the verified release assets
+        uses: softprops/action-gh-release@3bb12739c298aeb8a4eeaf626c5b8d85266b0e65 # v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          name: Brade and Cake House ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          body_path: release-assets/release-notes.md
+          # The release and its tag may already exist because the owner publishes
+          # the release from the GitHub web UI (tag created on publish). This
+          # action updates an existing release by tag instead of failing, and
+          # overwrite_files replaces same-named assets on a re-run. The unmatched
+          # guard fails loudly rather than publishing an incomplete release.
+          overwrite_files: true
+          fail_on_unmatched_files: true
+          files: |
+            release-assets/brade-cake-house.apk
+            release-assets/brade-cake-house.aab
+            release-assets/brade-cake-house-web.zip
+            release-assets/sha256sums.txt

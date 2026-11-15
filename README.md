@@ -101,8 +101,11 @@ flutter build web --release \
 - `.github/workflows/build-web.yml` builds and zips the web app, uploads only
   `brade-cake-house-web.zip`, and optionally deploys to GitHub Pages when the
   repository variable `ENABLE_PAGES` is `true`.
-- Pushing a `v*` tag creates/updates the GitHub Release and attaches the APK,
-  AAB and web ZIP.
+- A `v*` tag starts exactly three workflows: `ci` runs for the `main` push, and
+  `build-android`/`build-web` run for the tag. The Android workflow also runs
+  real RLS against a disposable local Supabase stack, then publishes the APK,
+  AAB, web ZIP and `sha256sums.txt` only after the build, smoke and integration
+  jobs pass.
 
 The app is distributed as a debug-signed sideload/testing build. Google Play is
 not a target. The workflow still supports optional release signing through

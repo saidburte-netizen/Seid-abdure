@@ -664,6 +664,36 @@ abstract class AppLocalizations {
   /// **'Something went wrong. Please try again.'**
   String get errorSomethingWentWrong;
 
+  /// No description provided for @errorInvalidInput.
+  ///
+  /// In en, this message translates to:
+  /// **'Some of the details are not valid. Please check and try again.'**
+  String get errorInvalidInput;
+
+  /// No description provided for @errorOperationNotAllowed.
+  ///
+  /// In en, this message translates to:
+  /// **'This action is not allowed right now.'**
+  String get errorOperationNotAllowed;
+
+  /// No description provided for @errorFileTooLarge.
+  ///
+  /// In en, this message translates to:
+  /// **'This file is too large. Please choose a smaller file.'**
+  String get errorFileTooLarge;
+
+  /// No description provided for @errorUnsupportedFile.
+  ///
+  /// In en, this message translates to:
+  /// **'This file type is not supported.'**
+  String get errorUnsupportedFile;
+
+  /// No description provided for @errorUploadFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The file could not be uploaded. Please try again.'**
+  String get errorUploadFailed;
+
   /// No description provided for @errorEmailNotConfirmed.
   ///
   /// In en, this message translates to:

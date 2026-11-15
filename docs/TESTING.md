@@ -28,7 +28,7 @@ flutter test
 
 The executable database test is
 `supabase/tests/integration/contract.sql`. It runs in a disposable local
-Supabase stack through `.github/workflows/supabase-integration.yml`:
+Supabase stack through the `integration` job in `.github/workflows/build-android.yml`:
 
 ```sh
 supabase start
@@ -84,6 +84,9 @@ verifies the APK package, label, INTERNET permission, launcher icon, bundled
 logo, signing mode and SHA-256 checksums.
 
 ## Release checklist
+
+> This checklist records the v1.0.7 release. The v1.0.8 gates are in
+> `docs/AUDIT_REPORT.md`; its tag is not created yet.
 
 - [x] Format, placeholder, schema, analyze and full-test gates green.
 - [x] Local Supabase contract green.

@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:brade_and_cake_house/app.dart';
 import 'package:brade_and_cake_house/auth/auth_controller.dart';
 import 'package:brade_and_cake_house/core/locale/locale_preferences.dart';
 import 'package:brade_and_cake_house/l10n/app_localizations.dart';
 import 'package:brade_and_cake_house/l10n/oromo_framework_localizations.dart';
+
+import 'support/fake_backend.dart';
 
 const _routes = [
   '/',
@@ -82,7 +81,11 @@ void main() {
 
     _setPortal(controller, 'admin');
     await tester.pumpWidget(
-      BakeryApp(client: controller.client, authController: controller),
+      BakeryApp(
+        client: controller.client,
+        authController: controller,
+        signInGateway: FakeSignInGateway(admin: true),
+      ),
     );
     await tester.pump(const Duration(milliseconds: 350));
     expect(find.text('We switched back to English.'), findsOneWidget);
@@ -92,6 +95,7 @@ void main() {
 
   testWidgets('all portal routes build for en, am and om', (tester) async {
     final controller = await _createTestController(tester);
+    final gateway = FakeSignInGateway(admin: true, signupAllowed: true);
 
     for (final locale in ['en', 'am', 'om']) {
       controller.locale = Locale(locale);
@@ -102,6 +106,7 @@ void main() {
             key: ValueKey('$locale:$route'),
             client: controller.client,
             authController: controller,
+            signInGateway: gateway,
             initialLocation: route,
           ),
         );
@@ -123,6 +128,7 @@ void main() {
             key: ValueKey('$locale:$role'),
             client: controller.client,
             authController: controller,
+            signInGateway: gateway,
           ),
         );
         await tester.pump(const Duration(milliseconds: 350));
@@ -184,6 +190,7 @@ void main() {
       BakeryApp(
         client: controller.client,
         authController: controller,
+        signInGateway: FakeSignInGateway(admin: true),
         initialLocation: '/sign-in',
       ),
     );
@@ -218,20 +225,7 @@ Future<AuthController> _createTestController(
   Map<String, Object> preferences = const {},
 }) async {
   SharedPreferences.setMockInitialValues(preferences);
-  final client = SupabaseClient(
-    'https://example.supabase.co',
-    'test-anon-key',
-    authOptions: const AuthClientOptions(autoRefreshToken: false),
-    httpClient: MockClient(
-      (request) async => http.Response(
-        '[]',
-        200,
-        headers: const {'content-type': 'application/json'},
-        request: request,
-      ),
-    ),
-  );
-  final controller = AuthController(client);
+  final controller = AuthController(offlineSupabaseClient());
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(milliseconds: 50));
   return controller;

@@ -102,6 +102,47 @@ void main() {
       expect(friendlyMessage(error), isNot(contains('products')));
       expect(friendlyMessage(error), isNot(contains('nmrpmypgkljmtnsvmcfn')));
     });
+
+    test('not-null and check violations become a safe input message', () {
+      for (final code in ['23502', '23514', '22P02', '22007']) {
+        final error = PostgrestException(
+          message:
+              'null value in column "customer_id" of relation "sales" violates not-null constraint',
+          code: code,
+        );
+        expect(
+          friendlyMessage(error),
+          'Some of the details are not valid. Please check and try again.',
+          reason: code,
+        );
+        expect(friendlyMessage(error), isNot(contains('customer_id')));
+        expect(friendlyMessage(error), isNot(contains('sales')));
+      }
+    });
+
+    test('a database-raised business rule becomes a safe action message', () {
+      final error = PostgrestException(
+        message: 'This sale already has returns and cannot be voided.',
+        code: 'P0001',
+      );
+      expect(friendlyMessage(error), 'This action is not allowed right now.');
+      expect(friendlyMessage(error), isNot(contains('returns')));
+    });
+
+    test('storage limits become safe file messages', () {
+      expect(
+        friendlyMessage(StorageException('too large', statusCode: '413')),
+        'This file is too large. Please choose a smaller file.',
+      );
+      expect(
+        friendlyMessage(StorageException('bad type', statusCode: '415')),
+        'This file type is not supported.',
+      );
+      expect(
+        friendlyMessage(StorageException('upload failed', statusCode: '400')),
+        'The file could not be uploaded. Please try again.',
+      );
+    });
   });
 
   group('the friendly error widget never renders raw technical text', () {

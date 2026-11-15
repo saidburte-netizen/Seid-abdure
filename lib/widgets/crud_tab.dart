@@ -77,6 +77,11 @@ class _CrudTabState extends State<CrudTab> {
   bool _started = false;
   String _query = '';
 
+  /// Row actions that are still running. A second tap on the same action for
+  /// the same row is ignored, so payroll, rent and void RPCs cannot be fired
+  /// twice by a double tap.
+  final Set<String> _runningActions = {};
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
@@ -153,9 +158,19 @@ class _CrudTabState extends State<CrudTab> {
 
   Future<void> _refresh() async {
     final future = _load();
-    setState(() => _future = future);
+    setState(() {
+      _future = future;
+    });
     await future;
   }
+
+  Future<List<Map<String, dynamic>>> _rowsForExport() => _repo.listAll(
+    widget.spec.table,
+    orderBy: widget.spec.orderBy,
+    ascending: widget.spec.ascending,
+    branchScoped: widget.spec.branchScoped,
+    equals: widget.filters,
+  );
 
   List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> rows) {
     if (_query.trim().isEmpty) return rows;
@@ -525,18 +540,21 @@ class _CrudTabState extends State<CrudTab> {
           );
         } else {
           for (final action in custom) {
-            if (action.label == value) {
-              try {
-                await action.onPressed(row);
-                if (context.mounted) {
-                  await _refresh();
-                  widget.onChanged?.call();
-                }
-              } catch (error) {
-                if (context.mounted) {
-                  showFriendlyError(context, error);
-                }
+            if (action.label != value) continue;
+            final key = '${row[widget.spec.primaryKey]}:${action.label}';
+            if (!_runningActions.add(key)) return;
+            try {
+              await action.onPressed(row);
+              if (context.mounted) {
+                await _refresh();
+                widget.onChanged?.call();
               }
+            } catch (error) {
+              if (context.mounted) {
+                showFriendlyError(context, error);
+              }
+            } finally {
+              _runningActions.remove(key);
             }
           }
         }
@@ -681,9 +699,12 @@ class _CrudTabState extends State<CrudTab> {
 
   Future<void> _exportPdf(
     BuildContext context,
-    List<Map<String, dynamic>> rows,
+    List<Map<String, dynamic>> initialRows,
   ) async {
     try {
+      final rows = _filtered(await _rowsForExport());
+      if (rows.isEmpty) return;
+      if (!context.mounted) return;
       final session = SessionScope.of(context);
       final keys = widget.spec.effectiveListColumns.take(8).toList();
       final bytes = await BrandPdf.document(
@@ -718,8 +739,10 @@ class _CrudTabState extends State<CrudTab> {
   Future<void> _export(
     BuildContext context,
     _CrudSnapshot snapshot,
-    List<Map<String, dynamic>> rows,
+    List<Map<String, dynamic>> initialRows,
   ) async {
+    final rows = _filtered(await _rowsForExport());
+    if (rows.isEmpty) return;
     final csv = rowsToCsv(rows);
     final path = await saveCsvFile(widget.spec.table, csv);
     if (!context.mounted) return;

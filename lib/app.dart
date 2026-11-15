@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'auth/auth_controller.dart';
+import 'auth/sign_in_gateway.dart';
 import 'brand/brand.dart';
 import 'core/connectivity/offline_banner.dart';
 import 'core/errors/friendly_error.dart';
@@ -39,38 +40,54 @@ class BakeryApp extends StatelessWidget {
   const BakeryApp({
     this.client,
     @visibleForTesting this.authController,
+    @visibleForTesting this.signInGateway,
     @visibleForTesting this.initialLocation = '/',
     super.key,
   });
 
   final SupabaseClient? client;
   final AuthController? authController;
+
+  /// Overrides the sign-in backend. Tests inject a fake so `has_admin()`,
+  /// `customer_signup_allowed()` and sign-in never reach the network.
+  final SignInGateway? signInGateway;
   final String initialLocation;
 
   @override
-  Widget build(BuildContext context) => _BakeryRouter(
-    client: client ?? authController?.client,
-    authController: authController,
-    initialLocation: initialLocation,
-  );
+  Widget build(BuildContext context) {
+    final resolvedClient = client ?? authController?.client;
+    return _BakeryRouter(
+      client: resolvedClient,
+      authController: authController,
+      signInGateway:
+          signInGateway ??
+          (resolvedClient == null
+              ? null
+              : SupabaseSignInGateway(resolvedClient)),
+      initialLocation: initialLocation,
+    );
+  }
 }
 
 class _BakeryRouter extends StatefulWidget {
   const _BakeryRouter({
     required this.client,
     required this.authController,
+    required this.signInGateway,
     required this.initialLocation,
   });
 
   final SupabaseClient? client;
   final AuthController? authController;
+  final SignInGateway? signInGateway;
   final String initialLocation;
 
   @override
   State<_BakeryRouter> createState() => _BakeryRouterState();
 }
 
-class _BakeryRouterState extends State<_BakeryRouter> {
+class _BakeryRouterState extends State<_BakeryRouter>
+    with WidgetsBindingObserver {
   final _scaffoldMessengerKey = GlobalKey<ScaffoldMessengerState>();
   late final AuthController? _auth;
   late final bool _ownsAuth;
@@ -113,6 +130,7 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _ownsAuth = widget.authController == null;
     _auth =
         widget.authController ??
@@ -302,7 +320,8 @@ class _BakeryRouterState extends State<_BakeryRouter> {
         ),
         GoRoute(
           path: '/sign-in',
-          builder: (context, state) => SignInScreen(client: widget.client!),
+          builder: (context, state) =>
+              SignInScreen(gateway: widget.signInGateway!),
         ),
         GoRoute(
           path: '/loading',
@@ -351,7 +370,15 @@ class _BakeryRouterState extends State<_BakeryRouter> {
   };
 
   @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _auth?.checkInactivity();
+    }
+  }
+
+  @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _router.dispose();
     if (_ownsAuth) _auth?.dispose();
     super.dispose();
@@ -377,37 +404,43 @@ class _BakeryRouterState extends State<_BakeryRouter> {
     }
     return SessionScope(
       controller: _auth,
-      child: ListenableBuilder(
-        listenable: _auth,
-        builder: (context, _) => MaterialApp.router(
-          title: Brand.appName,
-          scaffoldMessengerKey: _scaffoldMessengerKey,
-          onGenerateTitle: (context) => Brand.appName,
-          theme: AppTheme.light(),
-          darkTheme: AppTheme.dark(),
-          themeMode: _auth.themeMode,
-          locale: _auth.locale,
-          localizationsDelegates: const [
-            ...oromoFrameworkLocalizationsDelegates,
-            ...AppLocalizations.localizationsDelegates,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          routerConfig: _router,
-          debugShowCheckedModeBanner: false,
-          builder: (context, child) {
-            if (_auth.takeLocaleResetNotice()) {
-              final message = AppLocalizations.of(context).languageResetNotice;
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _scaffoldMessengerKey.currentState?.showSnackBar(
-                  SnackBar(content: Text(message)),
-                );
-              });
-            }
-            return OfflineBanner(
-              onReconnected: _auth.retry,
-              child: child ?? const SizedBox.shrink(),
-            );
-          },
+      child: Listener(
+        behavior: HitTestBehavior.translucent,
+        onPointerDown: (_) => _auth.noteActivity(),
+        child: ListenableBuilder(
+          listenable: _auth,
+          builder: (context, _) => MaterialApp.router(
+            title: Brand.appName,
+            scaffoldMessengerKey: _scaffoldMessengerKey,
+            onGenerateTitle: (context) => Brand.appName,
+            theme: AppTheme.light(),
+            darkTheme: AppTheme.dark(),
+            themeMode: _auth.themeMode,
+            locale: _auth.locale,
+            localizationsDelegates: const [
+              ...oromoFrameworkLocalizationsDelegates,
+              ...AppLocalizations.localizationsDelegates,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            routerConfig: _router,
+            debugShowCheckedModeBanner: false,
+            builder: (context, child) {
+              if (_auth.takeLocaleResetNotice()) {
+                final message = AppLocalizations.of(
+                  context,
+                ).languageResetNotice;
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _scaffoldMessengerKey.currentState?.showSnackBar(
+                    SnackBar(content: Text(message)),
+                  );
+                });
+              }
+              return OfflineBanner(
+                onReconnected: _auth.retry,
+                child: child ?? const SizedBox.shrink(),
+              );
+            },
+          ),
         ),
       ),
     );
@@ -493,9 +526,9 @@ class ConfigurationScreen extends StatelessWidget {
 }
 
 class SignInScreen extends StatefulWidget {
-  const SignInScreen({required this.client, super.key});
+  const SignInScreen({required this.gateway, super.key});
 
-  final SupabaseClient client;
+  final SignInGateway gateway;
 
   @override
   State<SignInScreen> createState() => _SignInScreenState();
@@ -536,28 +569,29 @@ class _SignInScreenState extends State<SignInScreen> {
       });
     }
     try {
-      final adminResult = await widget.client.rpc('has_admin');
-      final hasAdmin = _readBool(adminResult);
-      if (hasAdmin == null) {
-        throw const FormatException('has_admin returned no value');
-      }
-      var allowCustomerSignup = false;
-      try {
-        final signupResult = await widget.client.rpc('customer_signup_allowed');
-        allowCustomerSignup = _readBool(signupResult) ?? false;
-      } catch (error, stack) {
-        AppLogger.error('Could not read sign-up setting', error, stack);
+      final hasAdmin = await widget.gateway.hasAdmin();
+      bool? allowCustomerSignup;
+      if (hasAdmin == true) {
+        try {
+          allowCustomerSignup = await widget.gateway.customerSignupAllowed();
+        } catch (error, stack) {
+          AppLogger.error('Could not read sign-up setting', error, stack);
+        }
       }
       if (!mounted) return;
       setState(() {
         _hasAdmin = hasAdmin;
-        _allowCustomerSignup = allowCustomerSignup;
+        _allowCustomerSignup = allowCustomerSignup ?? false;
         _checkingAccess = false;
       });
     } catch (error, stack) {
       AppLogger.error('Could not check sign-up options', error, stack);
       if (!mounted) return;
       setState(() {
+        // Unknown access state: keep the normal sign-in form and hide every
+        // create-account option instead of guessing.
+        _hasAdmin = null;
+        _allowCustomerSignup = false;
         _accessError = error;
         _checkingAccess = false;
       });
@@ -571,7 +605,7 @@ class _SignInScreenState extends State<SignInScreen> {
       _error = null;
     });
     try {
-      await widget.client.auth.signInWithPassword(
+      await widget.gateway.signIn(
         email: _email.text.trim(),
         password: _password.text,
       );
@@ -591,15 +625,15 @@ class _SignInScreenState extends State<SignInScreen> {
       builder: (context) => _SignUpDialog(
         firstAdmin: firstAdmin,
         onSubmit: (data) async {
-          final response = await widget.client.auth.signUp(
+          final signedIn = await widget.gateway.signUp(
             email: data['email']!,
             password: data['password']!,
-            data: {'full_name': data['name']!},
+            fullName: data['name']!,
           );
-          if (!firstAdmin && response.session != null) {
-            await widget.client.auth.signOut();
+          if (!firstAdmin && signedIn) {
+            await widget.gateway.signOut();
           }
-          if (response.session == null) {
+          if (!signedIn) {
             return strings.accountCreatedConfirmEmail;
           }
           return firstAdmin
@@ -617,6 +651,7 @@ class _SignInScreenState extends State<SignInScreen> {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final signInNotice = SessionScope.maybeOf(context)?.signInNotice;
     return Scaffold(
       body: Column(
         children: [
@@ -692,6 +727,24 @@ class _SignInScreenState extends State<SignInScreen> {
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (signInNotice != null) ...[
+                                Container(
+                                  width: double.infinity,
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: scheme.errorContainer,
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    uiText(context, signInNotice),
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      color: scheme.onErrorContainer,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                              ],
                               TextFormField(
                                 controller: _email,
                                 decoration: InputDecoration(
@@ -1032,32 +1085,6 @@ class _SignUpDialogState extends State<_SignUpDialog> {
       ),
     );
   }
-}
-
-bool? _readBool(Object? value) {
-  if (value is bool) return value;
-  if (value is num) return value != 0;
-  if (value is String) {
-    final text = value.trim().toLowerCase();
-    if (text == 'true' || text == 't' || text == '1' || text == 'yes') {
-      return true;
-    }
-    if (text == 'false' || text == 'f' || text == '0' || text == 'no') {
-      return false;
-    }
-    return null;
-  }
-  if (value is Map) {
-    for (final key in const ['has_admin', 'exists', 'result', 'value']) {
-      if (value.containsKey(key)) {
-        final parsed = _readBool(value[key]);
-        if (parsed != null) return parsed;
-      }
-    }
-    return null;
-  }
-  if (value is List && value.isNotEmpty) return _readBool(value.first);
-  return null;
 }
 
 class LoadingScreen extends StatelessWidget {

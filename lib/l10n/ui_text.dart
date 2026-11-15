@@ -7,6 +7,8 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Users & roles": "ተጠቃሚዎች እና ሚናዎች",
     "Assign branch, role and active status": "ቅርንጫፍ፣ ሚና እና ንቁ ሁኔታ ይመድቡ",
     "Try again": "እንደገና ሞክር",
+    "Account deactivated. Contact an administrator.":
+        "መለያው ተሰናክሏል። እባክዎ አስተዳዳሪን ያግኙ።",
     "Reset language": "ቋንቋ ዳግም አስጀምር",
     "Approvals": "ማጽደቆች",
     "Approve": "አጽድቅ",
@@ -177,6 +179,8 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Assign branch, role and active status":
         "Damee, gahee fi haala socho'aa ramadi",
     "Try again": "Irra deebi'ii yaali",
+    "Account deactivated. Contact an administrator.":
+        "Herregni sun dhaabbateera. Maaloo bulchaa qunnamaa.",
     "Reset language": "Afaan irra deebi'i",
     "Approvals": "Mirkaneessaa",
     "Approve": "Mirkaneessi",
@@ -994,6 +998,7 @@ const List<String> uiTextKeys = [
   "Users & roles",
   "Assign branch, role and active status",
   "Try again",
+  "Account deactivated. Contact an administrator.",
   "Reset language",
   "Approvals",
   "Approve",

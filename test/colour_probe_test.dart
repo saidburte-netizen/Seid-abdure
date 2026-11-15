@@ -4,13 +4,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:http/http.dart' as http;
-import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:brade_and_cake_house/app.dart';
 import 'package:brade_and_cake_house/auth/auth_controller.dart';
+
+import 'support/fake_backend.dart';
 
 const _routes = [
   '/',
@@ -84,6 +83,7 @@ void main() {
           child: BakeryApp(
             client: controller.client,
             authController: controller,
+            signInGateway: FakeSignInGateway(admin: true),
             initialLocation: route,
           ),
         ),
@@ -150,6 +150,7 @@ void main() {
           child: BakeryApp(
             client: controller.client,
             authController: controller,
+            signInGateway: FakeSignInGateway(admin: true),
             initialLocation: route,
           ),
         ),
@@ -200,20 +201,7 @@ Future<AuthController> _createController(WidgetTester tester) async {
     const MethodChannel('dev.fluttercommunity.plus/connectivity_status'),
     (call) async => null,
   );
-  final client = SupabaseClient(
-    'https://example.supabase.co',
-    'test-anon-key',
-    authOptions: const AuthClientOptions(autoRefreshToken: false),
-    httpClient: MockClient(
-      (request) async => http.Response(
-        '[]',
-        200,
-        headers: const {'content-type': 'application/json'},
-        request: request,
-      ),
-    ),
-  );
-  final controller = AuthController(client);
+  final controller = AuthController(offlineSupabaseClient());
   await tester.pumpWidget(const SizedBox.shrink());
   await tester.pump(const Duration(milliseconds: 50));
   return controller;

@@ -5,6 +5,7 @@ import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
+import '../data/sale_math.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 import '../l10n/ui_text.dart';
@@ -103,27 +104,22 @@ class _PosScreenState extends State<PosScreen> {
     }
   }
 
-  num get _subtotal => _cart.entries.fold(0, (sum, entry) {
-    final product = _products[entry.key];
-    return sum + asNum(product?['price']) * entry.value;
-  });
+  SaleTotals get _totals => computeSaleTotals([
+    for (final entry in _cart.entries)
+      SaleLineInput(
+        price: asNum(_products[entry.key]?['price']),
+        quantity: entry.value,
+        taxRate: asNum(_products[entry.key]?['tax_rate']),
+      ),
+  ], discount: asNum(_discount.text));
 
-  num get _discountValue {
-    final value = asNum(_discount.text);
-    return value < 0 ? 0 : (value > _subtotal ? _subtotal : value);
-  }
+  num get _subtotal => _totals.subtotal;
 
-  num get _tax {
-    var tax = 0.0;
-    for (final entry in _cart.entries) {
-      final product = _products[entry.key];
-      final rate = asNum(product?['tax_rate']);
-      tax += asNum(product?['price']) * entry.value * rate / 100;
-    }
-    return (tax * 100).round() / 100;
-  }
+  num get _discountValue => _totals.discount;
 
-  num get _total => ((_subtotal - _discountValue + _tax) * 100).round() / 100;
+  num get _tax => _totals.tax;
+
+  num get _total => _totals.total;
 
   void _setPaidToTotal() {
     _paid.text = _subtotal == 0 ? '' : _total.toStringAsFixed(2);
@@ -212,10 +208,11 @@ class _PosScreenState extends State<PosScreen> {
     setState(() => _submitting = true);
     try {
       final receiptNo = await _nextReceipt();
-      final subtotal = _subtotal;
-      final discount = _discountValue;
-      final tax = _tax;
-      final total = _total;
+      final totals = _totals;
+      final subtotal = totals.subtotal;
+      final discount = totals.discount;
+      final tax = totals.tax;
+      final total = totals.total;
       final sale = await session.client
           .from('sales')
           .insert({
@@ -244,19 +241,19 @@ class _PosScreenState extends State<PosScreen> {
           .single();
       final saleId = sale['id'] as String;
       final items = <Map<String, dynamic>>[];
+      var lineIndex = 0;
       for (final entry in _cart.entries) {
         final product = _products[entry.key]!;
-        final line = asNum(product['price']) * entry.value;
-        final lineTax = line * asNum(product['tax_rate']) / 100;
+        final line = totals.lines[lineIndex++];
         items.add({
           'sale_id': saleId,
           'product_id': entry.key,
           'product_name': product['name'],
           'quantity': entry.value,
-          'unit_price': asNum(product['price']),
+          'unit_price': line.unitPrice,
           'discount_amount': 0,
-          'tax_amount': (lineTax * 100).round() / 100,
-          'line_total': ((line + lineTax) * 100).round() / 100,
+          'tax_amount': line.taxAmount,
+          'line_total': line.lineTotal,
         });
       }
       await session.client.from('sale_items').insert(items);
@@ -306,7 +303,7 @@ class _PosScreenState extends State<PosScreen> {
     final bytes = await BrandPdf.document(
       title: uiText(context, 'Sales receipt'),
       documentNumber: asText(sale['receipt_no']),
-      branchName: branch?.branchName ?? 'Main branch',
+      branchName: branch?.branchName ?? 'Jimma branch',
       subtitle: formatDate(sale['sale_date']),
       details: [
         ('Customer', _customerName()),

@@ -46,6 +46,8 @@ class BranchAccess {
 }
 
 class AuthController extends ChangeNotifier {
+  static const inactivityTimeout = Duration(minutes: 30);
+
   AuthController(this.client) {
     _subscription = client.auth.onAuthStateChange.listen((state) {
       if (_initialized) unawaited(_loadSession(state.session));
@@ -57,6 +59,7 @@ class AuthController extends ChangeNotifier {
   late final StreamSubscription<AuthState> _subscription;
   AuthStatus status = AuthStatus.loading;
   String? errorMessage;
+  String? signInNotice;
   Object? lastError;
   String? userId;
   String? userEmail;
@@ -73,6 +76,8 @@ class AuthController extends ChangeNotifier {
   bool _initialized = false;
   int _loadId = 0;
   bool _disposed = false;
+  Timer? _inactivityTimer;
+  DateTime? _lastActivity;
 
   BranchAccess? get selectedBranch {
     for (final branch in branches) {
@@ -155,11 +160,17 @@ class AuthController extends ChangeNotifier {
 
   Future<void> retry() => _loadSession(client.auth.currentSession);
 
+  /// Test hook: drive one session load with an explicit session so tests can
+  /// exercise deactivated-account handling without a live auth server.
+  @visibleForTesting
+  Future<void> debugLoadSession(Session? session) => _loadSession(session);
+
   Future<void> _loadSession(Session? session) async {
     final loadId = ++_loadId;
     errorMessage = null;
     lastError = null;
     if (session == null) {
+      _stopInactivityTimer();
       userId = null;
       userEmail = null;
       fullName = null;
@@ -190,6 +201,32 @@ class AuthController extends ChangeNotifier {
         _notify();
         return;
       }
+      if (profile['is_active'] == false) {
+        // A deactivated account must not reach the dashboard even if its
+        // auth token is still valid. Clear the session and show the normal
+        // sign-in screen with an explanation.
+        try {
+          await client.auth.signOut();
+        } catch (_) {
+          // The session is unusable either way; never block the sign-out UI.
+        }
+        _stopInactivityTimer();
+        userId = null;
+        userEmail = null;
+        fullName = null;
+        phone = null;
+        avatarUrl = null;
+        profileLanguage = null;
+        roleCode = null;
+        branches = const [];
+        selectedBranchId = null;
+        status = AuthStatus.signedOut;
+        errorMessage = 'Account deactivated. Contact an administrator.';
+        signInNotice = 'Account deactivated. Contact an administrator.';
+        _notify();
+        return;
+      }
+      signInNotice = null;
       fullName = profile['full_name'] as String?;
       phone = profile['phone'] as String?;
       avatarUrl = profile['avatar_url'] as String?;
@@ -239,7 +276,7 @@ class AuthController extends ChangeNotifier {
         for (final row in branchRows)
           BranchAccess(
             branchId: row['id'] as String,
-            branchName: row['name'] as String? ?? 'Main branch',
+            branchName: row['name'] as String? ?? 'Jimma branch',
             branchCode: row['code'] as String? ?? '',
             roleCode: roleCode!,
             permissions: isAdminRole ? const {} : permissions,
@@ -251,6 +288,9 @@ class AuthController extends ChangeNotifier {
         if (isAdminRole) {
           errorMessage =
               'No active branch exists yet. Create the first branch to continue.';
+          noteActivity();
+        } else {
+          _stopInactivityTimer();
         }
         _notify();
         return;
@@ -264,7 +304,9 @@ class AuthController extends ChangeNotifier {
         selectedBranchId = branches.first.branchId;
       }
       status = AuthStatus.ready;
+      noteActivity();
     } on PostgrestException catch (exception, stack) {
+      _stopInactivityTimer();
       if (loadId != _loadId) return;
       AppLogger.error('Could not load account access', exception, stack);
       lastError = exception;
@@ -272,12 +314,46 @@ class AuthController extends ChangeNotifier {
       status = AuthStatus.error;
     } catch (exception, stack) {
       if (loadId != _loadId) return;
+      _stopInactivityTimer();
       AppLogger.error('Could not load account access', exception, stack);
       lastError = exception;
       errorMessage = friendlyMessage(exception);
       status = AuthStatus.error;
     }
     _notify();
+  }
+
+  /// Call on any pointer interaction. Resets the 30-minute inactivity timer.
+  void noteActivity() {
+    if (status != AuthStatus.ready) return;
+    _lastActivity = DateTime.now();
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(inactivityTimeout, () {
+      unawaited(signOut());
+    });
+  }
+
+  /// Call when the app returns to the foreground. If the phone was idle for
+  /// longer than the timeout, sign out immediately instead of waiting.
+  void checkInactivity() {
+    final last = _lastActivity;
+    if (last == null) return;
+    if (DateTime.now().difference(last) >= inactivityTimeout) {
+      _stopInactivityTimer();
+      unawaited(signOut());
+      return;
+    }
+    noteActivity();
+  }
+
+  /// Test hook: sets the timestamp compared by [checkInactivity].
+  @visibleForTesting
+  void debugSetLastActivity(DateTime value) => _lastActivity = value;
+
+  void _stopInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = null;
+    _lastActivity = null;
   }
 
   Future<void> selectBranch(String branchId) async {
@@ -291,7 +367,7 @@ class AuthController extends ChangeNotifier {
   Future<void> createFirstBranch() async {
     await client.from('branches').insert({
       'code': 'MAIN',
-      'name': 'Main branch',
+      'name': 'Jimma branch',
       'is_active': true,
     });
     await retry();
@@ -378,7 +454,10 @@ class AuthController extends ChangeNotifier {
     await client.auth.updateUser(UserAttributes(password: password));
   }
 
-  Future<void> signOut() => client.auth.signOut();
+  Future<void> signOut() async {
+    _stopInactivityTimer();
+    await client.auth.signOut();
+  }
 
   void _notify() {
     if (!_disposed) notifyListeners();
@@ -387,6 +466,7 @@ class AuthController extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    _stopInactivityTimer();
     unawaited(_subscription.cancel());
     super.dispose();
   }
@@ -400,6 +480,11 @@ class SessionScope extends InheritedNotifier<AuthController> {
     required super.child,
     super.key,
   }) : super(notifier: controller);
+
+  static AuthController? maybeOf(BuildContext context) {
+    final scope = context.dependOnInheritedWidgetOfExactType<SessionScope>();
+    return scope?.notifier;
+  }
 
   static AuthController of(BuildContext context) {
     final scope = context.dependOnInheritedWidgetOfExactType<SessionScope>();

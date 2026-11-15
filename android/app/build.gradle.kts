@@ -33,7 +33,10 @@ android {
         applicationId = "net.bradeandcake.brade_and_cake_house"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        // API 24 is the highest requirement among our plugins
+        // (url_launcher_android, shared_preferences_android, path_provider_android
+        // and image_picker_android); flutter_secure_storage needs API 23.
+        minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
@@ -58,6 +61,13 @@ android {
                 // Keep CI builds installable when signing secrets are not set.
                 signingConfigs.getByName("debug")
             }
+            isDebuggable = false
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro"
+            )
         }
     }
 }

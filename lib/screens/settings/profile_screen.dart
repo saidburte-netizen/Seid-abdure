@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../core/logging/app_logger.dart';
+import '../../data/upload_validation.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/common.dart';
@@ -84,16 +85,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
         imageQuality: 88,
       );
       if (picked == null) return;
+      final size = await picked.length();
+      final problem = validateAvatarUpload(
+        fileName: picked.name,
+        byteLength: size,
+      );
+      if (problem != null) {
+        if (mounted) {
+          showSnack(
+            context,
+            problem == UploadProblem.tooLarge
+                ? strings.errorFileTooLarge
+                : strings.errorUnsupportedFile,
+            error: true,
+          );
+        }
+        return;
+      }
+      final dot = picked.name.lastIndexOf('.');
+      final extension = picked.name.substring(dot + 1).toLowerCase();
       setState(() => _uploading = true);
       final bytes = await picked.readAsBytes();
-      final extension = picked.name.contains('.')
-          ? picked.name.split('.').last.toLowerCase()
-          : 'jpg';
-      final contentType = switch (extension) {
-        'png' => 'image/png',
-        'webp' => 'image/webp',
-        _ => 'image/jpeg',
-      };
+      final contentType = avatarContentType(extension);
       final path =
           '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.$extension';
       await session.client.storage

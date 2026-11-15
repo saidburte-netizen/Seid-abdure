@@ -298,6 +298,22 @@ class AppLocalizationsAm extends AppLocalizations {
   String get errorSomethingWentWrong => 'የተሳሳተ ነገር ተከስቷል። እባክዎ እንደገና ይሞክሩ።';
 
   @override
+  String get errorInvalidInput =>
+      'አንዳንድ መረጃዎች ትክክል አይደሉም። እባክዎ ያረጋግጡ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get errorOperationNotAllowed => 'ይህ ተግባር አሁን አይፈቀድም።';
+
+  @override
+  String get errorFileTooLarge => 'ይህ ፋይል በጣም ትልቅ ነው። እባክዎ ትንሽ ፋይል ይምረጡ።';
+
+  @override
+  String get errorUnsupportedFile => 'ይህ የፋይል አይነት አይደገፍም።';
+
+  @override
+  String get errorUploadFailed => 'ፋይሉን መስቀል አልተቻለም። እባክዎ እንደገና ይሞክሩ።';
+
+  @override
   String get errorEmailNotConfirmed => 'ከመግባትዎ በፊት እባክዎ ኢሜይልዎን ያረጋግጡ።';
 
   @override
