@@ -109,7 +109,17 @@ jobs:
       - name: Scan the release APK for leaked secrets
         run: |
           set -euo pipefail
-          if strings brade-cake-house.apk | grep -E -q 'sb_secret_|SUPABASE_SERVICE_ROLE|-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}'; then
+          # Match real credential shapes, not bare prefixes. The Supabase SDK
+          # ships the literal "sb_secret_" as a key-format constant, so a bare
+          # prefix is a false positive; a real key has a long random body.
+          pattern='-----BEGIN [A-Z ]*PRIVATE KEY-----|ghp_[A-Za-z0-9]{36}|github_pat_[A-Za-z0-9_]{50,}|sb_secret_[A-Za-z0-9_-]{20,}|SUPABASE_SERVICE_ROLE_KEY'
+          # Positive control: the pattern must catch a synthetic secret so a
+          # broken regex cannot silently pass the scan.
+          if ! printf '%s\n' 'sb_secret_ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789' | grep -E -q -e "$pattern"; then
+            echo '::error::Secret-scan pattern failed its positive control.' >&2
+            exit 1
+          fi
+          if strings brade-cake-house.apk | grep -E -q -e "$pattern"; then
             echo '::error::The APK contains a secret-like string.' >&2
             exit 1
           fi

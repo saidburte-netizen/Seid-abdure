@@ -6,6 +6,7 @@
 create or replace function public.has_admin()
 returns boolean
 language sql
+stable
 security definer
 set search_path = public
 as $$
@@ -13,6 +14,7 @@ as $$
     select 1
     from public.profiles
     where role_code = 'admin'
+      and is_active
   );
 $$;
 

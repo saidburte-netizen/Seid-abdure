@@ -65,6 +65,16 @@ grep -v -e 'supabase_vault' -e 'pg_stat_statements' \
 chmod 644 "$DATA/live_schema.sql"
 psql_local "-q -f '$DATA/live_schema.sql'"
 
+# Mirror the CI integration job: apply the one-time helpers in supabase/sql
+# BEFORE the migrations, exactly as build-android.yml does. Without this the
+# local run can pass while CI fails (for example when a helper redefines a
+# hardened function).
+echo "Applying one-time helpers (supabase/sql) ..."
+for helper in "$ROOT"/supabase/sql/*.sql; do
+  echo "  $(basename "$helper")"
+  psql_local "-q -f '$helper'"
+done
+
 echo "Applying committed migrations ..."
 for migration in "$ROOT"/supabase/migrations/*.sql; do
   echo "  $(basename "$migration")"
