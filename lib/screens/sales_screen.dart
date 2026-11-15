@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
+import '../auth/void_sale_access.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
@@ -138,19 +139,22 @@ class _SalesScreenState extends State<SalesScreen> {
           'reason': (input['reason'] ?? '').toString().trim(),
         },
       );
-      if (mounted) showSnack(context, 'Sale voided and stock restored.');
+      if (mounted) {
+        showSnack(context, AppLocalizations.of(context).voidSaleSuccess);
+      }
     } catch (error) {
       if (!mounted) return;
       final strings = AppLocalizations.of(context);
-      final message = error.toString().toLowerCase();
-      if (message.contains('already been voided')) {
-        showSnack(context, strings.voidSaleAlreadyVoided);
-      } else if (message.contains('permission') ||
-          message.contains('not authorized')) {
-        showSnack(context, strings.errorPermissionDenied);
-      } else {
-        showSnack(context, strings.voidSaleFailed);
-      }
+      final failure = classifyVoidSaleFailure(error);
+      final message = switch (failure) {
+        VoidSaleFailure.notFound => strings.voidSaleNotFound,
+        VoidSaleFailure.alreadyVoided => strings.voidSaleAlreadyVoided,
+        VoidSaleFailure.onlyCompleted => strings.voidSaleOnlyCompleted,
+        VoidSaleFailure.hasReturns => strings.voidSaleHasReturns,
+        VoidSaleFailure.permissionDenied => strings.errorPermissionDenied,
+        VoidSaleFailure.unknown => strings.voidSaleFailed,
+      };
+      showSnack(context, message);
     }
   }
 
@@ -277,7 +281,7 @@ class _SalesScreenState extends State<SalesScreen> {
                           icon: Icons.assignment_return_outlined,
                           onPressed: (row) => _returnSale(session, row),
                         ),
-                      if (session.can('sales.void') &&
+                      if (canVoidSale(session.roleCode) &&
                           row['status'] == 'completed')
                         CrudRowAction(
                           label: uiText(context, 'Void sale'),

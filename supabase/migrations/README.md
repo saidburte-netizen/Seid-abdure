@@ -12,10 +12,10 @@ One later migration is committed here:
 The app calls `void_sale`, but the read-only live-schema snapshot does not
 expose that RPC. This migration adds only that missing function. It allows
 admin, manager, accountant and cashier roles, rejects an already-void sale,
-reverses cash and credit, and relies on the existing `trg_sales_void` and
-`trg_sales_audit` triggers for stock and audit. It never inserts stock movements
-itself, so stock is restored exactly once. Execute is revoked from `public` and
-`anon` and granted to `authenticated`.
+rejects a sale that already has any return, reverses cash and credit, and relies
+on the existing `trg_sales_void` and `trg_sales_audit` triggers for stock and
+audit. It never inserts stock movements itself, so stock is restored exactly
+once. Execute is revoked from `public` and `anon` and granted to `authenticated`.
 
 The copy-paste SQL is in `docs/SQL_TO_RUN.md`. Apply it to the hosted project
 with the Supabase CLI or SQL editor:

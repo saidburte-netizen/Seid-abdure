@@ -173,5 +173,9 @@
   "signOutConfirmation": "ከዚህ መለያ ውጣ?",
   "approvals": "ማጽደቆች",
   "voidSaleAlreadyVoided": "ይህ ሽያጭ አስቀድሞ ተሰርዟል።",
-  "voidSaleFailed": "ሽያጩን መሰረዝ አልተቻለም። እባክዎ ሽያጩን ያረጋግጡ እና እንደገና ይሞክሩ።"
+  "voidSaleFailed": "ሽያጩን መሰረዝ አልተቻለም። እባክዎ ሽያጩን ያረጋግጡ እና እንደገና ይሞክሩ።",
+  "voidSaleNotFound": "ይህ ሽያጭ ሊገኝ አልቻለም። ዝርዝሩን ያድሱ እና እንደገና ይሞክሩ።",
+  "voidSaleOnlyCompleted": "የተጠናቀቁ ሽያጮች ብቻ መሰረዝ ይችላሉ።",
+  "voidSaleHasReturns": "ይህ ሽያጭ አስቀድሞ ተመላሾች አሉት፣ ስለዚህ መሰረዝ አይችልም። በምትኩ የመመለሻ ሂደቱን ይጠቀሙ።",
+  "voidSaleSuccess": "ሽያጩ ተሰርዟል፤ ክምችቱም ተመልሷል።"
 }

@@ -539,4 +539,17 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get voidSaleFailed =>
       'ሽያጩን መሰረዝ አልተቻለም። እባክዎ ሽያጩን ያረጋግጡ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get voidSaleNotFound => 'ይህ ሽያጭ ሊገኝ አልቻለም። ዝርዝሩን ያድሱ እና እንደገና ይሞክሩ።';
+
+  @override
+  String get voidSaleOnlyCompleted => 'የተጠናቀቁ ሽያጮች ብቻ መሰረዝ ይችላሉ።';
+
+  @override
+  String get voidSaleHasReturns =>
+      'ይህ ሽያጭ አስቀድሞ ተመላሾች አሉት፣ ስለዚህ መሰረዝ አይችልም። በምትኩ የመመለሻ ሂደቱን ይጠቀሙ።';
+
+  @override
+  String get voidSaleSuccess => 'ሽያጩ ተሰርዟል፤ ክምችቱም ተመልሷል።';
 }

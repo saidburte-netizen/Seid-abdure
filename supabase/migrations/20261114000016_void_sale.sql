@@ -47,6 +47,12 @@ begin
     raise exception 'Only completed sales can be voided.';
   end if;
 
+  if exists (
+    select 1 from public.sale_returns where sale_id = target_sale
+  ) then
+    raise exception 'This sale already has returns and cannot be voided.';
+  end if;
+
   -- Reverse cash received directly against the sale.
   for v_payment in
     select id, cash_account_id, amount, method

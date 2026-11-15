@@ -621,6 +621,138 @@ begin
   end if;
 end $$;
 
+-- A completed sale with a partial return cannot be voided. The failed void
+-- must leave the already-returned stock and refunded cash unchanged.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, customer_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '31313131-3131-3131-3131-313131313131', 'TEST-SALE-PARTIAL-RETURN',
+  '11111111-1111-1111-1111-111111111111', '22222222-2222-2222-2222-222222222222',
+  '77777777-7777-7777-7777-777777777777', '00000000-0000-0000-0000-000000000003',
+  now(), 100, 0, 0, 100, 0, 'unpaid', 'completed'
+);
+insert into public.sale_items (
+  sale_id, product_id, product_name, quantity, unit_price,
+  discount_amount, tax_amount, line_total
+) values (
+  '31313131-3131-3131-3131-313131313131',
+  '68686868-6868-6868-6868-686868686868', 'Void test product',
+  2, 50, 0, 0, 100
+);
+insert into public.sale_payments (
+  sale_id, cash_account_id, method, amount, received_by
+) values (
+  '31313131-3131-3131-3131-313131313131',
+  '88888888-8888-8888-8888-888888888883', 'cash', 100,
+  '00000000-0000-0000-0000-000000000003'
+);
+select pg_temp.assert_true(
+  (select quantity = 8 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555504'),
+  'partial-return void fixture reduces stock'
+);
+select pg_temp.assert_true(
+  (select balance = 100 from public.v_cash_account_balances
+   where id = '88888888-8888-8888-8888-888888888883'),
+  'partial-return void fixture increases cash'
+);
+
+insert into public.sale_returns (
+  id, return_no, sale_id, return_date, reason, refund_amount,
+  cash_account_id, created_by
+) values (
+  '32323232-3232-3232-3232-323232323232', 'TEST-RETURN-VOID',
+  '31313131-3131-3131-3131-313131313131', now(), 'QA partial return', 50,
+  '88888888-8888-8888-8888-888888888883',
+  '00000000-0000-0000-0000-000000000001'
+);
+insert into public.sale_return_items (
+  return_id, sale_item_id, product_id, quantity, amount
+)
+select
+  '32323232-3232-3232-3232-323232323232', id, product_id, 1, 50
+from public.sale_items
+where sale_id = '31313131-3131-3131-3131-313131313131';
+
+select pg_temp.assert_true(
+  (select quantity = 9 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555504'),
+  'partial return restores one unit'
+);
+select pg_temp.assert_true(
+  (select balance = 50 from public.v_cash_account_balances
+   where id = '88888888-8888-8888-8888-888888888883'),
+  'partial return refunds half the cash'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.stock_movements
+   where reference_type = 'sale_return'
+     and reference_id = '32323232-3232-3232-3232-323232323232'
+     and movement_type = 'return_in' and quantity = 1),
+  'partial return posts one stock movement'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'sale_return'
+     and reference_id = '32323232-3232-3232-3232-323232323232'
+     and txn_type = 'out' and amount = 50),
+  'partial return posts one cash refund'
+);
+
+do $$
+declare
+  v_rejected boolean := false;
+begin
+  begin
+    perform public.void_sale(
+      '31313131-3131-3131-3131-313131313131', 'QA partial return void'
+    );
+  exception when others then
+    if position('already has returns' in lower(sqlerrm)) > 0 then
+      v_rejected := true;
+    else
+      raise;
+    end if;
+  end;
+  if not v_rejected then
+    raise exception 'ASSERTION FAILED: sale with a return was voided';
+  end if;
+end $$;
+
+select pg_temp.assert_true(
+  (select status = 'completed' and payment_status = 'paid'
+   from public.sales
+   where id = '31313131-3131-3131-3131-313131313131'),
+  'failed void leaves the sale completed'
+);
+select pg_temp.assert_true(
+  (select quantity = 9 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555504'),
+  'failed void leaves returned stock unchanged'
+);
+select pg_temp.assert_true(
+  (select balance = 50 from public.v_cash_account_balances
+   where id = '88888888-8888-8888-8888-888888888883'),
+  'failed void leaves refunded cash unchanged'
+);
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.stock_movements
+   where reference_type = 'sale_void'
+     and reference_id = '31313131-3131-3131-3131-313131313131'),
+  'failed void adds no stock movement'
+);
+select pg_temp.assert_true(
+  (select count(*) = 0 from public.cash_transactions
+   where reference_type = 'sale_void'
+     and reference_id = '31313131-3131-3131-3131-313131313131'),
+  'failed void adds no cash reversal'
+);
+
 -- Credit sale: void writes off the receivable, refunds any credit payments,
 -- and posts the matching customer ledger credit.
 insert into public.sales (

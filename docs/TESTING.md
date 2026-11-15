@@ -49,8 +49,9 @@ voids, customer payments, payables, cash transfers, payroll approval/payment,
 rent invoices/payments, alerts, expenses, bills, approvals, stock transfers,
 write-offs, role permissions, audit logs, translation columns and avatars. The
 void checks prove exact pre-sale stock and cash restoration, a single stock
-movement, credit receivable/ledger reversal, staff denial, and rejection of a
-second void.
+movement, credit receivable/ledger reversal, staff denial, rejection of a
+second void, and rejection of a sale that already has a partial return without
+changing stock or cash.
 
 ## Android emulator smoke test
 

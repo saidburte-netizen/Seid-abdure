@@ -558,4 +558,20 @@ class AppLocalizationsOm extends AppLocalizations {
   @override
   String get voidSaleFailed =>
       'Gurgurtaa haquun hin danda\'amne. Maaloo gurgurtaa mirkaneessii irra deebi\'ii yaali.';
+
+  @override
+  String get voidSaleNotFound =>
+      'Gurgurtaan kun argamuu hin dandeenye. Tarree haaromsii irra deebi\'ii yaali.';
+
+  @override
+  String get voidSaleOnlyCompleted =>
+      'Gurgurtaawwan xumuraman qofa haqamuu danda\'u.';
+
+  @override
+  String get voidSaleHasReturns =>
+      'Gurgurtaan kun duraan deebii qaba, kanaaf haqamuu hin danda\'u. Bakka sanaa adeemsa deebii fayyadami.';
+
+  @override
+  String get voidSaleSuccess =>
+      'Gurgurtaan haqameera; kuusniis deebi\'ee jira.';
 }

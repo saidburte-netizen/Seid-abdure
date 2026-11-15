@@ -553,4 +553,18 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get voidSaleFailed =>
       'The sale could not be voided. Please check the sale and try again.';
+
+  @override
+  String get voidSaleNotFound =>
+      'This sale could not be found. Refresh the list and try again.';
+
+  @override
+  String get voidSaleOnlyCompleted => 'Only completed sales can be voided.';
+
+  @override
+  String get voidSaleHasReturns =>
+      'This sale already has returns, so it cannot be voided. Use the return flow instead.';
+
+  @override
+  String get voidSaleSuccess => 'Sale voided and stock restored.';
 }

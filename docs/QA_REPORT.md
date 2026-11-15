@@ -1,4 +1,4 @@
-# QA report - Brade and Cake House 1.0.6+6
+# QA report - Brade and Cake House 1.0.7+7
 
 ## Environment
 
@@ -8,7 +8,7 @@
 | Dart | 3.9.2 |
 | Test surface | 390 x 844 logical pixels, light theme |
 | Live Supabase project | `nmrpmypgkljmtnsvmcfn` |
-| Build version | `1.0.6+6` |
+| Build version | `1.0.7+7` |
 
 ## Gate results
 
@@ -18,7 +18,7 @@
 | Placeholder/empty-handler scan | `bash tool/check_placeholders.sh` | PASS |
 | Schema consistency | `python3 tool/check_schema.py` | PASS |
 | Static analysis | `flutter analyze` | PASS, 0 issues |
-| Full Flutter suite | `flutter test` | PASS, 90 tests |
+| Full Flutter suite | `flutter test` | PASS, 92 tests |
 | Colour-balance suite | `flutter test test/colour_probe_test.dart` | PASS, 51 routes |
 | Offline evidence test | `flutter test test/airplane_mode_evidence_test.dart` | PASS |
 | Translation coverage | `flutter test test/ui_text_coverage_test.dart` | PASS, 3 tests |
@@ -119,7 +119,8 @@ Verified database results:
 - Cash transactions, customer ledger, receivables and partial payment
 - Sale return stock restoration, refund and status
 - Void sale exact stock/cash restoration, audit row, `void`/`refunded` status,
-  credit receivable/ledger reversal, staff denial and repeat-void rejection
+  credit receivable/ledger reversal, staff denial, repeat-void rejection, and
+  partial-return rejection with unchanged stock and cash
 - Payables, payable payment, supplier ledger and cash transaction
 - Cash transfer both sides
 - Payroll payslip totals, run totals, approval, payment, payslip paid flags and

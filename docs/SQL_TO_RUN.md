@@ -5,6 +5,7 @@ Run this in the Supabase SQL Editor on the hosted project **before** installing 
 - Safe to run more than once: the function uses `create or replace`.
 - It does **not** insert stock movements. The existing `trg_sales_void` trigger restores stock exactly once.
 - It reverses cash payments, writes off linked receivables, posts the matching customer ledger credit, and records the reason.
+- It rejects a sale that already has any return, so a partially returned sale cannot be voided.
 - Execute is revoked from `public` and `anon`, and granted only to `authenticated`.
 
 ```sql
@@ -55,6 +56,12 @@ begin
 
   if v_sale.status <> 'completed' then
     raise exception 'Only completed sales can be voided.';
+  end if;
+
+  if exists (
+    select 1 from public.sale_returns where sale_id = target_sale
+  ) then
+    raise exception 'This sale already has returns and cannot be voided.';
   end if;
 
   -- Reverse cash received directly against the sale.

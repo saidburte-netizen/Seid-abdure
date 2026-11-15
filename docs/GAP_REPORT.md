@@ -95,14 +95,16 @@ does not expose that RPC. One later-timestamp migration was added:
 
 It creates `public.void_sale(uuid, text)`, checks the
 admin/manager/accountant/cashier role with `has_any_role`, rejects a sale that
-is already void, reverses cash sale payments and received credit payments,
-writes off the remaining receivable with a balancing customer-ledger credit,
-updates the sale to `void`/`refunded`, and lets the existing `trg_sales_void`
-and `trg_sales_audit` triggers restore stock and write the audit row. The RPC
-never inserts a stock movement itself, so stock is restored exactly once. The
-local contract proves stock and cash return to their exact pre-sale values,
-credit receivables and the customer ledger are reversed, staff are denied, and
-a second void is rejected with a friendly message.
+is already void, rejects a sale that already has any return, reverses cash sale
+payments and received credit payments, writes off the remaining receivable with
+a balancing customer-ledger credit, updates the sale to `void`/`refunded`, and
+lets the existing `trg_sales_void` and `trg_sales_audit` triggers restore stock
+and write the audit row. The RPC never inserts a stock movement itself, so stock
+is restored exactly once. The local contract proves stock and cash return to
+their exact pre-sale values, credit receivables and the customer ledger are
+reversed, staff are denied, a second void is rejected with a friendly message,
+and a partially returned sale cannot be voided and leaves stock and cash
+unchanged.
 
 Apply the exact SQL to the hosted project with the Supabase CLI or SQL editor.
 The copy-paste version is in `docs/SQL_TO_RUN.md`:

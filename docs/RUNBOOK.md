@@ -66,7 +66,9 @@
   exactly once through `trg_sales_void`, reverses direct cash and received
   credit payments, writes off the remaining receivable with a balancing ledger
   credit, and records an audit row. A second void is rejected with a friendly
-  message. The RPC itself never inserts a stock movement.
+  message. A sale that already has any return is rejected too, so a partially
+  returned sale must be finished through the return flow. The RPC itself never
+  inserts a stock movement.
 - A return is recorded through `sale_returns` and `sale_return_items`; the
   triggers restore stock and post the refund cash movement.
 - Do not delete sales or cash rows. Use void/return so the audit trail remains

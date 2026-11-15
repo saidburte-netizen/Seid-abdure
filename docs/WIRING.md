@@ -53,7 +53,7 @@ and rolls back. The workflow is `.github/workflows/supabase-integration.yml`.
 | 1 | Sign in as admin, switch branch | `test/branch_repository_test.dart` proves every read carries `branch_id=eq.<selected>` and every insert fills `branch_id`; route tests prove admin/manager/staff screens build |
 | 2 | Create product, receive purchase order | contract: PO totals, receipt stock movement, PO item quantity and `received` status |
 | 3 | Complete a sale with two payment methods | contract: cash sale, credit sale and split cash+bank sale; two `sale_payment` cash transactions and paid status |
-| 4 | Void a completed sale | contract: `void_sale` restores stock exactly once, reverses cash, writes audit, sets `void`/`refunded`, rejects a second void, and reverses a credit receivable/ledger |
+| 4 | Void a completed sale | contract: `void_sale` restores stock exactly once, reverses cash, writes audit, sets `void`/`refunded`, rejects a second void, rejects a sale with any return, and reverses a credit receivable/ledger |
 | 5 | Process a sale return | contract: return line restores stock, refunds cash, sets sale `returned` |
 | 6 | Record customer payment | contract: receivable partial balance, customer-ledger credit and cash transaction |
 | 7 | Create expense and pay a bill | contract: expense cash-out and `v_expense_summary`; bill audit, paid status and bill-payment cash-out |

@@ -42,13 +42,17 @@ rotation) are listed in `docs/GAP_REPORT.md`. The 15 uploaded migrations
 `20261114000001`–`20261114000015` are still absent from `origin/main`; upload
 them before treating the repository as the authoritative migration source.
 
-## Post-release completion pass (1.0.6)
+## Post-release completion pass (1.0.7)
 
 These are the remaining hardening jobs after the 23-item build plan. `[x]`
 means implemented and covered by a local or CI gate.
 
 - [x] Add `void_sale` role check for admin, manager, accountant and cashier.
 - [x] Reject a second void with a friendly message.
+- [x] Reject a void when the sale already has any return.
+- [x] Prove a partially returned sale cannot be voided and stock/cash stay put.
+- [x] Map every void error to English, Amharic and Oromo friendly text.
+- [x] Show the Void action only for admin, manager, accountant and cashier.
 - [x] Revoke execute from `public` and `anon`; grant only `authenticated`.
 - [x] Never insert stock movements from `void_sale`; rely on `trg_sales_void`.
 - [x] Reverse direct cash payments and received credit payments.

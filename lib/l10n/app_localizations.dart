@@ -1143,6 +1143,30 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'The sale could not be voided. Please check the sale and try again.'**
   String get voidSaleFailed;
+
+  /// No description provided for @voidSaleNotFound.
+  ///
+  /// In en, this message translates to:
+  /// **'This sale could not be found. Refresh the list and try again.'**
+  String get voidSaleNotFound;
+
+  /// No description provided for @voidSaleOnlyCompleted.
+  ///
+  /// In en, this message translates to:
+  /// **'Only completed sales can be voided.'**
+  String get voidSaleOnlyCompleted;
+
+  /// No description provided for @voidSaleHasReturns.
+  ///
+  /// In en, this message translates to:
+  /// **'This sale already has returns, so it cannot be voided. Use the return flow instead.'**
+  String get voidSaleHasReturns;
+
+  /// No description provided for @voidSaleSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'Sale voided and stock restored.'**
+  String get voidSaleSuccess;
 }
 
 class _AppLocalizationsDelegate
