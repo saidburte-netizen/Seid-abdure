@@ -135,8 +135,10 @@ class PrivacyScreen extends StatelessWidget {
           SectionCard(
             title: uiText(context, 'Device storage'),
             child: const Text(
-              'The device stores only your selected language, theme and branch. '
-              'Business records remain in the organization database.',
+              'The device stores your selected language, theme and branch, and '
+              'your sign-in session in the platform secure store. Business '
+              'records remain in the organization database; the app keeps no '
+              'offline copy of them.',
             ),
           ),
           SectionCard(

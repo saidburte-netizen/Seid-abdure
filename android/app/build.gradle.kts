@@ -33,8 +33,9 @@ android {
         applicationId = "net.bradeandcake.brade_and_cake_house"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        // flutter_secure_storage requires API 24; this app targets modern
-        // Android phones and tablets.
+        // API 24 is the highest requirement among our plugins
+        // (url_launcher_android, shared_preferences_android, path_provider_android
+        // and image_picker_android); flutter_secure_storage needs API 23.
         minSdk = 24
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode

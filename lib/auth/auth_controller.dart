@@ -314,6 +314,10 @@ class AuthController extends ChangeNotifier {
     noteActivity();
   }
 
+  /// Test hook: sets the timestamp compared by [checkInactivity].
+  @visibleForTesting
+  void debugSetLastActivity(DateTime value) => _lastActivity = value;
+
   void _stopInactivityTimer() {
     _inactivityTimer?.cancel();
     _inactivityTimer = null;

@@ -1,44 +1,118 @@
-# Brade and Cake House — Decisions (batch 13/90)
+# Brade and Cake House — Engineering Decisions
 
-## 1. Riverpod removal
-- **Decision**: `flutter_riverpod` has been removed from `pubspec.yaml` and `ProviderScope` removed from `main.dart`. 
-- **Verification**: `grep -rn "riverpod\|ProviderScope\|ref\.watch\|ref\.read" lib/ test/` returns no results outside generated `.g.dart` files. The app uses `ChangeNotifier` + `InheritedNotifier` (AuthController, SessionScope) as the single state‑management approach.
-- **Action**: Keep removal. If any screen fails to refresh after create/update/delete, re‑add Riverpod with a clear migration plan.
+Updated: 2026-11-15 · Job counter: 50/90
 
-## 2. Security migration (20261115000001_security_hardening.sql)
-- **Decision**: The migration is kept as printed in full above. It satisfies the non‑negotiable rules:
-  - `has_admin()` and `customer_signup_allowed()` stay executable by **both** `anon` and `authenticated`.
-  - RLS helper functions (`current_role_code`, `is_admin`, `is_staff`, `has_any_role`, `current_employee_id`, `current_customer_id`, `can_read_bucket`, `can_write_bucket`) are granted only to `authenticated`, not `anon`.
-  - `next_number()` stays executable by `authenticated`.
-  - `void_sale`, `fn_generate_*`, `fn_close_day` are `authenticated`‑only; never anon.
-  - All public views have `security_invoker = true`.
-- **Next step**: Add an automated RLS test that logs in as each of the 9 roles and proves read/write boundaries, and that anon can call only `has_admin` and `customer_signup_allowed`. This test uses a mock client for scaffold purposes only; real RLS validation must run against a local Supabase stack (`supabase start` with migrations) in the CI integration workflow at release. Mark "runs in CI integration job at release" — do not mark done until the integration job has executed once.
+This file records decisions that affect the shipped behaviour. Where an earlier
+draft of this file was wrong, the correction is stated explicitly.
 
-## 3. R8 / ProGuard
-- **Decision**: The local environment has **no Android SDK**, so a release‑APK smoke test cannot be run. To avoid a potentially broken release, we have **disabled shrinking** in `android/app/build.gradle.kts` (`isMinifyEnabled false`, `isShrinkResources false`). 
-- **ProGuard rules** (`android/app/proguard-rules.pro`) are in place to keep Flutter embedding, plugin entry points and any Supabase‑related classes. These rules can be kept minimal until an emulator is available.
-- **When an emulator becomes available**: re‑enable `isMinifyEnabled true` / `isShrinkResources true`, run the full release smoke test, and tighten ProGuard rules if needed.
+## Toolchain
 
-## 4. Timezone migration (20261115000002)
-- **Decision**: The migration sets `timezone = 'Africa/Addis_Ababa'` on the four functions and changes 17 column defaults to `(now() at time zone 'Africa/Addis_Ababa')::date`. This is kept as the authoritative change. An integration test should verify that an entry at 00:30 Ethiopian time yields the Ethiopian date (not the previous day). This test will be added when the CI environment supports it.
+- **Flutter 3.35.4 / Dart 3.9.2** is installed at `/tmp/opencode/tools/flutter`
+  and matches `.github/workflows/*` (`flutter-version: "3.35.4"`).
+- The `pubspec.yaml` SDK constraint (`>=3.9.0 <4.0.0`) stays unchanged. The SDK
+  was upgraded to satisfy it; the constraint was not lowered.
+- `flutter_secure_storage` is pinned to `^10.3.4` because `^11` and
+  `share_plus ^10.1.4` cannot resolve together (win32 conflict). Other packages
+  keep their existing pins for the same reason.
 
-## 5. Flutter analyze / test environment
-- **Decision**: The current Flutter tool uses Dart SDK 3.5.4, while the project's `pubspec` requires `>=3.9.0`. Because of this mismatch, `flutter pub get`, `flutter analyze` and `flutter test` cannot be run to completion. All analysis errors (16 issues) are therefore **unverifiable** in this environment. The commit `424f81e` is marked **UNVERIFIED** in `docs/AUDIT_REPORT.md`. Once the Dart SDK is upgraded or the project constraint is relaxed, the analysis and test suite must pass with zero issues.
+## State management
 
-## 5. Formatting
-- **Decision**: `dart format` was run and applied to 32 files; the changes are committed as `cd21a56`. All Dart code now conforms to the project style.
+- Riverpod is removed. The app uses `ChangeNotifier` (`AuthController`) plus
+  `InheritedNotifier` (`SessionScope`). No second state container is added.
+- Screens refresh after their own write and on pull-to-refresh. There is no
+  shared cache; this is intentional and documented in the client guide.
+- Every destructive or expensive control guards against a second tap while its
+  request is running: POS checkout, `CrudTab` row actions (payroll generation,
+  payroll approval, rent generation, void), and form submit buttons.
 
-## 6. Remaining work (77 jobs)
-- Schema and column mismatch checks (compare Dart tables/views/columns/RPCs against migrations and live schema).
-- RLS validation (role‑based access tests).
-- Money precision (ensure no `double` arithmetic in write paths; rounding to 2 decimals display).
-- Dependency and OSV vulnerability scan (run `osv-scanner` if network available; otherwise document).
-- Secret scan of git history and APK strings (run Gitleaks locally; already clean).
-- Pagination and timeouts (ensure `listAll` and 20‑second read timeout are wired; prevent double submission).
-- State refresh and double‑submit protection (in‑flight guards, idempotency keys).
-- Dead buttons / UI walkthrough (role‑based automated walkthrough test).
-- Management module business‑rule tests (end‑to‑end for users/roles, branches, stores, cash, products/recipes, stock, production, cake orders, POS, daily closing, cash transfers, bills, customers/suppliers, credit/debit, HR, rentals, notifications, reports/exports, settings and audit).
-- Client handover pack in `docs/client/` (`CLIENT_USER_GUIDE.md`, `SUPPORT.md`, `PRIVACY_POLICY.md`, `FEATURES.md`).
-- Final report with GO / NO‑GO verdict, checksums, release links, test results, owner actions.
+## Authentication
 
-**Job counter**: 13/90 local commits done; 77 remaining. Next batch will continue after this decision document.
+- Sign-in goes through `SignInGateway` (`lib/auth/sign_in_gateway.dart`). The
+  production implementation calls Supabase; tests inject `FakeSignInGateway`.
+  Tests never contact the live project.
+- If `has_admin()` or `customer_signup_allowed()` throws or returns null, the
+  screen shows the normal email/password form, hides create-account options and
+  never displays the raw error.
+- Sessions live in the platform secure store. `initialize()` migrates a legacy
+  `SharedPreferences` session exactly once and only if secure storage has no
+  session, so an old copy cannot overwrite a newer one.
+- Inactivity: 30 minutes without pointer activity signs out; returning to the
+  app after a longer absence signs out immediately.
+
+## Money
+
+- `lib/data/sale_math.dart` rounds each line to two decimals and derives the
+  sale total from the rounded lines, so the printed line totals always add up.
+- The database remains the owner of posted totals, stock movements, cash rows
+  and refund cash. The app does not insert its own stock/cash side effects for
+  void, returns, production or transfers.
+
+## Data access
+
+- Reads time out after 20 seconds and retry once. Writes are never retried.
+- `BranchRepository.listAll` pages with `offset`/`limit` until a short page is
+  returned, so exports are not capped at PostgREST's 1,000-row default.
+- The app never queues offline writes. A failed save tells the user it was not
+  saved; this is deliberate, to avoid duplicate sales after reconnection.
+
+## Database / SQL
+
+- The live Supabase schema is authoritative. The committed snapshot
+  `supabase/fixtures/live_schema.sql` is used to build disposable test
+  databases; the absent migrations `20261114000001`–`000015` are not replayed.
+- `20261115000001_security_hardening.sql` keeps `has_admin()` and
+  `customer_signup_allowed()` executable by `anon` and `authenticated`, grants
+  the RLS helpers and `next_number` only to `authenticated`, keeps
+  `void_sale`/`fn_generate_*`/`fn_close_day` authenticated-only, and sets every
+  view to `security_invoker`. These rules are asserted by the contract.
+- The three `20261115*` migrations have **not** been applied to the hosted
+  project. The owner applies them in the SQL Editor.
+- `void_sale` restores stock through `trg_sales_void`/`fn_sale_void`; returns
+  post refund cash through `trg_returns_cash` and stock through
+  `trg_return_items_stock`. The app must not duplicate those rows.
+- Stock-count statuses are `draft`, `completed`, `cancelled`; only `completed`
+  is applied.
+
+## Testing
+
+- SQL contract tests run against a disposable local PostgreSQL with Supabase
+  stubs (`tool/run_contract_local.sh`), replaying the live-schema snapshot,
+  every committed migration and `contract.sql` in one rolled-back transaction.
+  This is the same suite the release integration job runs against
+  `supabase start`.
+- Widget tests use `offlineSupabaseClient()` (an HTTP mock returning `[]`) or a
+  purpose-built mock; none uses the real network.
+- The button walkthrough taps visible controls on every route and role
+  dashboard and fails on any Flutter exception. It found two real bugs.
+
+## Android release
+
+- `minSdkVersion` is 24, which satisfies every plugin (highest requirement 24;
+  `flutter_secure_storage` needs 23).
+- R8, resource shrinking, ProGuard rules and Dart obfuscation are **enabled**.
+  An earlier draft of this file said shrinking was disabled; that is no longer
+  true — `android/app/build.gradle.kts` has `isMinifyEnabled = true` and
+  `isShrinkResources = true`, and the workflow passes
+  `--obfuscate --split-debug-info`.
+- If signing secrets are absent, the build is debug-signed and is a
+  sideload/testing artifact, not a Play Store release.
+
+## CI / supply chain
+
+- All workflow actions are pinned to commit SHAs with the version in a comment.
+  `supabase/setup-cli@v1` did not exist as a ref and was corrected to `v1.7.3`.
+- CI runs static analysis, the full test suite, formatting, schema checks, OSV
+  dependency scanning and a Gitleaks history scan.
+- The Android workflow verifies that the embedded Supabase JWT has role `anon`
+  and scans the built APK for secret-like strings before publishing.
+- The smoke job only gets `contents: read`; write permission stays with the
+  release job.
+
+## Known limitations (accepted)
+
+- No offline write queue; no MFA; no self-service password reset; no barcode
+  scanning; no push notifications; no screenshot protection on payroll.
+- Universal APK is large; split-per-ABI is optional.
+- Global `anon` revocation is applied by SQL migration, not by the app.
+- PostgreSQL role switching in the local contract is not a substitute for a
+  real GoTrue sign-in; the release integration job performs that run.

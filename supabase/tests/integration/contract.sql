@@ -1130,9 +1130,11 @@ begin
   end if;
 end $$;
 
--- Anonymous access: the two login RPCs work, but protected tables do not leak.
+-- Anonymous access: the two login RPCs work, and no table or view is readable.
 set local role anon;
 do $$
+declare
+  readable text;
 begin
   if not public.has_admin() then
     raise exception 'ASSERTION FAILED: has_admin() is false for anon';
@@ -1140,12 +1142,31 @@ begin
   if not public.customer_signup_allowed() then
     raise exception 'ASSERTION FAILED: customer_signup_allowed() is false for anon';
   end if;
-  if (select count(*) from public.profiles) <> 0 then
+
+  select string_agg(c.relname, ', ')
+  into readable
+  from pg_class c
+  join pg_namespace n on n.oid = c.relnamespace
+  where n.nspname = 'public'
+    and c.relkind in ('r', 'v', 'm', 'p')
+    and has_table_privilege('anon', c.oid, 'SELECT');
+  if readable is not null then
+    raise exception 'ASSERTION FAILED: anon still has SELECT on: %', readable;
+  end if;
+
+  -- Even if a privilege is granted by mistake, RLS must return no rows.
+  begin
+    perform count(*) from public.profiles;
     raise exception 'ASSERTION FAILED: anon can read profiles';
-  end if;
-  if (select count(*) from public.app_settings) <> 0 then
+  exception when insufficient_privilege then
+    null;
+  end;
+  begin
+    perform count(*) from public.app_settings;
     raise exception 'ASSERTION FAILED: anon can read app_settings';
-  end if;
+  exception when insufficient_privilege then
+    null;
+  end;
 end $$;
 reset role;
 
@@ -1316,20 +1337,23 @@ begin
   end if;
 end $$;
 
-select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000001', true);
+-- A customer may write only inside their own avatar folder. Staff roles are
+-- allowed to manage any bucket through can_write_bucket(), which is covered
+-- separately.
+select set_config('request.jwt.claim.sub', '00000000-0000-0000-0000-000000000009', true);
 set local role authenticated;
 do $$
 begin
   begin
     insert into storage.objects (bucket_id, name, owner)
-    values ('avatars', '00000000-0000-0000-0000-000000000001/avatar.png', '00000000-0000-0000-0000-000000000001');
+    values ('avatars', '00000000-0000-0000-0000-000000000009/avatar.png', '00000000-0000-0000-0000-000000000009');
   exception
     when others then
       raise exception 'ASSERTION FAILED: own avatar upload rejected: %', sqlerrm;
   end;
   begin
     insert into storage.objects (bucket_id, name, owner)
-    values ('avatars', '00000000-0000-0000-0000-000000000009/avatar.png', '00000000-0000-0000-0000-000000000001');
+    values ('avatars', '00000000-0000-0000-0000-000000000001/avatar.png', '00000000-0000-0000-0000-000000000009');
     raise exception 'ASSERTION FAILED: cross-user avatar upload allowed';
   exception
     when insufficient_privilege then

@@ -11,19 +11,24 @@ export '../core/errors/friendly_error.dart';
 /// Every write that changes money, stock or credit must use a database RPC.
 /// This repository is for ordinary master data and read models only.
 class BranchRepository {
-  BranchRepository(this.client, this.branchId);
+  BranchRepository(
+    this.client,
+    this.branchId, {
+    this.readTimeout = const Duration(seconds: 20),
+  });
 
   final SupabaseClient client;
   final String branchId;
 
-  static const _readTimeout = Duration(seconds: 20);
+  /// Read timeout. Tests shorten it; production keeps 20 seconds.
+  final Duration readTimeout;
 
   /// Retries idempotent reads once with a short backoff. Writes are never
   /// retried because a retried write can duplicate money or stock.
   Future<T> _read<T>(Future<T> Function() action) async {
     for (var attempt = 0; ; attempt++) {
       try {
-        return await action().timeout(_readTimeout);
+        return await action().timeout(readTimeout);
       } catch (error) {
         if (attempt >= 1 || !_isRetryableRead(error)) rethrow;
         await Future<void>.delayed(const Duration(milliseconds: 350));

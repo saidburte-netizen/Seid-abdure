@@ -21,7 +21,12 @@ class SecureLocalStorage extends LocalStorage {
     final preferences = await SharedPreferences.getInstance();
     final legacySession = preferences.getString(persistSessionKey);
     if (legacySession == null) return;
-    await _storage.write(key: persistSessionKey, value: legacySession);
+    // Never overwrite a session that already lives in secure storage: the
+    // plain-text copy is older by definition.
+    final existing = await _storage.read(key: persistSessionKey);
+    if (existing == null) {
+      await _storage.write(key: persistSessionKey, value: legacySession);
+    }
     await preferences.remove(persistSessionKey);
   }
 

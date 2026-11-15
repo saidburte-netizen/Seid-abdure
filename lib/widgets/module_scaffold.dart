@@ -47,13 +47,28 @@ class ModuleScaffold extends StatelessWidget {
     return AppScaffold(
       isRoot: isRoot,
       drawer: _PortalDrawer(session: session),
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(Brand.logoAsset, width: 32, height: 32),
-          const SizedBox(width: 9),
-          Flexible(child: Text(title, overflow: TextOverflow.ellipsis)),
-        ],
+      // The title box gets very little width when a screen has many app-bar
+      // actions, so the logo is dropped rather than overflowing the row.
+      title: LayoutBuilder(
+        builder: (context, constraints) {
+          final showLogo = constraints.maxWidth >= 96;
+          return Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (showLogo) ...[
+                Image.asset(Brand.logoAsset, width: 32, height: 32),
+                const SizedBox(width: 9),
+              ],
+              Flexible(
+                child: Text(
+                  title,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          );
+        },
       ),
       actions: [
         ...actions,

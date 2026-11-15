@@ -148,7 +148,11 @@ String csvEscape(Object? value) {
       const ['=', '+', '-', '@', '\t', '\r'].contains(text[0])) {
     text = "'$text";
   }
-  if (text.contains(',') || text.contains('"') || text.contains('\n')) {
+  if (text.contains(',') ||
+      text.contains('"') ||
+      text.contains('\n') ||
+      text.contains('\r') ||
+      text.contains('\t')) {
     return '"${text.replaceAll('"', '""')}"';
   }
   return text;
