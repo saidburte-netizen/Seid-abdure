@@ -303,6 +303,25 @@ class AppLocalizationsEn extends AppLocalizations {
       'Something went wrong. Please try again.';
 
   @override
+  String get errorInvalidInput =>
+      'Some of the details are not valid. Please check and try again.';
+
+  @override
+  String get errorOperationNotAllowed =>
+      'This action is not allowed right now.';
+
+  @override
+  String get errorFileTooLarge =>
+      'This file is too large. Please choose a smaller file.';
+
+  @override
+  String get errorUnsupportedFile => 'This file type is not supported.';
+
+  @override
+  String get errorUploadFailed =>
+      'The file could not be uploaded. Please try again.';
+
+  @override
   String get errorEmailNotConfirmed =>
       'Please confirm your email before signing in.';
 

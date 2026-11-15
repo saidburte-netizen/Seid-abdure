@@ -12,7 +12,7 @@
   - `next_number()` stays executable by `authenticated`.
   - `void_sale`, `fn_generate_*`, `fn_close_day` are `authenticated`‑only; never anon.
   - All public views have `security_invoker = true`.
-- **Next step**: Add an automated RLS test that logs in as each of the 9 roles and proves read/write boundaries, and that anon can call only the two allowed RPCs. This test will be added in the next batch once the environment supports `flutter test`.
+- **Next step**: Add an automated RLS test that logs in as each of the 9 roles and proves read/write boundaries, and that anon can call only `has_admin` and `customer_signup_allowed`. This test uses a mock client for scaffold purposes only; real RLS validation must run against a local Supabase stack (`supabase start` with migrations) in the CI integration workflow at release. Mark "runs in CI integration job at release" — do not mark done until the integration job has executed once.
 
 ## 3. R8 / ProGuard
 - **Decision**: The local environment has **no Android SDK**, so a release‑APK smoke test cannot be run. To avoid a potentially broken release, we have **disabled shrinking** in `android/app/build.gradle.kts` (`isMinifyEnabled false`, `isShrinkResources false`). 

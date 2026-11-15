@@ -29,8 +29,8 @@ class ProductionScreen extends StatelessWidget {
     try {
       await session.client
           .from('production_batches')
-          .update({'status': 'completed', 'completed_at': nowIso()}).eq(
-              'id', batch['id']);
+          .update({'status': 'completed', 'completed_at': nowIso()})
+          .eq('id', batch['id']);
       if (context.mounted) showSnack(context, 'Production batch completed.');
     } catch (error) {
       if (context.mounted) {
@@ -56,7 +56,8 @@ class ProductionScreen extends StatelessWidget {
     try {
       await session.client
           .from('cake_orders')
-          .update({'status': next}).eq('id', order['id']);
+          .update({'status': next})
+          .eq('id', order['id']);
       if (context.mounted) {
         showSnack(
           context,

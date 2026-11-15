@@ -125,10 +125,7 @@ void main() {
         message: 'This sale already has returns and cannot be voided.',
         code: 'P0001',
       );
-      expect(
-        friendlyMessage(error),
-        'This action is not allowed right now.',
-      );
+      expect(friendlyMessage(error), 'This action is not allowed right now.');
       expect(friendlyMessage(error), isNot(contains('returns')));
     });
 

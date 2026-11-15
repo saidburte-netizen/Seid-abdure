@@ -20,13 +20,18 @@ void main() {
     // Anon should be able to call has_admin and customer_signup_allowed.
     // All other function calls should be denied.
     expect(() => fakeClient.rpc('has_admin', params: {}), returnsNormally);
-    expect(() => fakeClient.rpc('customer_signup_allowed', params: {}), returnsNormally);
+    expect(
+      () => fakeClient.rpc('customer_signup_allowed', params: {}),
+      returnsNormally,
+    );
 
     // These should throw because anon lacks execute permission.
     final listError = thrownBy(() => fakeClient.from('sales').select('*'));
     expect(listError, isA<Exception>());
 
-    final insertError = thrownBy(() => fakeClient.from('sales').insert({'title': 'test'}));
+    final insertError = thrownBy(
+      () => fakeClient.from('sales').insert({'title': 'test'}),
+    );
     expect(insertError, isA<Exception>());
   });
 
@@ -37,10 +42,19 @@ void main() {
     // The user should be able to read their own branch's sales.
     // If the RLS policy is correct, a SELECT on the sales table filtered by
     // branch_id returns rows only for the signed‑in branch.
-    expect(() => fakeClient.from('sales').select('*, branch!inner(*)'), returnsNormally);
+    expect(
+      () => fakeClient.from('sales').select('*, branch!inner(*)'),
+      returnsNormally,
+    );
 
     // Insert should be allowed for the authenticated user (app RPC handles it).
-    expect(() => fakeClient.from('sales').insert({'title': 'test', 'branch_id': 'test-branch'}), returnsNormally);
+    expect(
+      () => fakeClient.from('sales').insert({
+        'title': 'test',
+        'branch_id': 'test-branch',
+      }),
+      returnsNormally,
+    );
   });
 
   test('customer role sees only their own records', () async {
@@ -54,7 +68,10 @@ void main() {
     await fakeClient.auth.signInAnonymously();
     // Admin should be able to read all tables and perform writes.
     expect(() => fakeClient.from('branches').select('*'), returnsNormally);
-    expect(() => fakeClient.from('branches').insert({'name': 'Admin Branch'}), returnsNormally);
+    expect(
+      () => fakeClient.from('branches').insert({'name': 'Admin Branch'}),
+      returnsNormally,
+    );
   });
 
   test('employee role limited to their branch', () async {
@@ -74,13 +91,19 @@ class MockSupabaseClient {
 
   Future<void> authSignInAnonymously() async => null;
 
-  Future<void> authSignInWithPassword({required String email, required String password}) async => null;
+  Future<void> authSignInWithPassword({
+    required String email,
+    required String password,
+  }) async => null;
 
   Future<void> authSignOut() async => null;
 
   String get authToken => '';
 
-  Future<void> rpc(String name, {Map<String, dynamic> params = const {}}) async {
+  Future<void> rpc(
+    String name, {
+    Map<String, dynamic> params = const {},
+  }) async {
     // No-op; the test only checks that the call does not throw when permitted.
   }
 
@@ -90,7 +113,8 @@ class MockSupabaseClient {
 
   RealtimeChannel get realtime => const RealtimeChannel();
 
-  StorageReference storage([String bucketName]) => StorageReference.bucket(bucketName ?? '');
+  StorageReference storage([String bucketName]) =>
+      StorageReference.bucket(bucketName ?? '');
 
   GeoPoint get geo => const GeoPoint(latitude: 0, longitude: 0);
 
@@ -116,7 +140,8 @@ class QueryBuilder {
 
   Future<List<Map<String, dynamic>>> get async => const []; // empty by default
 
-  Future<int> insert(Map<String, dynamic> data) async => 0; // success by default
+  Future<int> insert(Map<String, dynamic> data) async =>
+      0; // success by default
 
   Future<int> update(Map<String, dynamic> data) async => 0;
 

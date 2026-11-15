@@ -18,11 +18,14 @@ class PeopleScreen extends StatelessWidget {
     bool approve,
   ) async {
     try {
-      await session.client.from('leave_requests').update({
-        'status': approve ? 'approved' : 'rejected',
-        'approved_by': session.userId,
-        'decided_at': nowIso(),
-      }).eq('id', leave['id']);
+      await session.client
+          .from('leave_requests')
+          .update({
+            'status': approve ? 'approved' : 'rejected',
+            'approved_by': session.userId,
+            'decided_at': nowIso(),
+          })
+          .eq('id', leave['id']);
       if (context.mounted) {
         showSnack(context, approve ? 'Leave approved.' : 'Leave rejected.');
       }

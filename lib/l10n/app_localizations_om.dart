@@ -307,6 +307,24 @@ class AppLocalizationsOm extends AppLocalizations {
       'Wanti tokko dogoggora ta\'e. Maaloo deebi\'ii yaalaa.';
 
   @override
+  String get errorInvalidInput =>
+      'Odeeffannoon tokko tokko sirrii miti. Maaloo mirkaneessaa deebi\'ii yaalaa.';
+
+  @override
+  String get errorOperationNotAllowed => 'Gochi kun yeroo ammaa hin hayyamamu.';
+
+  @override
+  String get errorFileTooLarge =>
+      'Faayiliin kun baay\'ee guddaa dha. Maaloo faayilii xiqqaa filadhaa.';
+
+  @override
+  String get errorUnsupportedFile => 'Gosa faayilii kana hin deeggaru.';
+
+  @override
+  String get errorUploadFailed =>
+      'Faayilii olkaa\'uun hin danda\'amne. Maaloo deebi\'ii yaalaa.';
+
+  @override
   String get errorEmailNotConfirmed =>
       'Maaloo dura imeelii keessan mirkaneessaa sana booda seenaa.';
 
