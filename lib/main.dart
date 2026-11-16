@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/semantics.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,6 +12,11 @@ import 'core/errors/error_ui.dart';
 import 'core/locale/locale_preferences.dart';
 import 'core/logging/app_logger.dart';
 import 'data/formatting.dart';
+
+// Keep the semantics tree alive for the whole app run. Flutter only builds
+// semantics when an accessibility service is active; forcing it makes screen
+// readers work on any device and lets the release smoke test read the UI.
+SemanticsHandle? _semanticsHandle;
 
 const _rawSupabaseUrl = String.fromEnvironment('SUPABASE_URL');
 const _rawSupabaseAnonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
@@ -22,6 +28,7 @@ Future<void> main() async {
   runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
+      _semanticsHandle ??= SemanticsBinding.instance.ensureSemantics();
       WidgetsBinding.instance.addPostFrameCallback((_) {
         firstFrameRendered = true;
       });

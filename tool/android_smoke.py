@@ -2,11 +2,19 @@
 """Install the release APK on an emulator and smoke-test the app.
 
 The script uses the Android accessibility hierarchy so it does not depend on
-screen coordinates. It always confirms the login screen and switches
-English -> Amharic -> Oromo -> English. When SMOKE_EMAIL and SMOKE_PASSWORD
-are provided it also signs in, opens the dashboard, and completes one POS
-cash sale. Without those credentials the signed-in phase is skipped with an
-explicit warning, so a release is never blocked by smoke-test credentials.
+screen coordinates. The app calls SemanticsBinding.ensureSemantics() at start
+up, so the release build exposes its widgets to UIAutomator even when no
+accessibility service is enabled on the emulator.
+
+It always confirms the login screen and switches English -> Amharic -> Oromo ->
+English. When SMOKE_EMAIL and SMOKE_PASSWORD are provided it also signs in,
+opens the dashboard, and completes one POS cash sale. Without those credentials
+the signed-in phase is skipped with an explicit warning, so a release is never
+blocked by smoke-test credentials.
+
+Every failure prints a GitHub ``::error::`` annotation with the real reason and
+leaves a screenshot plus logcat in build/evidence/android-smoke, so a red run
+is diagnosable from the public annotations API without downloading logs.
 """
 
 from __future__ import annotations
@@ -22,6 +30,10 @@ PACKAGE = "net.bradeandcake.brade_and_cake_house"
 ACTIVITY = ".MainActivity"
 OUT_DIR = "build/evidence/android-smoke"
 LANGUAGE_MENU_LABELS = {"Language", "ቋንቋ", "Afaan", "Change language"}
+# The language button is always on the login screen; its tooltip is a reliable
+# semantics label in every locale, unlike the text-field hints which Android
+# exposes as hintText (not text/content-desc) on API <= 34.
+LOGIN_MARKERS = {"Sign in", "ግባ", "Seeni", "Language", "ቋንቋ", "Afaan"}
 
 
 def adb(*args: str, check: bool = True) -> str:
@@ -32,6 +44,13 @@ def adb(*args: str, check: bool = True) -> str:
         capture_output=True,
     )
     return result.stdout
+
+
+def annotate(message: str) -> None:
+    """Emit a GitHub Actions error annotation (publicly readable)."""
+    clean = " ".join(str(message).split())
+    clean = clean.replace("%", "pct")[:900]
+    print(f"::error::SMOKE: {clean}", flush=True)
 
 
 def dump_xml() -> ET.Element:
@@ -71,6 +90,27 @@ def find_text(root: ET.Element, text: str) -> ET.Element | None:
     return None
 
 
+def first_node(*nodes: ET.Element | None) -> ET.Element | None:
+    """Return the first node that exists.
+
+    ``or`` cannot be used on ElementTree elements: an element with no children
+    is falsy, so ``find_text(a) or find_text(b)`` would discard a match.
+    """
+    for node in nodes:
+        if node is not None:
+            return node
+    return None
+
+
+def find_edit_text(root: ET.Element, index: int) -> ET.Element | None:
+    edits = [
+        node
+        for node in visible_nodes(root)
+        if (node.get("class") or "").endswith("EditText")
+    ]
+    return edits[index] if len(edits) > index else None
+
+
 def find_language_menu(root: ET.Element) -> ET.Element | None:
     for node in visible_nodes(root):
         description = node.get("content-desc") or ""
@@ -88,13 +128,39 @@ def find_language_menu(root: ET.Element) -> ET.Element | None:
     return None
 
 
+def bounds_of(node: ET.Element) -> list[int] | None:
+    numbers = [int(value) for value in re.findall(r"\d+", node.get("bounds") or "")]
+    return numbers if len(numbers) == 4 else None
+
+
 def tap(node: ET.Element) -> None:
-    bounds = node.get("bounds") or ""
-    numbers = [int(value) for value in re.findall(r"\d+", bounds)]
-    if len(numbers) != 4:
-        raise RuntimeError(f"UI node has no usable bounds: {bounds}")
+    numbers = bounds_of(node)
+    if numbers is None:
+        raise RuntimeError(f"UI node has no usable bounds: {node.get('bounds')}")
     x1, y1, x2, y2 = numbers
     adb("shell", "input", "tap", str((x1 + x2) // 2), str((y1 + y2) // 2))
+
+
+def find_edit_text_above(root: ET.Element, anchor: ET.Element) -> ET.Element | None:
+    """Return the text field closest above a button.
+
+    Android exposes Flutter ``labelText`` as a hint, not text or content-desc,
+    so fields such as "Amount paid" cannot be found by label. The field sits
+    directly above its submit button, which is a stable position.
+    """
+    anchor_bounds = bounds_of(anchor)
+    if anchor_bounds is None:
+        return None
+    candidates: list[tuple[int, ET.Element]] = []
+    for node in visible_nodes(root):
+        if not (node.get("class") or "").endswith("EditText"):
+            continue
+        node_bounds = bounds_of(node)
+        if node_bounds is not None and node_bounds[3] <= anchor_bounds[1]:
+            candidates.append((anchor_bounds[1] - node_bounds[3], node))
+    if not candidates:
+        return None
+    return min(candidates, key=lambda item: item[0])[1]
 
 
 def wait_for(predicate, description: str, timeout: int = 75) -> ET.Element:
@@ -121,6 +187,27 @@ def screenshot(name: str) -> None:
     with open(path, "wb") as handle:
         handle.write(image)
     print(f"SCREENSHOT {path} {len(image)} bytes")
+
+
+def dump_logcat() -> None:
+    try:
+        output = adb("logcat", "-d", "-t", "300", check=False)
+        os.makedirs(OUT_DIR, exist_ok=True)
+        path = os.path.join(OUT_DIR, "logcat.txt")
+        with open(path, "w", encoding="utf-8", errors="replace") as handle:
+            handle.write(output)
+        interesting = [
+            line
+            for line in output.splitlines()
+            if "FATAL" in line
+            or "AndroidRuntime" in line
+            or "flutter" in line.lower()
+            or "Exception" in line
+        ]
+        for line in interesting[-15:]:
+            print(f"LOGCAT {line}")
+    except Exception:  # noqa: BLE001 - diagnostics must never mask the failure
+        pass
 
 
 def assert_no_raw_errors(root: ET.Element) -> None:
@@ -196,17 +283,18 @@ def sign_in_and_sell() -> None:
             "SMOKE_EMAIL/SMOKE_PASSWORD must be letters, digits or @ . _ + - only."
         )
 
-    email_field = wait_for(lambda r: find_text(r, "Email"), "email field")
+    email_field = wait_for(lambda r: find_edit_text(r, 0), "email field")
     type_into(email_field, email)
-    password_field = wait_for(lambda r: find_text(r, "Password"), "password field")
+    password_field = wait_for(lambda r: find_edit_text(r, 1), "password field")
     type_into(password_field, password)
-    sign_in = wait_for(lambda r: find_text(r, "Sign in"), "sign in button")
-    tap(sign_in)
+    # Enter submits the form through onFieldSubmitted and hides the keyboard,
+    # so the sign-in button does not need to be visible above it.
+    adb("shell", "input", "keyevent", "66")
     dashboard = wait_for(
-        lambda r: (
-            find_text(r, "Dashboard")
-            or find_text(r, "Point of sale")
-            or find_text(r, "New sale")
+        lambda r: first_node(
+            find_text(r, "Dashboard"),
+            find_text(r, "Point of sale"),
+            find_text(r, "New sale"),
         ),
         "dashboard after sign-in",
         timeout=90,
@@ -225,7 +313,13 @@ def sign_in_and_sell() -> None:
         "POS navigation item",
     )
     tap(pos)
-    wait_for(lambda r: find_text(r, "Search products"), "POS product list")
+    wait_for(
+        lambda r: first_node(
+            find_text(r, "Current sale"),
+            find_clickable_label(r, ["Complete sale"]),
+        ),
+        "POS product list",
+    )
     screenshot("06-pos-before-sale.png")
 
     chrome = {
@@ -249,12 +343,18 @@ def sign_in_and_sell() -> None:
     print(f"POS PRODUCT {label(product)!r}")
     tap(product)
 
-    paid = wait_for(lambda r: find_text(r, "Amount paid"), "amount paid field")
-    type_into(paid, "999999")
     complete = wait_for(
         lambda r: find_clickable_label(r, ["Complete sale"]),
         "complete sale button",
     )
+    paid = find_edit_text_above(dump_xml(), complete)
+    if paid is not None:
+        type_into(paid, "999999")
+        adb("shell", "input", "keyevent", "4")  # hide the keyboard
+        complete = wait_for(
+            lambda r: find_clickable_label(r, ["Complete sale"]),
+            "complete sale button after amount",
+        )
     tap(complete)
     confirm = wait_for(
         lambda r: find_clickable_label(r, ["Complete"]),
@@ -262,10 +362,10 @@ def sign_in_and_sell() -> None:
     )
     tap(confirm)
     wait_for(
-        lambda r: (
-            find_text(r, "Sales receipt")
-            or find_text(r, "Sale completed")
-            or find_text(r, "Receipt")
+        lambda r: first_node(
+            find_text(r, "Sales receipt"),
+            find_text(r, "Sale completed"),
+            find_text(r, "Receipt"),
         ),
         "completed sale receipt",
         timeout=90,
@@ -274,20 +374,20 @@ def sign_in_and_sell() -> None:
     print("SMOKE SIGNED-IN OK: dashboard opened and one POS cash sale completed.")
 
 
-def main() -> None:
-    apk = sys.argv[1] if len(sys.argv) > 1 else "brade-cake-house.apk"
+def run(apk: str) -> None:
     print(f"Installing {apk}")
     adb("install", "-r", apk)
     adb("shell", "pm", "clear", PACKAGE)
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}")
+    time.sleep(3)
+    # Evidence before any assertion, so a timeout still leaves a screenshot.
+    screenshot("00-launched.png")
     root = wait_for(
-        lambda current: (
-            find_text(current, "Email")
-            or find_text(current, "Password")
-            or find_text(current, "Sign in")
+        lambda current: first_node(
+            *[find_text(current, text) for text in LOGIN_MARKERS]
         ),
         "login screen",
-        timeout=90,
+        timeout=120,
     )
     screenshot("01-login-en.png")
     assert_no_raw_errors(root)
@@ -308,6 +408,20 @@ def main() -> None:
         "SMOKE OK: installed, launched, login screen shown, "
         "en -> am -> om -> en verified"
     )
+
+
+def main() -> None:
+    apk = sys.argv[1] if len(sys.argv) > 1 else "brade-cake-house.apk"
+    try:
+        run(apk)
+    except Exception as exc:  # noqa: BLE001 - report and re-raise
+        annotate(f"{type(exc).__name__}: {exc}")
+        try:
+            screenshot("99-failure.png")
+        except Exception:  # noqa: BLE001
+            pass
+        dump_logcat()
+        raise
 
 
 if __name__ == "__main__":

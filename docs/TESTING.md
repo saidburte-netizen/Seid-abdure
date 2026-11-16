@@ -68,6 +68,22 @@ switches the pre-login language menu English → አማርኛ → Afaan Oromoo �
 captures screenshots in `build/evidence/android-smoke/`, and fails on visible
 technical exception text.
 
+The release build keeps its accessibility tree enabled at startup
+(`SemanticsBinding.ensureSemantics()` in `lib/main.dart`), so UIAutomator can
+read the widgets on an emulator with no screen reader installed. Without that,
+a release Flutter build exposes an empty hierarchy and the smoke test cannot
+find any label.
+
+When `SMOKE_EMAIL` and `SMOKE_PASSWORD` repository secrets are set, the script
+also signs in, opens the dashboard, and completes one POS cash sale. Without
+them that phase is skipped with an explicit `SMOKE SKIP` line, so missing
+credentials never block a release.
+
+On failure the script prints a GitHub `::error::` annotation with the real
+reason (and the labels it could see), and leaves a screenshot plus `logcat.txt`
+in the evidence directory. Annotations are readable from the public API even
+when job logs are not.
+
 ## Build checks
 
 ```sh
