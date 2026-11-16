@@ -215,11 +215,7 @@ class _KpiGrid extends StatelessWidget {
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
     final cards = [
-      (
-        strings.todaySales,
-        formatMoney(data['today_sales']),
-        Icons.today,
-      ),
+      (strings.todaySales, formatMoney(data['today_sales']), Icons.today),
       (
         strings.cashBalance,
         formatMoney(data['cash_balance']),
