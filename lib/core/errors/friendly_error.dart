@@ -147,8 +147,10 @@ FriendlyErrorKind classifyError(Object error) {
         code == '22003' ||
         code == '22007' ||
         code == '22008' ||
+        code == '428C9' ||
         _containsAny(text, const [
           'not-null',
+          'non-default value',
           'null value',
           'check constraint',
           'invalid input syntax',

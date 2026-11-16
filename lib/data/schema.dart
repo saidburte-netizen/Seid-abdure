@@ -7,6 +7,8 @@ enum FieldType {
   integer,
   date,
   time,
+  datetime,
+  json,
   boolean,
   select,
   lookup,
@@ -29,6 +31,7 @@ class FieldSpec {
     this.max,
     this.list = false,
     this.width,
+    this.generated = false,
   });
 
   final String key;
@@ -46,6 +49,10 @@ class FieldSpec {
   final num? max;
   final bool list;
   final double? width;
+
+  /// True for database-generated columns. They are shown in lists but never
+  /// sent in an INSERT or UPDATE.
+  final bool generated;
 }
 
 class TableSpec {
@@ -120,7 +127,7 @@ final Map<String, TableSpec> tableSpecs = {
     description: 'Live table `app_settings`.',
     fields: [
       FieldSpec('key', 'Key', required: true),
-      FieldSpec('value', 'Value', type: FieldType.multiline, required: true),
+      FieldSpec('value', 'Value', type: FieldType.json, required: true),
       FieldSpec('description', 'Description'),
     ],
   ),
@@ -180,14 +187,28 @@ final Map<String, TableSpec> tableSpecs = {
         lookupBranchScoped: false,
       ),
       FieldSpec('work_date', 'Work date', type: FieldType.date, required: true),
-      FieldSpec('clock_in', 'Clock in', type: FieldType.time),
-      FieldSpec('clock_out', 'Clock out', type: FieldType.time),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'present'),
+      FieldSpec('clock_in', 'Clock in', type: FieldType.datetime),
+      FieldSpec('clock_out', 'Clock out', type: FieldType.datetime),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'present',
+        options: {
+          'present': 'Present',
+          'absent': 'Absent',
+          'late': 'Late',
+          'leave': 'Leave',
+          'holiday': 'Holiday',
+        },
+      ),
       FieldSpec(
         'hours_worked',
         'Hours worked',
         type: FieldType.number,
         defaultValue: 0,
+        generated: true,
       ),
       FieldSpec('notes', 'Notes'),
     ],
@@ -230,7 +251,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['bill_no', 'bill_date', 'amount', 'status'],
     description: 'Live table `bills`.',
     fields: [
-      FieldSpec('bill_no', 'Bill no', required: true),
+      FieldSpec('bill_no', 'Bill no', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'supplier_id',
         'Supplier',
@@ -329,7 +350,11 @@ final Map<String, TableSpec> tableSpecs = {
     ],
     description: 'Live table `cake_orders`.',
     fields: [
-      FieldSpec('order_no', 'Order no', required: true),
+      FieldSpec(
+        'order_no',
+        'Order no',
+        hint: 'Leave blank to auto-generate',
+      ),
       FieldSpec(
         'customer_id',
         'Customer',
@@ -358,7 +383,13 @@ final Map<String, TableSpec> tableSpecs = {
       ),
       FieldSpec('design_notes', 'Design notes'),
       FieldSpec('size_note', 'Size note'),
-      FieldSpec('quantity', 'Quantity', required: true),
+      FieldSpec(
+        'quantity',
+        'Quantity',
+        type: FieldType.integer,
+        required: true,
+        defaultValue: 1,
+      ),
       FieldSpec(
         'total_amount',
         'Total amount',
@@ -373,10 +404,29 @@ final Map<String, TableSpec> tableSpecs = {
         required: true,
         defaultValue: 0,
       ),
-      FieldSpec('balance_amount', 'Balance amount', type: FieldType.number),
-      FieldSpec('due_at', 'Due at', type: FieldType.time),
+      FieldSpec(
+        'balance_amount',
+        'Balance amount',
+        type: FieldType.number,
+        generated: true,
+      ),
+      FieldSpec('due_at', 'Due at', type: FieldType.datetime),
       FieldSpec('delivery_address', 'Delivery address'),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'pending'),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'new',
+        options: {
+          'new': 'New',
+          'confirmed': 'Confirmed',
+          'in_production': 'In production',
+          'ready': 'Ready',
+          'delivered': 'Delivered',
+          'cancelled': 'Cancelled',
+        },
+      ),
     ],
   ),
   'cash_accounts': TableSpec(
@@ -414,10 +464,10 @@ final Map<String, TableSpec> tableSpecs = {
         type: FieldType.select,
         required: true,
         options: {
-          'cash': 'Cash',
+          'cash_drawer': 'Cash drawer',
+          'safe': 'Safe',
           'bank': 'Bank',
           'mobile_money': 'Mobile money',
-          'card': 'Card',
         },
       ),
       FieldSpec('account_number', 'Account number'),
@@ -474,14 +524,8 @@ final Map<String, TableSpec> tableSpecs = {
         'Txn type',
         type: FieldType.select,
         required: true,
-        options: {
-          'cash_in': 'Cash in',
-          'cash_out': 'Cash out',
-          'expense': 'Expense',
-          'income': 'Income',
-          'adjustment': 'Adjustment',
-          'transfer': 'Transfer',
-        },
+        hint: 'Use Out with an expense category for expenses',
+        options: {'in': 'Cash in', 'out': 'Cash out / expense'},
       ),
       FieldSpec(
         'category_id',
@@ -599,12 +643,7 @@ final Map<String, TableSpec> tableSpecs = {
         'Kind',
         type: FieldType.select,
         required: true,
-        options: {
-          'product': 'Product',
-          'inventory': 'Inventory',
-          'expense': 'Expense',
-          'income': 'Income',
-        },
+        options: {'product': 'Product', 'item': 'Inventory item'},
       ),
       FieldSpec('name', 'Name', required: true),
       FieldSpec(
@@ -639,7 +678,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['code', 'full_name', 'phone', 'is_active'],
     description: 'Live table `customers`.',
     fields: [
-      FieldSpec('code', 'Code', required: true),
+      FieldSpec('code', 'Code', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'user_id',
         'User',
@@ -658,10 +697,9 @@ final Map<String, TableSpec> tableSpecs = {
         type: FieldType.select,
         required: true,
         options: {
-          'walk_in': 'Walk-in',
-          'regular': 'Regular',
+          'retail': 'Retail',
           'wholesale': 'Wholesale',
-          'credit': 'Credit',
+          'corporate': 'Corporate',
         },
       ),
       FieldSpec(
@@ -782,6 +820,7 @@ final Map<String, TableSpec> tableSpecs = {
         'Difference',
         type: FieldType.number,
         defaultValue: 0,
+        generated: true,
       ),
       FieldSpec(
         'closed_by',
@@ -1005,7 +1044,11 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['employee_no', 'full_name', 'job_title', 'status'],
     description: 'Live table `employees`.',
     fields: [
-      FieldSpec('employee_no', 'Employee number', required: true),
+      FieldSpec(
+        'employee_no',
+        'Employee number',
+        hint: 'Leave blank to auto-generate',
+      ),
       FieldSpec(
         'profile_id',
         'Profile',
@@ -1035,7 +1078,7 @@ final Map<String, TableSpec> tableSpecs = {
         'gender',
         'Gender',
         type: FieldType.select,
-        options: {'male': 'Male', 'female': 'Female', 'other': 'Other'},
+        options: {'male': 'Male', 'female': 'Female'},
       ),
       FieldSpec('date_of_birth', 'Date of birth', type: FieldType.date),
       FieldSpec('phone', 'Phone'),
@@ -1053,10 +1096,22 @@ final Map<String, TableSpec> tableSpecs = {
           'full_time': 'Full time',
           'part_time': 'Part time',
           'contract': 'Contract',
-          'daily': 'Daily',
+          'casual': 'Casual',
         },
       ),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'active'),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'active',
+        options: {
+          'active': 'Active',
+          'on_leave': 'On leave',
+          'suspended': 'Suspended',
+          'terminated': 'Terminated',
+        },
+      ),
       FieldSpec(
         'base_salary',
         'Base salary',
@@ -1121,12 +1176,7 @@ final Map<String, TableSpec> tableSpecs = {
         'Kind',
         type: FieldType.select,
         required: true,
-        options: {
-          'product': 'Product',
-          'inventory': 'Inventory',
-          'expense': 'Expense',
-          'income': 'Income',
-        },
+        options: {'expense': 'Expense', 'income': 'Income'},
       ),
       FieldSpec(
         'is_active',
@@ -1203,7 +1253,11 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['receipt_no', 'po_id', 'store_id', 'received_date'],
     description: 'Live table `goods_receipts`.',
     fields: [
-      FieldSpec('receipt_no', 'Receipt no', required: true),
+      FieldSpec(
+        'receipt_no',
+        'Receipt no',
+        hint: 'Leave blank to auto-generate',
+      ),
       FieldSpec(
         'po_id',
         'Purchase order',
@@ -1260,10 +1314,10 @@ final Map<String, TableSpec> tableSpecs = {
         type: FieldType.select,
         required: true,
         options: {
-          'general': 'General',
+          'performance': 'Performance',
           'warning': 'Warning',
           'commendation': 'Commendation',
-          'disciplinary': 'Disciplinary',
+          'other': 'Other',
         },
       ),
       FieldSpec('title', 'Title', required: true),
@@ -1286,7 +1340,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['sku', 'name', 'cost_price', 'is_active'],
     description: 'Live table `items`.',
     fields: [
-      FieldSpec('sku', 'SKU', required: true),
+      FieldSpec('sku', 'SKU', hint: 'Leave blank to auto-generate'),
       FieldSpec('name', 'Name', required: true),
       FieldSpec(
         'item_type',
@@ -1297,7 +1351,7 @@ final Map<String, TableSpec> tableSpecs = {
           'raw_material': 'Raw material',
           'finished_good': 'Finished good',
           'packaging': 'Packaging',
-          'consumable': 'Consumable',
+          'other': 'Other',
         },
       ),
       FieldSpec(
@@ -1307,7 +1361,7 @@ final Map<String, TableSpec> tableSpecs = {
         lookupTable: 'categories',
         lookupLabel: 'name',
         lookupBranchScoped: false,
-        lookupEquals: {'kind': 'inventory'},
+        lookupEquals: {'kind': 'item'},
       ),
       FieldSpec(
         'unit_id',
@@ -1363,7 +1417,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['lease_no', 'property_id', 'tenant_id', 'start_date'],
     description: 'Live table `leases`.',
     fields: [
-      FieldSpec('lease_no', 'Lease no', required: true),
+      FieldSpec('lease_no', 'Lease no', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'property_id',
         'Property',
@@ -1502,7 +1556,13 @@ final Map<String, TableSpec> tableSpecs = {
     description: 'Live table `leave_types`.',
     fields: [
       FieldSpec('name', 'Name', required: true),
-      FieldSpec('days_per_year', 'Days per year', required: true),
+      FieldSpec(
+        'days_per_year',
+        'Days per year',
+        type: FieldType.integer,
+        required: true,
+        defaultValue: 0,
+      ),
       FieldSpec('is_paid', 'Is paid', type: FieldType.boolean, required: true),
     ],
   ),
@@ -1865,9 +1925,27 @@ final Map<String, TableSpec> tableSpecs = {
         required: true,
         defaultValue: 0,
       ),
-      FieldSpec('balance', 'Balance', type: FieldType.number, defaultValue: 0),
+      FieldSpec(
+        'balance',
+        'Balance',
+        type: FieldType.number,
+        defaultValue: 0,
+        generated: true,
+      ),
       FieldSpec('due_date', 'Due date', type: FieldType.date),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'unpaid'),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'open',
+        options: {
+          'open': 'Open',
+          'partial': 'Partial',
+          'paid': 'Paid',
+          'cancelled': 'Cancelled',
+        },
+      ),
     ],
   ),
   'payroll_runs': TableSpec(
@@ -2091,7 +2169,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['batch_no', 'branch_id', 'store_id', 'product_id'],
     description: 'Live table `production_batches`.',
     fields: [
-      FieldSpec('batch_no', 'Batch no', required: true),
+      FieldSpec('batch_no', 'Batch no', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'branch_id',
         'Branch',
@@ -2171,7 +2249,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['sku', 'name', 'price', 'is_active'],
     description: 'Live table `products`.',
     fields: [
-      FieldSpec('sku', 'SKU', required: true),
+      FieldSpec('sku', 'SKU', hint: 'Leave blank to auto-generate'),
       FieldSpec('name', 'Name', required: true),
       FieldSpec('name_am', 'Name (Amharic)'),
       FieldSpec('name_om', 'Name (Oromo)'),
@@ -2302,7 +2380,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['code', 'name', 'property_type', 'branch_id'],
     description: 'Live table `properties`.',
     fields: [
-      FieldSpec('code', 'Code', required: true),
+      FieldSpec('code', 'Code', hint: 'Leave blank to auto-generate'),
       FieldSpec('name', 'Name', required: true),
       FieldSpec('property_type', 'Property type', required: true),
       FieldSpec(
@@ -2321,7 +2399,18 @@ final Map<String, TableSpec> tableSpecs = {
         required: true,
         defaultValue: 0,
       ),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'active'),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'vacant',
+        options: {
+          'vacant': 'Vacant',
+          'occupied': 'Occupied',
+          'maintenance': 'Maintenance',
+        },
+      ),
       FieldSpec('description', 'Description'),
       FieldSpec(
         'is_active',
@@ -2401,6 +2490,7 @@ final Map<String, TableSpec> tableSpecs = {
         'Line total',
         type: FieldType.number,
         defaultValue: 0,
+        generated: true,
       ),
     ],
   ),
@@ -2419,7 +2509,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['po_number', 'order_date', 'total_amount', 'status'],
     description: 'Live table `purchase_orders`.',
     fields: [
-      FieldSpec('po_number', 'PO number', required: true),
+      FieldSpec('po_number', 'PO number', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'supplier_id',
         'Supplier',
@@ -2588,9 +2678,27 @@ final Map<String, TableSpec> tableSpecs = {
         required: true,
         defaultValue: 0,
       ),
-      FieldSpec('balance', 'Balance', type: FieldType.number, defaultValue: 0),
+      FieldSpec(
+        'balance',
+        'Balance',
+        type: FieldType.number,
+        defaultValue: 0,
+        generated: true,
+      ),
       FieldSpec('due_date', 'Due date', type: FieldType.date),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'unpaid'),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'open',
+        options: {
+          'open': 'Open',
+          'partial': 'Partial',
+          'paid': 'Paid',
+          'written_off': 'Written off',
+        },
+      ),
     ],
   ),
   'recipe_items': TableSpec(
@@ -2692,7 +2800,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['invoice_no', 'period_start', 'amount', 'status'],
     description: 'Live table `rent_invoices`.',
     fields: [
-      FieldSpec('invoice_no', 'Invoice no', required: true),
+      FieldSpec('invoice_no', 'Invoice no', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'lease_id',
         'Lease',
@@ -3095,7 +3203,7 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['return_no', 'sale_id', 'return_date', 'refund_amount'],
     description: 'Live table `sale_returns`.',
     fields: [
-      FieldSpec('return_no', 'Return no', required: true),
+      FieldSpec('return_no', 'Return no', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'sale_id',
         'Sale',
@@ -3108,7 +3216,7 @@ final Map<String, TableSpec> tableSpecs = {
       FieldSpec(
         'return_date',
         'Return date',
-        type: FieldType.time,
+        type: FieldType.date,
         required: true,
       ),
       FieldSpec('reason', 'Reason'),
@@ -3154,7 +3262,11 @@ final Map<String, TableSpec> tableSpecs = {
     ],
     description: 'Live table `sales`.',
     fields: [
-      FieldSpec('receipt_no', 'Receipt no', required: true),
+      FieldSpec(
+        'receipt_no',
+        'Receipt no',
+        hint: 'Leave blank to auto-generate',
+      ),
       FieldSpec(
         'branch_id',
         'Branch',
@@ -3179,7 +3291,7 @@ final Map<String, TableSpec> tableSpecs = {
         lookupLabel: 'full_name',
         lookupBranchScoped: false,
       ),
-      FieldSpec('sale_date', 'Sale date', type: FieldType.time, required: true),
+      FieldSpec('sale_date', 'Sale date', type: FieldType.date, required: true),
       FieldSpec(
         'subtotal',
         'Subtotal',
@@ -3225,10 +3337,22 @@ final Map<String, TableSpec> tableSpecs = {
           'partial': 'Partial',
           'unpaid': 'Unpaid',
           'credit': 'Credit',
+          'refunded': 'Refunded',
         },
         defaultValue: 'paid',
       ),
-      FieldSpec('status', 'Status', required: true, defaultValue: 'completed'),
+      FieldSpec(
+        'status',
+        'Status',
+        type: FieldType.select,
+        required: true,
+        defaultValue: 'completed',
+        options: {
+          'completed': 'Completed',
+          'void': 'Void',
+          'returned': 'Returned',
+        },
+      ),
       FieldSpec('notes', 'Notes'),
     ],
   ),
@@ -3316,6 +3440,7 @@ final Map<String, TableSpec> tableSpecs = {
         'Difference',
         type: FieldType.number,
         defaultValue: 0,
+        generated: true,
       ),
     ],
   ),
@@ -3434,13 +3559,17 @@ final Map<String, TableSpec> tableSpecs = {
         type: FieldType.select,
         required: true,
         options: {
-          'in': 'In',
-          'out': 'Out',
-          'transfer': 'Transfer',
-          'adjustment': 'Adjustment',
-          'production': 'Production',
-          'sale': 'Sale',
           'purchase': 'Purchase',
+          'production_in': 'Production in',
+          'production_out': 'Production out',
+          'sale': 'Sale',
+          'return_in': 'Return in',
+          'return_out': 'Return out',
+          'transfer_in': 'Transfer in',
+          'transfer_out': 'Transfer out',
+          'adjustment': 'Adjustment',
+          'damage': 'Damage',
+          'count': 'Stock count',
         },
       ),
       FieldSpec(
@@ -3566,9 +3695,9 @@ final Map<String, TableSpec> tableSpecs = {
         required: true,
         options: {
           'main': 'Main store',
-          'branch': 'Branch store',
-          'production': 'Production store',
-          'retail': 'Retail store',
+          'kitchen': 'Kitchen store',
+          'shop': 'Shop store',
+          'other': 'Other store',
         },
       ),
       FieldSpec(
@@ -3601,7 +3730,13 @@ final Map<String, TableSpec> tableSpecs = {
       FieldSpec('email', 'Email'),
       FieldSpec('address', 'Address'),
       FieldSpec('tin', 'TIN'),
-      FieldSpec('payment_terms_days', 'Payment terms days', required: true),
+      FieldSpec(
+        'payment_terms_days',
+        'Payment terms days',
+        type: FieldType.integer,
+        required: true,
+        defaultValue: 0,
+      ),
       FieldSpec(
         'is_active',
         'Is active',
@@ -3735,10 +3870,10 @@ final Map<String, TableSpec> tableSpecs = {
         'Account type',
         type: FieldType.select,
         options: {
-          'cash': 'Cash',
+          'cash_drawer': 'Cash drawer',
+          'safe': 'Safe',
           'bank': 'Bank',
           'mobile_money': 'Mobile money',
-          'card': 'Card',
         },
       ),
       FieldSpec(

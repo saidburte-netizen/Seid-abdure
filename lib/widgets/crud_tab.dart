@@ -1,6 +1,10 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
+import '../core/events/data_revision.dart';
+import '../core/logging/error_log.dart';
 import '../data/export.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
@@ -28,6 +32,13 @@ class LookupOption {
 
   final String id;
   final String label;
+}
+
+String _dateTimeText(DateTime value) {
+  String two(int part) => part.toString().padLeft(2, '0');
+  return '${value.year.toString().padLeft(4, '0')}-${two(value.month)}-'
+      '${two(value.day)} ${two(value.hour)}:${two(value.minute)}:'
+      '${two(value.second)}';
 }
 
 class _CrudSnapshot {
@@ -208,6 +219,29 @@ class _CrudTabState extends State<CrudTab> {
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             if (widget.header != null) widget.header!,
+            if (!_canWrite && !widget.alwaysReadOnly)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.lock_outline,
+                      size: 18,
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        uiText(
+                          context,
+                          'You can view this list but you do not have permission to change it.',
+                        ),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
               child: Wrap(
@@ -506,7 +540,14 @@ class _CrudTabState extends State<CrudTab> {
       return formatQuantity(value);
     }
     if (field.type == FieldType.date) return formatDate(value);
+    if (field.type == FieldType.datetime) {
+      final parsed = asDateTime(value);
+      return _dateTimeText(parsed);
+    }
     if (field.type == FieldType.time) return formatTime(value);
+    if (field.type == FieldType.json) {
+      return value is String ? value : const JsonEncoder().convert(value);
+    }
     return asText(value);
   }
 
@@ -655,46 +696,50 @@ class _CrudTabState extends State<CrudTab> {
     _CrudSnapshot snapshot,
     Map<String, dynamic>? row,
   ) async {
-    final result = await showDialog<Map<String, dynamic>>(
+    final saved = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (context) => _CrudFormDialog(
+      builder: (dialogContext) => _CrudFormDialog(
         spec: widget.spec,
         row: row,
         lookups: snapshot.lookups,
+        onSubmit: (payload) async {
+          try {
+            if (row == null) {
+              await _repo.insert(
+                widget.spec.table,
+                payload,
+                branchScoped: widget.spec.branchScoped,
+              );
+            } else {
+              await _repo.update(
+                widget.spec.table,
+                row[widget.spec.primaryKey],
+                payload,
+                primaryKey: widget.spec.primaryKey,
+              );
+            }
+          } catch (error) {
+            ErrorLog.instance.record(
+              module: widget.spec.title,
+              target: widget.spec.table,
+              error: error,
+            );
+            rethrow;
+          }
+        },
       ),
     );
-    if (result == null || !context.mounted) return;
-    try {
-      if (row == null) {
-        await _repo.insert(
-          widget.spec.table,
-          result,
-          branchScoped: widget.spec.branchScoped,
-        );
-      } else {
-        await _repo.update(
-          widget.spec.table,
-          row[widget.spec.primaryKey],
-          result,
-          primaryKey: widget.spec.primaryKey,
-        );
-      }
-      if (context.mounted) {
-        showSnack(
-          context,
-          uiTextFormat(context, 'recordSaved', {
-            'name': uiText(context, widget.spec.singular),
-          }),
-        );
-        await _refresh();
-        widget.onChanged?.call();
-      }
-    } catch (error) {
-      if (context.mounted) {
-        showFriendlyError(context, error);
-      }
-    }
+    if (saved != true || !context.mounted) return;
+    showSnack(
+      context,
+      uiTextFormat(context, 'recordSaved', {
+        'name': uiText(context, widget.spec.singular),
+      }),
+    );
+    DataRevision.bump();
+    await _refresh();
+    widget.onChanged?.call();
   }
 
   Future<void> _exportPdf(
@@ -785,11 +830,13 @@ class _CrudFormDialog extends StatefulWidget {
     required this.spec,
     required this.row,
     required this.lookups,
+    required this.onSubmit,
   });
 
   final TableSpec spec;
   final Map<String, dynamic>? row;
   final Map<String, List<LookupOption>> lookups;
+  final Future<void> Function(Map<String, dynamic> payload) onSubmit;
 
   @override
   State<_CrudFormDialog> createState() => _CrudFormDialogState();
@@ -801,11 +848,13 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
   final _values = <String, Object?>{};
   bool _saving = false;
   bool _dirty = false;
+  Object? _error;
 
   @override
   void initState() {
     super.initState();
     for (final field in widget.spec.fields) {
+      if (field.generated) continue;
       final raw = widget.row?[field.key] ?? field.defaultValue;
       if (field.type == FieldType.boolean) {
         _values[field.key] = raw == null ? false : asBool(raw);
@@ -816,11 +865,24 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
               ? ''
               : dateOnly(_values[field.key] as DateTime),
         );
+      } else if (field.type == FieldType.datetime) {
+        final parsed = raw == null ? null : asDateTime(raw);
+        _values[field.key] = parsed;
+        _controllers[field.key] = TextEditingController(
+          text: parsed == null ? '' : _dateTimeText(parsed),
+        );
       } else if (field.type == FieldType.time) {
         final text = raw?.toString() ?? '';
         _controllers[field.key] = TextEditingController(
           text: text.length > 5 ? text.substring(0, 5) : text,
         );
+      } else if (field.type == FieldType.json) {
+        final text = raw == null
+            ? ''
+            : raw is String
+            ? raw
+            : const JsonEncoder.withIndent('  ').convert(raw);
+        _controllers[field.key] = TextEditingController(text: text);
       } else {
         _controllers[field.key] = TextEditingController(
           text: raw == null ? '' : raw.toString(),
@@ -858,24 +920,40 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         ),
         content: SizedBox(
           width: media.width > 720 ? 640 : media.width * 0.9,
-          child: Form(
-            key: _formKey,
-            child: SingleChildScrollView(
-              child: Wrap(
-                spacing: 12,
-                runSpacing: 12,
-                children: [
-                  for (final field in widget.spec.fields)
-                    SizedBox(
-                      width:
-                          field.width ??
-                          ((media.width > 720 ? 640 : media.width * 0.9) / 2) -
-                              8,
-                      child: _buildField(context, field),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              if (_error != null) ...[
+                FriendlyErrorBox(error: _error!),
+                const SizedBox(height: 12),
+              ],
+              Flexible(
+                child: Form(
+                  key: _formKey,
+                  child: SingleChildScrollView(
+                    child: Wrap(
+                      spacing: 12,
+                      runSpacing: 12,
+                      children: [
+                        for (final field in widget.spec.fields)
+                          if (!field.generated)
+                            SizedBox(
+                              width:
+                                  field.width ??
+                                  ((media.width > 720
+                                              ? 640
+                                              : media.width * 0.9) /
+                                          2) -
+                                      8,
+                              child: _buildField(context, field),
+                            ),
+                      ],
                     ),
-                ],
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
         actions: [
@@ -999,6 +1077,74 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
                 _values[field.key] = selected;
                 _controllers[field.key]!.text = dateOnly(selected);
               });
+            }
+          },
+        );
+      case FieldType.datetime:
+        return TextFormField(
+          controller: _controllers[field.key],
+          readOnly: true,
+          decoration: InputDecoration(
+            labelText: uiText(context, field.label),
+            hintText: 'YYYY-MM-DD HH:MM',
+            suffixIcon: const Icon(Icons.event_outlined),
+          ),
+          validator: (value) =>
+              field.required && (value == null || value.isEmpty)
+              ? uiText(context, 'Required')
+              : null,
+          onTap: () async {
+            final now = DateTime.now();
+            final current = _values[field.key] as DateTime?;
+            final date = await showDatePicker(
+              context: context,
+              initialDate: current ?? now,
+              firstDate: DateTime(now.year - 10),
+              lastDate: DateTime(now.year + 10),
+            );
+            if (date == null || !context.mounted) return;
+            final time = await showTimePicker(
+              context: context,
+              initialTime: TimeOfDay.fromDateTime(current ?? now),
+            );
+            if (time == null) return;
+            final selected = DateTime(
+              date.year,
+              date.month,
+              date.day,
+              time.hour,
+              time.minute,
+            );
+            setState(() {
+              _dirty = true;
+              _values[field.key] = selected;
+              _controllers[field.key]!.text = _dateTimeText(selected);
+            });
+          },
+        );
+      case FieldType.json:
+        return TextFormField(
+          controller: _controllers[field.key],
+          minLines: 3,
+          maxLines: 6,
+          keyboardType: TextInputType.multiline,
+          decoration: InputDecoration(
+            labelText: uiText(context, field.label),
+            hintText: field.hint ?? 'JSON, for example {"enabled": true}',
+          ),
+          onChanged: (_) {
+            if (!_dirty) setState(() => _dirty = true);
+          },
+          validator: (value) {
+            final text = value?.trim() ?? '';
+            if (text.isEmpty) {
+              return field.required ? uiText(context, 'Required') : null;
+            }
+            try {
+              jsonDecode(text);
+              return null;
+            } catch (_) {
+              return uiText(context, 'Enter valid JSON');
             }
           },
         );

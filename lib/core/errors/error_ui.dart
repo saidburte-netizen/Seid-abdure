@@ -5,14 +5,18 @@ import 'package:flutter/material.dart';
 import '../../l10n/app_localizations.dart';
 import 'friendly_error.dart';
 import '../../l10n/ui_text.dart';
+import '../logging/error_log.dart';
 
 /// Shows a branded, friendly error snackbar. Technical exception text is never
-/// passed through.
+/// passed through; it is recorded for the administrator diagnostics screen.
 void showFriendlyError(
   BuildContext context,
   Object error, {
+  String module = 'App',
+  String target = '',
   Future<void> Function()? onRetry,
 }) {
+  ErrorLog.instance.record(module: module, target: target, error: error);
   if (!context.mounted) return;
   final strings = AppLocalizations.of(context);
   final scheme = Theme.of(context).colorScheme;
