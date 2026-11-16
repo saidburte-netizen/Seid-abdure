@@ -263,11 +263,12 @@ class _KpiGrid extends StatelessWidget {
             mainAxisSpacing: 12,
             childAspectRatio: columns == 1 ? 3.2 : 2.4,
             children: [
-              for (final card in cards)
+              for (var index = 0; index < cards.length; index++)
                 _DashboardKpiCard(
-                  label: card.$1,
-                  value: card.$2,
-                  icon: card.$3,
+                  label: cards[index].$1,
+                  value: cards[index].$2,
+                  icon: cards[index].$3,
+                  highlighted: index < 3,
                 ),
             ],
           );
@@ -282,11 +283,13 @@ class _DashboardKpiCard extends StatelessWidget {
     required this.label,
     required this.value,
     required this.icon,
+    required this.highlighted,
   });
 
   final String label;
   final String value;
   final IconData icon;
+  final bool highlighted;
 
   @override
   Widget build(BuildContext context) {
@@ -294,13 +297,19 @@ class _DashboardKpiCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: scheme.surfaceContainerHighest,
+        color: highlighted ? scheme.primary : scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: scheme.outlineVariant),
+        border: Border.all(
+          color: highlighted ? scheme.primary : scheme.outlineVariant,
+        ),
       ),
       child: Row(
         children: [
-          Icon(icon, size: 20, color: scheme.primary),
+          Icon(
+            icon,
+            size: 20,
+            color: highlighted ? scheme.onPrimary : scheme.primary,
+          ),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -311,7 +320,9 @@ class _DashboardKpiCard extends StatelessWidget {
                   label,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.labelMedium,
+                  style: Theme.of(context).textTheme.labelMedium?.copyWith(
+                    color: highlighted ? scheme.onPrimary : null,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 FittedBox(
@@ -321,6 +332,7 @@ class _DashboardKpiCard extends StatelessWidget {
                     value,
                     maxLines: 1,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: highlighted ? scheme.onPrimary : null,
                       fontWeight: FontWeight.w800,
                     ),
                   ),

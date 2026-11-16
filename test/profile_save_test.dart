@@ -84,7 +84,7 @@ void main() {
     await tester.pumpWidget(_profileApp(controller));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Updated Name');
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.text('Save'));
     await tester.pumpAndSettle();
 
     expect(updateRequest, isNotNull);
@@ -128,7 +128,7 @@ void main() {
     await tester.pumpWidget(_profileApp(controller));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextFormField).first, 'Updated Name');
-    await tester.tap(find.widgetWithText(FilledButton, 'Save'));
+    await tester.tap(find.text('Save'));
     await tester.pump();
     final request = await pendingRequest.future;
     await tester.pump(const Duration(milliseconds: 60));
