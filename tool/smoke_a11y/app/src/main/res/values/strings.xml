@@ -1,0 +1,4 @@
+<resources>
+    <string name="app_name">Smoke accessibility helper</string>
+    <string name="accessibility_description">Keeps Android accessibility enabled during the automated release smoke test so the Flutter UI can be read. It does not read, store, or act on any data.</string>
+</resources>

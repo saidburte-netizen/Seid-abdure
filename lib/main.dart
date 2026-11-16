@@ -13,9 +13,9 @@ import 'core/locale/locale_preferences.dart';
 import 'core/logging/app_logger.dart';
 import 'data/formatting.dart';
 
-// Keep the semantics tree alive for the whole app run. Flutter only builds
-// semantics when an accessibility service is active; forcing it makes screen
-// readers work on any device and lets the release smoke test read the UI.
+// Build the semantics tree from startup so accessibility services and the
+// automated release smoke test can read the UI immediately, without waiting
+// for the first accessibility query to trigger it.
 SemanticsHandle? _semanticsHandle;
 
 const _rawSupabaseUrl = String.fromEnvironment('SUPABASE_URL');

@@ -28,6 +28,8 @@ import xml.etree.ElementTree as ET
 
 PACKAGE = "net.bradeandcake.brade_and_cake_house"
 ACTIVITY = ".MainActivity"
+A11Y_PACKAGE = "net.bradeandcake.smokea11y"
+A11Y_COMPONENT = f"{A11Y_PACKAGE}/{A11Y_PACKAGE}.SmokeAccessibilityService"
 OUT_DIR = "build/evidence/android-smoke"
 LANGUAGE_MENU_LABELS = {"Language", "ቋንቋ", "Afaan", "Change language"}
 # The language button is always on the login screen; its tooltip is a reliable
@@ -81,6 +83,17 @@ def visible_labels(root: ET.Element) -> list[str]:
         if label(node)
     }
     return sorted(labels)
+
+
+def hierarchy_summary(root: ET.Element) -> str:
+    nodes = visible_nodes(root)
+    packages = sorted({node.get("package") for node in nodes if node.get("package")})
+    classes = sorted({node.get("class") for node in nodes if node.get("class")})
+    return (
+        f"packages={packages} "
+        f"classes={classes[:10]} "
+        f"labels={visible_labels(root)[:20]}"
+    )
 
 
 def find_text(root: ET.Element, text: str) -> ET.Element | None:
@@ -172,8 +185,12 @@ def wait_for(predicate, description: str, timeout: int = 75) -> ET.Element:
         if node is not None:
             return node
         time.sleep(1)
-    labels = visible_labels(last_root) if last_root is not None else []
-    raise RuntimeError(f"Timed out waiting for {description}. Visible labels: {labels}")
+    summary = (
+        hierarchy_summary(last_root)
+        if last_root is not None
+        else "no hierarchy was readable"
+    )
+    raise RuntimeError(f"Timed out waiting for {description}. {summary}")
 
 
 def screenshot(name: str) -> None:
@@ -374,8 +391,45 @@ def sign_in_and_sell() -> None:
     print("SMOKE SIGNED-IN OK: dashboard opened and one POS cash sale completed.")
 
 
-def run(apk: str) -> None:
+def enable_accessibility(helper_apk: str | None) -> None:
+    """Enable a no-op accessibility service so Android exposes Flutter's tree.
+
+    ``FlutterView.getAccessibilityNodeProvider()`` returns the semantics bridge
+    only while ``AccessibilityManager.isEnabled()`` is true. TalkBack would
+    change how taps work, so the smoke job installs an inert service instead.
+    """
+    if helper_apk:
+        if not os.path.exists(helper_apk):
+            raise RuntimeError(f"Accessibility helper APK not found: {helper_apk}")
+        adb("install", "-r", helper_apk)
+    installed = adb("shell", "pm", "list", "packages", A11Y_PACKAGE, check=False)
+    if A11Y_PACKAGE not in installed:
+        print(
+            "SMOKE WARN: accessibility helper is not installed; "
+            "the release UI tree will be empty."
+        )
+        return
+    adb(
+        "shell",
+        "settings",
+        "put",
+        "secure",
+        "enabled_accessibility_services",
+        A11Y_COMPONENT,
+    )
+    adb("shell", "settings", "put", "secure", "accessibility_enabled", "1")
+    for _ in range(20):
+        state = adb("shell", "dumpsys", "accessibility", check=False)
+        if "smokea11y" in state:
+            print("ACCESSIBILITY helper enabled")
+            return
+        time.sleep(1)
+    print("SMOKE WARN: dumpsys does not list the helper yet; continuing.")
+
+
+def run(apk: str, helper_apk: str | None = None) -> None:
     print(f"Installing {apk}")
+    enable_accessibility(helper_apk)
     adb("install", "-r", apk)
     adb("shell", "pm", "clear", PACKAGE)
     adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}")
@@ -412,8 +466,9 @@ def run(apk: str) -> None:
 
 def main() -> None:
     apk = sys.argv[1] if len(sys.argv) > 1 else "brade-cake-house.apk"
+    helper_apk = sys.argv[2] if len(sys.argv) > 2 else None
     try:
-        run(apk)
+        run(apk, helper_apk)
     except Exception as exc:  # noqa: BLE001 - report and re-raise
         annotate(f"{type(exc).__name__}: {exc}")
         try:
