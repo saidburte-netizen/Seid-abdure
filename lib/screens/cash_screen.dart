@@ -11,7 +11,16 @@ import '../widgets/module_scaffold.dart';
 import '../l10n/ui_text.dart';
 
 class CashScreen extends StatelessWidget {
-  const CashScreen({super.key});
+  const CashScreen({
+    this.initialTabIndex = 0,
+    this.recoveryNotice,
+    this.onRecoveryDismiss,
+    super.key,
+  });
+
+  final int initialTabIndex;
+  final String? recoveryNotice;
+  final VoidCallback? onRecoveryDismiss;
 
   Future<void> _createPayable(
     BuildContext context,
@@ -106,9 +115,20 @@ class CashScreen extends StatelessWidget {
         KpiKind.overdueReceivables,
       ],
       body: DefaultTabController(
+        initialIndex: initialTabIndex,
         length: 8,
         child: Column(
           children: [
+            if (recoveryNotice != null)
+              MaterialBanner(
+                content: Text(recoveryNotice!),
+                actions: [
+                  TextButton(
+                    onPressed: onRecoveryDismiss,
+                    child: const Text('Dismiss'),
+                  ),
+                ],
+              ),
             const _PendingCashNote(),
             const AppTabBar(
               isScrollable: true,

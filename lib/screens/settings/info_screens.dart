@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 
+import '../../auth/auth_controller.dart';
 import '../../brand/brand.dart';
+import '../../core/logging/save_diagnostics.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/common.dart';
@@ -13,6 +17,7 @@ class AboutScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
+    final isAdmin = SessionScope.maybeOf(context)?.isAdmin == true;
     return AppScaffold(
       title: Text(strings.about),
       body: ListView(
@@ -58,10 +63,52 @@ class AboutScreen extends StatelessWidget {
               'and reporting are updated through the live business database.',
             ),
           ),
+          if (isAdmin) const _SaveDiagnosticsPanel(),
         ],
       ),
     );
   }
+}
+
+class _SaveDiagnosticsPanel extends StatefulWidget {
+  const _SaveDiagnosticsPanel();
+
+  @override
+  State<_SaveDiagnosticsPanel> createState() => _SaveDiagnosticsPanelState();
+}
+
+class _SaveDiagnosticsPanelState extends State<_SaveDiagnosticsPanel> {
+  @override
+  void initState() {
+    super.initState();
+    unawaited(SaveDiagnostics.instance.load());
+  }
+
+  @override
+  Widget build(BuildContext context) => AnimatedBuilder(
+    animation: SaveDiagnostics.instance,
+    builder: (context, _) {
+      final entries = SaveDiagnostics.instance.entries.take(80);
+      return SectionCard(
+        title: 'Save diagnostics',
+        child: entries.isEmpty
+            ? const Text('No save attempts recorded.')
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  for (final entry in entries)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: SelectableText(
+                        '${entry.time.toLocal().toIso8601String()} | '
+                        '${entry.module} | ${entry.target} | ${entry.step}',
+                      ),
+                    ),
+                ],
+              ),
+      );
+    },
+  );
 }
 
 class HelpScreen extends StatelessWidget {

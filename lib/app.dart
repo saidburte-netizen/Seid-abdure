@@ -10,6 +10,7 @@ import 'brand/brand.dart';
 import 'core/connectivity/offline_banner.dart';
 import 'core/errors/friendly_error.dart';
 import 'core/logging/app_logger.dart';
+import 'core/logging/save_diagnostics.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/oromo_framework_localizations.dart';
 import 'screens/approvals_screen.dart';
@@ -92,6 +93,9 @@ class _BakeryRouterState extends State<_BakeryRouter>
   late final AuthController? _auth;
   late final bool _ownsAuth;
   late final GoRouter _router;
+  SaveBreadcrumb? _pendingSaveRecovery;
+  bool _saveRecoveryLoaded = false;
+  bool _saveRecoveryNavigated = false;
 
   static const _routePermissions = {
     '/pos': 'pos.use',
@@ -208,7 +212,18 @@ class _BakeryRouterState extends State<_BakeryRouter>
           path: '/inventory',
           builder: (context, state) => const InventoryScreen(),
         ),
-        GoRoute(path: '/cash', builder: (context, state) => const CashScreen()),
+        GoRoute(
+          path: '/cash',
+          builder: (context, state) => CashScreen(
+            initialTabIndex: state.uri.queryParameters['tab'] == 'accounts'
+                ? 1
+                : 0,
+            recoveryNotice: state.uri.queryParameters['save_recovery'] == '1'
+                ? _recoveryNotice
+                : null,
+            onRecoveryDismiss: _dismissSaveRecovery,
+          ),
+        ),
         GoRoute(
           path: '/people',
           builder: (context, state) => const PeopleScreen(),
@@ -350,6 +365,52 @@ class _BakeryRouterState extends State<_BakeryRouter>
         ),
       ],
     );
+    _auth?.addListener(_restoreInterruptedSave);
+    unawaited(_loadInterruptedSave());
+  }
+
+  Future<void> _loadInterruptedSave() async {
+    await SaveDiagnostics.instance.load();
+    if (!mounted) return;
+    _pendingSaveRecovery = SaveDiagnostics.instance.pendingRecoveryFor(
+      'cash_accounts',
+    );
+    _saveRecoveryLoaded = true;
+    _restoreInterruptedSave();
+  }
+
+  String? get _recoveryNotice {
+    final recovery = _pendingSaveRecovery;
+    if (recovery == null) return null;
+    if (recovery.step == 'validated' || recovery.step == 'session ok') {
+      return 'The previous cash account was not saved. Re-enter it and save again.';
+    }
+    return 'The previous cash-account save was interrupted. Check the account list before retrying.';
+  }
+
+  void _restoreInterruptedSave() {
+    if (!mounted ||
+        !_saveRecoveryLoaded ||
+        _pendingSaveRecovery == null ||
+        _saveRecoveryNavigated ||
+        _auth?.status != AuthStatus.ready) {
+      return;
+    }
+    _saveRecoveryNavigated = true;
+    _router.go('/cash?tab=accounts&save_recovery=1');
+  }
+
+  void _dismissSaveRecovery() {
+    final recovery = _pendingSaveRecovery;
+    if (recovery == null) return;
+    SaveDiagnostics.instance.record(
+      attemptId: recovery.attemptId,
+      module: recovery.module,
+      target: recovery.target,
+      step: 'recovery reviewed',
+    );
+    _pendingSaveRecovery = null;
+    _router.go('/cash?tab=accounts');
   }
 
   Widget _moduleScreen(String name) => switch (name) {
@@ -379,6 +440,7 @@ class _BakeryRouterState extends State<_BakeryRouter>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _auth?.removeListener(_restoreInterruptedSave);
     _router.dispose();
     if (_ownsAuth) _auth?.dispose();
     super.dispose();

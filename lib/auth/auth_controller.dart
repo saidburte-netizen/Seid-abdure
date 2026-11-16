@@ -333,9 +333,26 @@ class AuthController extends ChangeNotifier {
     if (status != AuthStatus.ready) return;
     _lastActivity = DateTime.now();
     _inactivityTimer?.cancel();
-    _inactivityTimer = Timer(inactivityTimeout, () {
-      unawaited(signOut());
-    });
+    _inactivityTimer = Timer(inactivityTimeout, _expireAfterInactivity);
+  }
+
+  void _expireAfterInactivity() {
+    final lastActivity = _lastActivity;
+    final elapsed = lastActivity == null
+        ? inactivityTimeout
+        : DateTime.now().difference(lastActivity);
+    if (SaveFlow.hasActiveWrites || elapsed < inactivityTimeout) {
+      final remaining = elapsed < inactivityTimeout
+          ? inactivityTimeout - elapsed
+          : const Duration(seconds: 1);
+      _inactivityTimer = Timer(
+        SaveFlow.hasActiveWrites ? const Duration(seconds: 1) : remaining,
+        _expireAfterInactivity,
+      );
+      return;
+    }
+    _inactivityTimer = null;
+    unawaited(signOut());
   }
 
   /// Call when the app returns to the foreground. If the phone was idle for
@@ -343,6 +360,10 @@ class AuthController extends ChangeNotifier {
   void checkInactivity() {
     final last = _lastActivity;
     if (last == null) return;
+    if (SaveFlow.hasActiveWrites) {
+      noteActivity();
+      return;
+    }
     if (DateTime.now().difference(last) >= inactivityTimeout) {
       _stopInactivityTimer();
       unawaited(signOut());

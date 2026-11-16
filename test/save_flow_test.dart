@@ -1,13 +1,18 @@
+import 'dart:async';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:brade_and_cake_house/core/events/data_revision.dart';
 import 'package:brade_and_cake_house/core/logging/error_log.dart';
+import 'package:brade_and_cake_house/core/logging/save_diagnostics.dart';
 import 'package:brade_and_cake_house/data/save_flow.dart';
 
 void main() {
-  setUp(() {
+  setUp(() async {
+    await SaveDiagnostics.instance.flush();
     SharedPreferences.setMockInitialValues({});
+    SaveDiagnostics.instance.resetForTesting();
   });
 
   test('a successful write returns the value and bumps the revision', () async {
@@ -51,5 +56,26 @@ void main() {
 
     expect(value, 'value');
     expect(DataRevision.notifier.value, before);
+  });
+
+  test('a stalled write times out and records the last reached step', () async {
+    final response = Completer<int>();
+    final before = DataRevision.notifier.value;
+
+    await expectLater(
+      SaveFlow.write<int>(
+        module: 'Test',
+        target: 'stalled_write',
+        timeout: const Duration(milliseconds: 10),
+        action: () => response.future,
+      ),
+      throwsA(isA<TimeoutException>()),
+    );
+
+    expect(DataRevision.notifier.value, before);
+    expect(SaveFlow.hasActiveWrites, isFalse);
+    expect(SaveDiagnostics.instance.entries.first.step, 'failed');
+    response.complete(1);
+    await SaveDiagnostics.instance.flush();
   });
 }

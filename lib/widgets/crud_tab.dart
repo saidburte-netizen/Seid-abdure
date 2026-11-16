@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
+import '../core/logging/save_diagnostics.dart';
 import '../data/export.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
@@ -670,16 +671,27 @@ class _CrudTabState extends State<CrudTab> {
     final saved = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
-      builder: (dialogContext) => _CrudFormDialog(
+      builder: (_) => _CrudFormDialog(
         spec: widget.spec,
         row: row,
         lookups: snapshot.lookups,
-        onSubmit: (payload) async {
+        onSubmit: (payload, diagnosticId) async {
+          final session = SessionScope.of(context);
+          if (session.status != AuthStatus.ready || session.userId == null) {
+            throw StateError('The signed-in session is no longer ready.');
+          }
+          SaveDiagnostics.instance.record(
+            attemptId: diagnosticId,
+            module: widget.spec.title,
+            target: widget.spec.table,
+            step: 'session ok',
+          );
           if (row == null) {
             await _repo.insert(
               widget.spec.table,
               payload,
               branchScoped: widget.spec.branchScoped,
+              diagnosticId: diagnosticId,
             );
           } else {
             await _repo.update(
@@ -687,6 +699,7 @@ class _CrudTabState extends State<CrudTab> {
               row[widget.spec.primaryKey],
               payload,
               primaryKey: widget.spec.primaryKey,
+              diagnosticId: diagnosticId,
             );
           }
         },
@@ -797,7 +810,8 @@ class _CrudFormDialog extends StatefulWidget {
   final TableSpec spec;
   final Map<String, dynamic>? row;
   final Map<String, List<LookupOption>> lookups;
-  final Future<void> Function(Map<String, dynamic> payload) onSubmit;
+  final Future<void> Function(Map<String, dynamic> payload, String diagnosticId)
+  onSubmit;
 
   @override
   State<_CrudFormDialog> createState() => _CrudFormDialogState();
@@ -864,9 +878,10 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
   Widget build(BuildContext context) {
     final media = MediaQuery.sizeOf(context);
     return PopScope(
-      canPop: !_dirty,
+      canPop: !_dirty && !_saving,
       onPopInvokedWithResult: (didPop, _) async {
         if (didPop) return;
+        if (_saving) return;
         if (!await confirmDiscardChanges(context)) return;
         _dirty = false;
         if (context.mounted) Navigator.of(context).pop();
@@ -1183,7 +1198,14 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() => _saving = true);
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    final diagnosticId = SaveDiagnostics.instance.begin(
+      module: widget.spec.title,
+      target: widget.spec.table,
+    );
     final payload = <String, dynamic>{};
     for (final field in widget.spec.fields) {
       if (field.type == FieldType.boolean) {
@@ -1212,7 +1234,17 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           break;
       }
     }
-    _dirty = false;
-    if (mounted) Navigator.of(context).pop(payload);
+    try {
+      await widget.onSubmit(payload, diagnosticId);
+      if (!mounted) return;
+      _dirty = false;
+      Navigator.of(context).pop(true);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _error = error;
+        _saving = false;
+      });
+    }
   }
 }

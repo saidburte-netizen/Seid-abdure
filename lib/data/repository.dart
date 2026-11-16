@@ -148,6 +148,7 @@ class BranchRepository {
     String table,
     Map<String, dynamic> values, {
     bool branchScoped = true,
+    String? diagnosticId,
   }) async {
     final payload = Map<String, dynamic>.from(values);
     if (branchScoped && branchId.isNotEmpty) {
@@ -156,6 +157,7 @@ class BranchRepository {
     return SaveFlow.write(
       module: 'Data',
       target: table,
+      diagnosticId: diagnosticId,
       action: () async {
         final row = await client.from(table).insert(payload).select().single();
         return Map<String, dynamic>.from(row);
@@ -168,10 +170,12 @@ class BranchRepository {
     Object id,
     Map<String, dynamic> values, {
     String primaryKey = 'id',
+    String? diagnosticId,
   }) async {
     return SaveFlow.write(
       module: 'Data',
       target: table,
+      diagnosticId: diagnosticId,
       action: () async {
         final row = await client
             .from(table)
