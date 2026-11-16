@@ -52,14 +52,14 @@ class _DashboardScreenState extends State<DashboardScreen> {
     super.didChangeDependencies();
     if (!_started) {
       _started = true;
-      _reload();
+      _kpis = _loadKpis();
     }
   }
 
-  void _reload() {
+  Future<Map<String, dynamic>> _loadKpis() {
     final session = SessionScope.of(context);
-    if (session.isCustomer) return;
-    _kpis = session.client
+    if (session.isCustomer) return Future.value(const {});
+    return session.client
         .from('v_dashboard_kpis')
         .select()
         .maybeSingle()
@@ -70,9 +70,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
         );
   }
 
+  void _reload() {
+    if (!mounted) return;
+    setState(() => _kpis = _loadKpis());
+  }
+
   Future<void> _refresh() async {
-    setState(_reload);
-    await _kpis;
+    final future = _loadKpis();
+    setState(() => _kpis = future);
+    await future;
   }
 
   Future<void> _alerts() async {
@@ -138,11 +144,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ModuleScaffold(
       title: strings.dashboard,
       isRoot: true,
-      kpiKinds: const [
-        KpiKind.cashBalance,
-        KpiKind.todaySales,
-        KpiKind.lowStock,
-      ],
       actions: [
         IconButton(
           tooltip: strings.runAlerts,
@@ -156,6 +157,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
           padding: const EdgeInsets.only(bottom: 32),
           children: [
             _WelcomeLine(session: session, branch: branch),
+            AsyncView<Map<String, dynamic>>(
+              future: _kpis ?? Future.value(const {}),
+              onRetry: _refresh,
+              builder: (context, data) => _KpiGrid(data: data),
+            ),
             SectionBar(
               title: strings.workspace,
               subtitle: strings.workspaceSubtitle,
@@ -195,6 +201,73 @@ class _DashboardScreenState extends State<DashboardScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _KpiGrid extends StatelessWidget {
+  const _KpiGrid({required this.data});
+
+  final Map<String, dynamic> data;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final cards = [
+      (
+        strings.todaySales,
+        formatMoney(data['today_sales']),
+        Icons.today,
+      ),
+      (
+        strings.cashBalance,
+        formatMoney(data['cash_balance']),
+        Icons.account_balance_wallet_outlined,
+      ),
+      (
+        strings.lowStock,
+        formatQuantity(data['low_stock_items']),
+        Icons.warning_amber_outlined,
+      ),
+      (
+        uiText(context, 'Overdue'),
+        formatMoney(data['overdue_receivables']),
+        Icons.person_search_outlined,
+      ),
+      (
+        uiText(context, 'Rent due'),
+        formatMoney(data['rent_due']),
+        Icons.apartment_outlined,
+      ),
+      (
+        uiText(context, 'Staff present'),
+        formatQuantity(data['staff_present_today']),
+        Icons.groups_outlined,
+      ),
+    ];
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          final columns = constraints.maxWidth >= 1000
+              ? 3
+              : constraints.maxWidth >= 620
+              ? 2
+              : 1;
+          return GridView.count(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            crossAxisCount: columns,
+            crossAxisSpacing: 12,
+            mainAxisSpacing: 12,
+            childAspectRatio: columns == 1 ? 3.2 : 2.4,
+            children: [
+              for (final card in cards)
+                StatCard(label: card.$1, value: card.$2, icon: card.$3),
+            ],
+          );
+        },
       ),
     );
   }

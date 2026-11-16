@@ -49,7 +49,10 @@ class BranchAccess {
 class AuthController extends ChangeNotifier {
   static const inactivityTimeout = Duration(minutes: 30);
 
-  AuthController(this.client) {
+  AuthController(
+    this.client, {
+    this.profileWriteTimeout = const Duration(seconds: 20),
+  }) {
     _subscription = client.auth.onAuthStateChange.listen((state) {
       if (_initialized) unawaited(_loadSession(state.session));
     });
@@ -57,6 +60,7 @@ class AuthController extends ChangeNotifier {
   }
 
   final SupabaseClient client;
+  final Duration profileWriteTimeout;
   late final StreamSubscription<AuthState> _subscription;
   AuthStatus status = AuthStatus.loading;
   String? errorMessage;
@@ -453,7 +457,13 @@ class AuthController extends ChangeNotifier {
     await SaveFlow.write(
       module: 'Account',
       target: 'profiles',
-      action: () => client.from('profiles').update(payload).eq('id', userId!),
+      action: () => client
+          .from('profiles')
+          .update(payload)
+          .eq('id', userId!)
+          .select('id')
+          .single()
+          .timeout(profileWriteTimeout),
     );
     if (payload.containsKey('full_name')) this.fullName = fullName!.trim();
     if (payload.containsKey('phone')) this.phone = phone!.trim();

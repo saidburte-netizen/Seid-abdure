@@ -73,6 +73,48 @@ void _setPortal(AuthController controller) {
 }
 
 void main() {
+  testWidgets('dashboard shows and refreshes all live business KPIs', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    var todaySales = 111.0;
+    final client = _changingKpiClient(() => todaySales);
+    final controller = AuthController(client);
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 50));
+    _setPortal(controller);
+    tester.view.physicalSize = const Size(1200, 2400);
+    tester.view.devicePixelRatio = 1;
+
+    await tester.pumpWidget(
+      BakeryApp(
+        client: client,
+        authController: controller,
+        signInGateway: FakeSignInGateway(admin: true),
+        initialLocation: '/',
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.text("Today's sales"), findsOneWidget);
+    expect(find.text('Cash balance'), findsOneWidget);
+    expect(find.text('Low stock'), findsOneWidget);
+    expect(find.text('Overdue'), findsOneWidget);
+    expect(find.text('Rent due'), findsOneWidget);
+    expect(find.text('Staff present'), findsOneWidget);
+    expect(find.textContaining('111.00'), findsOneWidget);
+
+    todaySales = 222.0;
+    DataRevision.bump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
+
+    expect(find.textContaining('222.00'), findsOneWidget);
+    expect(find.textContaining('111.00'), findsNothing);
+    expect(tester.takeException(), isNull);
+    controller.dispose();
+  });
+
   testWidgets('a report reloads and changes after DataRevision.bump', (
     tester,
   ) async {
