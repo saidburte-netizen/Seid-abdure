@@ -307,7 +307,12 @@ jobs:
         run: |
           set -euo pipefail
           printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT}}" > tool/smoke_a11y/local.properties
-          android/gradlew -p tool/smoke_a11y :app:assembleDebug --no-daemon --console=plain
+          if ! android/gradlew -p tool/smoke_a11y :app:assembleDebug --no-daemon --console=plain > helper-build.log 2>&1; then
+            tail -n 40 helper-build.log
+            tail -n 40 helper-build.log | while IFS= read -r line; do echo "::error::$line"; done
+            exit 1
+          fi
+          tail -n 5 helper-build.log
           test -f tool/smoke_a11y/app/build/outputs/apk/debug/app-debug.apk
 
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4
