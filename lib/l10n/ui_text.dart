@@ -3,6 +3,18 @@ import 'package:flutter/widgets.dart';
 
 const Map<String, Map<String, String>> _uiTranslations = {
   'am': {
+    "Search records": "መዝገቦችን ፈልግ",
+    "Refresh": "አድስ",
+    "Export CSV": "CSV አውጣ",
+    "Export PDF": "PDF አውጣ",
+    "Add": "ጨምር",
+    "Cash balance": "የጥሬ ገንዘብ ቀሪ ሂሳብ",
+    "Today's sales": "የዛሬ ሽያጭ",
+    "Low stock": "ያነሰ ክምችት",
+    "Overdue": "ያለፈ ጊዜ",
+    "Rent due": "የሚከፈል ኪራይ",
+    "Staff present": "የተገኙ ሰራተኞች",
+    "No records yet": "እስካሁን መዝገብ የለም",
     "Branches": "ቅርንጫፎች",
     "Users & roles": "ተጠቃሚዎች እና ሚናዎች",
     "Assign branch, role and active status": "ቅርንጫፍ፣ ሚና እና ንቁ ሁኔታ ይመድቡ",
@@ -93,7 +105,6 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Record rent": "ኪራይ መዝግብ",
     "Reports & analytics": "ሪፖርቶች እና ትንታኔ",
     "Report view": "የሪፖርት እይታ",
-    "Refresh": "አድስ",
     "Void this sale?": "ይህን ሽያጭ ሰርዝ?",
     "The database restores stock, cash and credit for this sale. This cannot be undone.":
         "የውሂብ ጎታ ለዚህ ሽያጭ ክምችት፣ ገንዘብ እና ብድርን ይመልሳል። ይህ ሊቀለበስ አይችልም።",
@@ -166,7 +177,6 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "New": "አዲስ",
     "Create": "ፍጠር",
     "Close": "ዝጋ",
-    "Add": "ጨምር",
     "Export": "ላክ",
     "Delete record?": "መዝገብ አጥፋ?",
     "Saved.": "ተቀምጧል።",
@@ -174,6 +184,18 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "PDF exported.": "PDF ተልኳል።",
   },
   'om': {
+    "Search records": "Galmee barbaadi",
+    "Refresh": "Haaromsi",
+    "Export CSV": "CSV baasi",
+    "Export PDF": "PDF baasi",
+    "Add": "Dabali",
+    "Cash balance": "Haftee maallaqa harkaa",
+    "Today's sales": "Gurgurtaa har'aa",
+    "Low stock": "Kuusaa xiqqaa",
+    "Overdue": "Yeroon darbe",
+    "Rent due": "Kiraa kaffalamuu qabu",
+    "Staff present": "Hojjettoota argaman",
+    "No records yet": "Galmeen ammatti hin jiru",
     "Branches": "Dameewwan",
     "Users & roles": "Fayyadamtoota fi gaheewwan",
     "Assign branch, role and active status":
@@ -266,7 +288,6 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Record rent": "Kiraa galmeessi",
     "Reports & analytics": "Gabaasa fi xiinxala",
     "Report view": "Ilaalcha gabaasaa",
-    "Refresh": "Haaromsi",
     "Void this sale?": "Gurgurtaa kana haqi?",
     "The database restores stock, cash and credit for this sale. This cannot be undone.":
         "Daataan kuusaa, maallaqa fi liqii gurgurtaa kanaaf deebisa. Kun hin duubatti deebi'u.",
@@ -342,7 +363,6 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "New": "Haaraa",
     "Create": "Uumi",
     "Close": "Cufi",
-    "Add": "Dabali",
     "Export": "Al-ergi",
     "Delete record?": "Galmee haqi?",
     "Saved.": "Olkaa'ame.",
@@ -994,6 +1014,18 @@ const Map<String, Map<String, String>> _templateTranslations = {
 /// Translates a known UI phrase. Unknown English is returned unchanged so
 /// data values (names, product codes) are never mangled.
 const List<String> uiTextKeys = [
+  "Search records",
+  "Refresh",
+  "Export CSV",
+  "Export PDF",
+  "Add",
+  "Cash balance",
+  "Today's sales",
+  "Low stock",
+  "Overdue",
+  "Rent due",
+  "Staff present",
+  "No records yet",
   "Branches",
   "Users & roles",
   "Assign branch, role and active status",
@@ -1075,7 +1107,6 @@ const List<String> uiTextKeys = [
   "Record rent",
   "Reports & analytics",
   "Report view",
-  "Refresh",
   "Void this sale?",
   "The database restores stock, cash and credit for this sale. This cannot be undone.",
   "Sales & returns",
@@ -1141,7 +1172,6 @@ const List<String> uiTextKeys = [
   "New",
   "Create",
   "Close",
-  "Add",
   "Export",
   "Delete record?",
   "Saved.",
@@ -1207,7 +1237,7 @@ String _translateWords(String code, String english) {
 /// Translates a template such as `newRecord` and replaces `{name}` style
 /// placeholders. The template itself is never shown to the user.
 String uiTemplateForLocale(String code, String key) {
-  if (code == 'en') return key;
+  if (code == 'en') return uiTemplateSources[key] ?? key;
   return _templateTranslations[code]?[key] ?? key;
 }
 

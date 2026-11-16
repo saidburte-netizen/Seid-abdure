@@ -25,12 +25,12 @@ class ErrorLogEntry {
   final String message;
 
   Map<String, dynamic> toJson() => {
-        'time': time.toIso8601String(),
-        'module': module,
-        'target': target,
-        'code': code,
-        'message': message,
-      };
+    'time': time.toIso8601String(),
+    'module': module,
+    'target': target,
+    'code': code,
+    'message': message,
+  };
 
   static ErrorLogEntry? fromJson(Object? raw) {
     if (raw is! Map) return null;

@@ -228,8 +228,9 @@ class BrandPdf {
                                 child: pw.Text(
                                   totals[index].$1,
                                   style: pw.TextStyle(
-                                    fontSize:
-                                        index == totals.length - 1 ? 10 : 9,
+                                    fontSize: index == totals.length - 1
+                                        ? 10
+                                        : 9,
                                     color: _muted,
                                     fontWeight: index == totals.length - 1
                                         ? pw.FontWeight.bold
@@ -289,115 +290,115 @@ class BrandPdf {
   }
 
   static pw.Widget _header(pw.MemoryImage logo, String branchName) => pw.Column(
+    children: [
+      pw.Row(
+        crossAxisAlignment: pw.CrossAxisAlignment.center,
         children: [
-          pw.Row(
-            crossAxisAlignment: pw.CrossAxisAlignment.center,
-            children: [
-              pw.Container(
-                width: 54,
-                height: 54,
-                decoration: pw.BoxDecoration(
-                  color: _cream,
-                  borderRadius: pw.BorderRadius.circular(8),
-                ),
-                child: pw.Padding(
-                  padding: const pw.EdgeInsets.all(3),
-                  child: pw.Image(logo, fit: pw.BoxFit.contain),
-                ),
-              ),
-              pw.SizedBox(width: 10),
-              pw.Expanded(
-                child: pw.Column(
-                  crossAxisAlignment: pw.CrossAxisAlignment.start,
-                  children: [
-                    pw.Text(
-                      Brand.appName,
-                      style: pw.TextStyle(
-                        color: _green,
-                        fontSize: 15,
-                        fontWeight: pw.FontWeight.bold,
-                      ),
-                    ),
-                    pw.Text(
-                      Brand.slogan,
-                      style: pw.TextStyle(
-                        color: _gold,
-                        fontSize: 8.5,
-                        fontStyle: pw.FontStyle.italic,
-                      ),
-                    ),
-                    pw.SizedBox(height: 2),
-                    pw.Text(
-                      branchName,
-                      style: const pw.TextStyle(color: _muted, fontSize: 8.5),
-                    ),
-                  ],
-                ),
-              ),
-              pw.Text(
-                'BAKERY • SHOP • PROPERTY',
-                style: pw.TextStyle(
-                  color: _forest,
-                  fontSize: 7,
-                  letterSpacing: 0.8,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
-            ],
+          pw.Container(
+            width: 54,
+            height: 54,
+            decoration: pw.BoxDecoration(
+              color: _cream,
+              borderRadius: pw.BorderRadius.circular(8),
+            ),
+            child: pw.Padding(
+              padding: const pw.EdgeInsets.all(3),
+              child: pw.Image(logo, fit: pw.BoxFit.contain),
+            ),
           ),
-          pw.SizedBox(height: 10),
-          pw.Container(height: 1, color: _forest),
+          pw.SizedBox(width: 10),
+          pw.Expanded(
+            child: pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.start,
+              children: [
+                pw.Text(
+                  Brand.appName,
+                  style: pw.TextStyle(
+                    color: _green,
+                    fontSize: 15,
+                    fontWeight: pw.FontWeight.bold,
+                  ),
+                ),
+                pw.Text(
+                  Brand.slogan,
+                  style: pw.TextStyle(
+                    color: _gold,
+                    fontSize: 8.5,
+                    fontStyle: pw.FontStyle.italic,
+                  ),
+                ),
+                pw.SizedBox(height: 2),
+                pw.Text(
+                  branchName,
+                  style: const pw.TextStyle(color: _muted, fontSize: 8.5),
+                ),
+              ],
+            ),
+          ),
+          pw.Text(
+            'BAKERY • SHOP • PROPERTY',
+            style: pw.TextStyle(
+              color: _forest,
+              fontSize: 7,
+              letterSpacing: 0.8,
+              fontWeight: pw.FontWeight.bold,
+            ),
+          ),
         ],
-      );
+      ),
+      pw.SizedBox(height: 10),
+      pw.Container(height: 1, color: _forest),
+    ],
+  );
 
   static pw.Widget _footer(pw.Context context, String? footer) => pw.Column(
+    children: [
+      pw.Container(height: 0.8, color: _gold),
+      pw.SizedBox(height: 4),
+      pw.Row(
         children: [
-          pw.Container(height: 0.8, color: _gold),
-          pw.SizedBox(height: 4),
-          pw.Row(
-            children: [
-              pw.Expanded(
-                child: pw.Text(
-                  footer?.trim().isNotEmpty == true
-                      ? footer!
-                      : '${Brand.appName} • ${Brand.slogan}',
-                  style: const pw.TextStyle(fontSize: 7.5, color: _muted),
-                ),
-              ),
-              pw.Text(
-                'Page ${context.pageNumber} of ${context.pagesCount}',
-                style: const pw.TextStyle(fontSize: 7.5, color: _muted),
-              ),
-            ],
+          pw.Expanded(
+            child: pw.Text(
+              footer?.trim().isNotEmpty == true
+                  ? footer!
+                  : '${Brand.appName} • ${Brand.slogan}',
+              style: const pw.TextStyle(fontSize: 7.5, color: _muted),
+            ),
+          ),
+          pw.Text(
+            'Page ${context.pageNumber} of ${context.pagesCount}',
+            style: const pw.TextStyle(fontSize: 7.5, color: _muted),
           ),
         ],
-      );
+      ),
+    ],
+  );
 
   static pw.Widget _detail(String label, String value) => pw.Padding(
-        padding: const pw.EdgeInsets.only(bottom: 3),
-        child: pw.Row(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            pw.SizedBox(
-              width: 82,
-              child: pw.Text(
-                label,
-                style: pw.TextStyle(
-                  fontSize: 8.5,
-                  color: _muted,
-                  fontWeight: pw.FontWeight.bold,
-                ),
-              ),
+    padding: const pw.EdgeInsets.only(bottom: 3),
+    child: pw.Row(
+      crossAxisAlignment: pw.CrossAxisAlignment.start,
+      children: [
+        pw.SizedBox(
+          width: 82,
+          child: pw.Text(
+            label,
+            style: pw.TextStyle(
+              fontSize: 8.5,
+              color: _muted,
+              fontWeight: pw.FontWeight.bold,
             ),
-            pw.Expanded(
-              child: pw.Text(
-                value,
-                style: const pw.TextStyle(fontSize: 9, color: _ink),
-              ),
-            ),
-          ],
+          ),
         ),
-      );
+        pw.Expanded(
+          child: pw.Text(
+            value,
+            style: const pw.TextStyle(fontSize: 9, color: _ink),
+          ),
+        ),
+      ],
+    ),
+  );
 
   static String _cell(Object? value, {required bool numeric}) {
     if (value == null) return '';

@@ -3,7 +3,6 @@ import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 
 import '../l10n/app_localizations.dart';
-import 'brand_ui.dart';
 
 /// The shared page shell for every authenticated screen.
 ///
@@ -29,11 +28,12 @@ class AppScaffold extends StatefulWidget {
     this.showBack,
     this.bottomNavigationBar,
     this.resizeToAvoidBottomInset,
+    this.kpiStrip,
     this.hero,
     this.heroTitle,
     this.heroSubtitle,
     this.showHero = true,
-    this.heroHeightFactor = 0.55,
+    this.heroHeightFactor = 0.0,
     super.key,
   });
 
@@ -48,8 +48,12 @@ class AppScaffold extends StatefulWidget {
   final Widget? bottomNavigationBar;
   final bool? resizeToAvoidBottomInset;
 
-  /// Overrides the automatic brand hero. Pass [showHero] false for immersive
-  /// screens such as the sign-in shell.
+  /// A compact summary strip placed inside the green app bar, below the title.
+  /// It replaces the old full-screen hero band.
+  final Widget? kpiStrip;
+
+  /// Retained for source compatibility with older call sites. The hero is no
+  /// longer rendered: every screen uses the compact [kpiStrip] header instead.
   final Widget? hero;
   final String? heroTitle;
   final String? heroSubtitle;
@@ -131,32 +135,17 @@ class _AppScaffoldState extends State<AppScaffold> {
       );
   }
 
-  String? get _titleText {
-    final title = widget.title;
-    if (title is Text) return title.data;
-    return widget.heroTitle;
-  }
-
   @override
   Widget build(BuildContext context) {
     final strings = AppLocalizations.of(context);
-    final keyboardOpen = MediaQuery.viewInsetsOf(context).bottom > 0;
-    final heroWidget = widget.hero ??
-        (widget.showHero
-            ? AppHeroHeader(
-                title: _titleText ?? widget.heroTitle ?? strings.appTitle,
-                subtitle: widget.heroSubtitle ?? strings.appTitle,
-                heightFactor: widget.heroHeightFactor,
-              )
-            : null);
     final leading = !_showBack
         ? (widget.drawer == null
-            ? null
-            : IconButton(
-                tooltip: strings.menu,
-                icon: const Icon(Icons.menu),
-                onPressed: () => _scaffoldKey.currentState?.openDrawer(),
-              ))
+              ? null
+              : IconButton(
+                  tooltip: strings.menu,
+                  icon: const Icon(Icons.menu),
+                  onPressed: () => _scaffoldKey.currentState?.openDrawer(),
+                ))
         : IconButton(
             tooltip: strings.back,
             icon: const Icon(Icons.arrow_back),
@@ -191,18 +180,24 @@ class _AppScaffoldState extends State<AppScaffold> {
         key: _scaffoldKey,
         drawer: widget.drawer,
         appBar: AppBar(
+          key: const Key('app-header'),
           leading: leading,
-          title: widget.title,
+          // Scale instead of ellipsizing: a long localized title stays whole,
+          // even at 360 dp width and text scale 1.3.
+          title: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: widget.title,
+          ),
           actions: appBarActions,
+          bottom: widget.kpiStrip == null
+              ? null
+              : PreferredSize(
+                  preferredSize: const Size.fromHeight(120),
+                  child: widget.kpiStrip!,
+                ),
         ),
-        body: heroWidget == null || keyboardOpen
-            ? widget.body
-            : Column(
-                children: [
-                  heroWidget,
-                  Expanded(child: widget.body),
-                ],
-              ),
+        body: widget.body,
         floatingActionButton: widget.floatingActionButton,
         bottomNavigationBar: widget.bottomNavigationBar,
         resizeToAvoidBottomInset: widget.resizeToAvoidBottomInset,

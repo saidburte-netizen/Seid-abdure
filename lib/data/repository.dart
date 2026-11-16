@@ -26,7 +26,7 @@ class BranchRepository {
   /// Retries idempotent reads once with a short backoff. Writes are never
   /// retried because a retried write can duplicate money or stock.
   Future<T> _read<T>(Future<T> Function() action) async {
-    for (var attempt = 0;; attempt++) {
+    for (var attempt = 0; ; attempt++) {
       try {
         return await action().timeout(readTimeout);
       } catch (error) {
@@ -60,17 +60,16 @@ class BranchRepository {
     bool branchScoped = true,
     Map<String, Object?> equals = const {},
     int limit = 500,
-  }) =>
-      _listPage(
-        table,
-        columns: columns,
-        orderBy: orderBy,
-        ascending: ascending,
-        branchScoped: branchScoped,
-        equals: equals,
-        offset: 0,
-        limit: limit,
-      );
+  }) => _listPage(
+    table,
+    columns: columns,
+    orderBy: orderBy,
+    ascending: ascending,
+    branchScoped: branchScoped,
+    equals: equals,
+    offset: 0,
+    limit: limit,
+  );
 
   /// Fetches every page. Use this for exports and reports, never for a
   /// screen that only needs the first page.
@@ -182,23 +181,21 @@ class BranchRepository {
   Future<Object?> rpc(
     String function, [
     Map<String, Object?> params = const {},
-  ]) =>
-      client.rpc(function, params: params);
+  ]) => client.rpc(function, params: params);
 
   Future<List<Map<String, dynamic>>> lookup(
     String table, {
     String labelColumn = 'name',
     bool branchScoped = true,
     Map<String, Object?> equals = const {},
-  }) =>
-      list(
-        table,
-        columns: 'id,$labelColumn',
-        branchScoped: branchScoped,
-        equals: equals,
-        orderBy: labelColumn,
-        limit: 500,
-      );
+  }) => list(
+    table,
+    columns: 'id,$labelColumn',
+    branchScoped: branchScoped,
+    equals: equals,
+    orderBy: labelColumn,
+    limit: 500,
+  );
 
   Future<Map<String, dynamic>> upsert(
     String table,

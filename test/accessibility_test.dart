@@ -74,7 +74,8 @@ void main() {
       expect(
         errors,
         isEmpty,
-        reason: '$route rendered layout errors at 200% text scale:\n'
+        reason:
+            '$route rendered layout errors at 200% text scale:\n'
             '${errors.join('\n')}',
       );
     });
@@ -93,7 +94,8 @@ void main() {
       expect(
         errors,
         isEmpty,
-        reason: '$route rendered layout errors at 200% text scale on 320x568:\n'
+        reason:
+            '$route rendered layout errors at 200% text scale on 320x568:\n'
             '${errors.join('\n')}',
       );
     });

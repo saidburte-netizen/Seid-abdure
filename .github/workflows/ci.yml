@@ -34,11 +34,15 @@ jobs:
       - run: flutter gen-l10n
       - name: Validate Dart Supabase usage against the schema snapshot
         run: python3 tool/check_schema.py
+      - name: Drift test — app schema vs live schema snapshot
+        run: python3 tool/payload_drift_test.py
       - name: Verify the main Android manifest allows network access
         run: |
           set -euo pipefail
           grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml
           grep -q 'android.permission.ACCESS_NETWORK_STATE' android/app/src/main/AndroidManifest.xml
+      # Run `tool/format.sh` locally before pushing. CI only verifies the
+      # result; it never rewrites files, commits, or pushes formatting changes.
       - run: dart format --output=none --set-exit-if-changed lib test
       - name: Reject empty handlers and unfinished placeholders
         run: bash tool/check_placeholders.sh
@@ -62,6 +66,13 @@ jobs:
             test/oromo_localizations_test.dart
       - name: Run full Flutter test suite
         run: flutter test
+      - name: Upload UI screenshots
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: ui-screenshots
+          path: build/ui_screenshots
+          if-no-files-found: error
+          retention-days: 30
       - name: Scan dependencies for known vulnerabilities
         run: |
           set -euo pipefail

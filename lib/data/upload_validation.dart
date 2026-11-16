@@ -8,10 +8,10 @@ const Set<String> avatarExtensions = {'jpg', 'jpeg', 'png', 'webp'};
 const int maxAvatarBytes = 5 * 1024 * 1024;
 
 String avatarContentType(String extension) => switch (extension) {
-      'png' => 'image/png',
-      'webp' => 'image/webp',
-      _ => 'image/jpeg',
-    };
+  'png' => 'image/png',
+  'webp' => 'image/webp',
+  _ => 'image/jpeg',
+};
 
 /// Returns the reason a picked file cannot be uploaded, or `null` when it can.
 ///

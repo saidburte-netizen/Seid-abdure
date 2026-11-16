@@ -350,11 +350,7 @@ final Map<String, TableSpec> tableSpecs = {
     ],
     description: 'Live table `cake_orders`.',
     fields: [
-      FieldSpec(
-        'order_no',
-        'Order no',
-        hint: 'Leave blank to auto-generate',
-      ),
+      FieldSpec('order_no', 'Order no', hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'customer_id',
         'Customer',
@@ -2800,8 +2796,11 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['invoice_no', 'period_start', 'amount', 'status'],
     description: 'Live table `rent_invoices`.',
     fields: [
-      FieldSpec('invoice_no', 'Invoice no',
-          hint: 'Leave blank to auto-generate'),
+      FieldSpec(
+        'invoice_no',
+        'Invoice no',
+        hint: 'Leave blank to auto-generate',
+      ),
       FieldSpec(
         'lease_id',
         'Lease',

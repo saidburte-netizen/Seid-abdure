@@ -58,7 +58,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _reload() {
     final session = SessionScope.of(context);
     if (session.isCustomer) return;
-    _kpis = session.client.from('v_dashboard_kpis').select().maybeSingle().then(
+    _kpis = session.client
+        .from('v_dashboard_kpis')
+        .select()
+        .maybeSingle()
+        .then(
           (row) => row == null
               ? <String, dynamic>{}
               : Map<String, dynamic>.from(row),
@@ -84,10 +88,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   static const List<(String, IconData, String?)> _modules = [
     ('pos', Icons.point_of_sale, 'pos.use'),
-    ('sales', Icons.receipt_long_outlined, 'sales.view'),
-    ('production', Icons.bakery_dining, 'production.manage'),
-    ('inventory', Icons.inventory_2_outlined, 'inventory.view'),
     ('cash', Icons.account_balance_wallet_outlined, 'cash.view'),
+    ('sales', Icons.receipt_long_outlined, 'sales.view'),
+    ('inventory', Icons.inventory_2_outlined, 'inventory.view'),
+    ('production', Icons.bakery_dining, 'production.manage'),
     ('people', Icons.groups_outlined, 'hr.view'),
     ('payroll', Icons.receipt_long_outlined, 'payroll.manage'),
     ('rentals', Icons.apartment_outlined, 'rentals.manage'),
@@ -98,19 +102,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   String _moduleLabel(AppLocalizations strings, String name) => switch (name) {
-        'pos' => strings.newSale,
-        'sales' => strings.salesModule,
-        'production' => strings.productionModule,
-        'inventory' => strings.inventoryModule,
-        'cash' => strings.cashModule,
-        'people' => strings.peopleModule,
-        'payroll' => strings.payrollModule,
-        'rentals' => strings.rentalsModule,
-        'credit' => strings.payablesModule,
-        'approvals' => strings.approvals,
-        'reports' => strings.reportsModule,
-        _ => strings.settingsModule,
-      };
+    'pos' => strings.newSale,
+    'sales' => strings.salesModule,
+    'production' => strings.productionModule,
+    'inventory' => strings.inventoryModule,
+    'cash' => strings.cashModule,
+    'people' => strings.peopleModule,
+    'payroll' => strings.payrollModule,
+    'rentals' => strings.rentalsModule,
+    'credit' => strings.payablesModule,
+    'approvals' => strings.approvals,
+    'reports' => strings.reportsModule,
+    _ => strings.settingsModule,
+  };
 
   @override
   Widget build(BuildContext context) {
@@ -129,7 +133,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     return ModuleScaffold(
       title: strings.dashboard,
       isRoot: true,
-      showHero: false,
+      kpiKinds: const [
+        KpiKind.cashBalance,
+        KpiKind.todaySales,
+        KpiKind.lowStock,
+      ],
       actions: [
         IconButton(
           tooltip: strings.runAlerts,
@@ -142,12 +150,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         child: ListView(
           padding: const EdgeInsets.only(bottom: 32),
           children: [
-            _WelcomeHeader(session: session, branch: branch),
-            AsyncView<Map<String, dynamic>>(
-              future: _kpis ?? Future.value(const {}),
-              onRetry: _refresh,
-              builder: (context, data) => _KpiGrid(data: data),
-            ),
+            _WelcomeLine(session: session, branch: branch),
             SectionBar(
               title: strings.workspace,
               subtitle: strings.workspaceSubtitle,
@@ -159,8 +162,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final columns = constraints.maxWidth >= 1000
                       ? 4
                       : constraints.maxWidth >= 620
-                          ? 3
-                          : 2;
+                      ? 3
+                      : 2;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -192,8 +195,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   }
 }
 
-class _WelcomeHeader extends StatelessWidget {
-  const _WelcomeHeader({required this.session, required this.branch});
+class _WelcomeLine extends StatelessWidget {
+  const _WelcomeLine({required this.session, required this.branch});
 
   final AuthController session;
   final BranchAccess branch;
@@ -204,96 +207,39 @@ class _WelcomeHeader extends StatelessWidget {
     final portal = branch.isAdmin
         ? strings.adminPortal
         : branch.isManager
-            ? strings.managerPortal
-            : strings.teamPortal;
-    return AppHeroHeader(
-      kicker: portal,
-      title: session.fullName == null
-          ? strings.welcome
-          : '${strings.welcome}, ${session.fullName}',
-      subtitle:
-          '${branch.branchName} • ${branch.roleLabel} • ${formatDate(DateTime.now())}',
-      heightFactor: 0.26,
-      minHeight: 220,
-      trailing: Column(
-        mainAxisSize: MainAxisSize.min,
+        ? strings.managerPortal
+        : strings.teamPortal;
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+      child: Row(
         children: [
-          if (session.can('pos.use'))
-            IconButton.filledTonal(
-              tooltip: strings.newSale,
-              onPressed: () => context.push('/pos'),
-              icon: const Icon(Icons.point_of_sale),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  session.fullName == null
+                      ? strings.welcome
+                      : '${strings.welcome}, ${session.fullName}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.titleSmall?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  '${branch.branchName} • $portal • ${formatDate(DateTime.now())}',
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall,
+                ),
+              ],
             ),
-          const SizedBox(height: 8),
-          IconButton.filledTonal(
-            tooltip: strings.alerts,
-            onPressed: () => context.push('/notifications'),
-            icon: const Icon(Icons.notifications_outlined),
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _KpiGrid extends StatelessWidget {
-  const _KpiGrid({required this.data});
-
-  final Map<String, dynamic> data;
-
-  @override
-  Widget build(BuildContext context) {
-    final strings = AppLocalizations.of(context);
-    final cards = [
-      (strings.todaySales, formatMoney(data['today_sales']), Icons.today),
-      (
-        strings.cashBalance,
-        formatMoney(data['cash_balance']),
-        Icons.account_balance_wallet_outlined,
-      ),
-      (
-        strings.lowStock,
-        formatQuantity(data['low_stock_items']),
-        Icons.warning_amber_outlined,
-      ),
-      (
-        strings.receivables,
-        formatMoney(data['overdue_receivables']),
-        Icons.person_search_outlined,
-      ),
-      (
-        strings.rentOutstanding,
-        formatMoney(data['rent_due']),
-        Icons.apartment_outlined,
-      ),
-      (
-        strings.activeEmployees,
-        formatQuantity(data['staff_present_today']),
-        Icons.groups_outlined,
-      ),
-    ];
-    return Padding(
-      padding: const EdgeInsets.all(16),
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final columns = constraints.maxWidth >= 1000
-              ? 3
-              : constraints.maxWidth >= 620
-                  ? 2
-                  : 1;
-          return GridView.count(
-            shrinkWrap: true,
-            physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: columns == 1 ? 3.2 : 2.4,
-            children: [
-              for (final card in cards)
-                StatCard(label: card.$1, value: card.$2, icon: card.$3),
-            ],
-          );
-        },
       ),
     );
   }
@@ -312,28 +258,27 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-        clipBehavior: Clip.antiAlias,
-        child: InkWell(
-          onTap: onTap,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Icon(icon,
-                    size: 30, color: Theme.of(context).colorScheme.primary),
-                Text(
-                  label,
-                  style: Theme.of(context).textTheme.titleMedium,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ],
+    clipBehavior: Clip.antiAlias,
+    child: InkWell(
+      onTap: onTap,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Icon(icon, size: 30, color: Theme.of(context).colorScheme.primary),
+            Text(
+              label,
+              style: Theme.of(context).textTheme.titleMedium,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
             ),
-          ),
+          ],
         ),
-      );
+      ),
+    ),
+  );
 }
 
 class _CustomerDashboard extends StatefulWidget {
