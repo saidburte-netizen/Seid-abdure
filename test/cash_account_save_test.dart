@@ -100,9 +100,7 @@ void main() {
           if (request.method == 'POST' &&
               request.url.path.endsWith('/cash_accounts')) {
             insertRequest = request;
-            return _jsonResponse(request, [
-              {'id': 'cash-1'},
-            ]);
+            return _jsonResponse(request, {'id': 'cash-1'});
           }
           if (request.method == 'GET' &&
               request.url.path.endsWith('/branches')) {
@@ -180,6 +178,7 @@ void main() {
         DateTime.now().subtract(const Duration(minutes: 31)),
       );
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
 
@@ -187,11 +186,7 @@ void main() {
       expect(find.text('Saving…'), findsOneWidget);
       expect(tester.takeException(), isNull);
 
-      pendingResponse.complete(
-        _jsonResponse(request, [
-          {'id': 'cash-1'},
-        ]),
-      );
+      pendingResponse.complete(_jsonResponse(request, {'id': 'cash-1'}));
       await tester.pump(const Duration(milliseconds: 500));
       await tester.pumpWidget(const SizedBox.shrink());
       _testController!.dispose();
