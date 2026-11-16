@@ -55,6 +55,17 @@ Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
   expect(finder, findsOneWidget);
 }
 
+Future<void> _pumpUntilGone(WidgetTester tester, Finder finder) async {
+  for (
+    var attempt = 0;
+    attempt < 30 && finder.evaluate().isNotEmpty;
+    attempt++
+  ) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsNothing);
+}
+
 Future<void> _openNewCashAccount(WidgetTester tester) async {
   await tester.pumpWidget(_app(_testController!));
   await tester.pump(const Duration(milliseconds: 500));
@@ -115,7 +126,7 @@ void main() {
       await tester.tap(find.text('Save'));
       await tester.pump(const Duration(milliseconds: 100));
       expect(insertRequest, isNotNull);
-      await tester.pump(const Duration(milliseconds: 100));
+      await _pumpUntilGone(tester, find.text('Saving…'));
 
       expect(jsonDecode(insertRequest!.body), containsPair('name', 'seya'));
       expect(
@@ -177,7 +188,10 @@ void main() {
       _testController!.debugSetLastActivity(
         DateTime.now().subtract(const Duration(minutes: 31)),
       );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
       tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
       await tester.pump();
@@ -187,7 +201,7 @@ void main() {
       expect(tester.takeException(), isNull);
 
       pendingResponse.complete(_jsonResponse(request, {'id': 'cash-1'}));
-      await tester.pump(const Duration(milliseconds: 500));
+      await _pumpUntilGone(tester, find.text('Saving…'));
       await tester.pumpWidget(const SizedBox.shrink());
       _testController!.dispose();
     },
