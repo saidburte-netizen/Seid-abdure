@@ -1,3 +1,4 @@
+import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -32,7 +33,8 @@ class RentalsScreen extends StatelessWidget {
         'fn_generate_rent_invoices',
         params: {'p_date': dateOnly(DateTime.now())},
       );
-      if (context.mounted) showSnack(context, 'Rent invoices generated.');
+      if (context.mounted) showSnack(context, 'Rent invoices generated');
+      DataRevision.bump();
     } catch (error) {
       if (context.mounted) {
         showFriendlyError(context, error);
@@ -196,67 +198,69 @@ class _RentPaymentDialogState extends State<_RentPaymentDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Rent for ${widget.invoice['invoice_no']}'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        DropdownButtonFormField<String>(
-          initialValue: _account,
-          decoration: InputDecoration(
-            labelText: uiText(context, 'Cash account'),
-          ),
-          items: [
-            for (final account in widget.accounts)
-              DropdownMenuItem(
-                value: account['id'] as String,
-                child: Text(asText(account['name'])),
+        title: Text('Rent for ${widget.invoice['invoice_no']}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButtonFormField<String>(
+              initialValue: _account,
+              decoration: InputDecoration(
+                labelText: uiText(context, 'Cash account'),
               ),
-          ],
-          onChanged: (value) => setState(() => _account = value ?? _account),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _amount,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: uiText(context, 'Amount')),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _method,
-          decoration: InputDecoration(labelText: uiText(context, 'Method')),
-          items: const [
-            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-            DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-            DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
-            DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-            DropdownMenuItem(
-              value: 'mobile_money',
-              child: Text('Mobile money'),
+              items: [
+                for (final account in widget.accounts)
+                  DropdownMenuItem(
+                    value: account['id'] as String,
+                    child: Text(asText(account['name'])),
+                  ),
+              ],
+              onChanged: (value) =>
+                  setState(() => _account = value ?? _account),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _amount,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(labelText: uiText(context, 'Amount')),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: _method,
+              decoration: InputDecoration(labelText: uiText(context, 'Method')),
+              items: const [
+                DropdownMenuItem(value: 'cash', child: Text('Cash')),
+                DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
+                DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
+                DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
+                DropdownMenuItem(
+                  value: 'mobile_money',
+                  child: Text('Mobile money'),
+                ),
+              ],
+              onChanged: (value) => setState(() => _method = value ?? 'cash'),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              controller: _reference,
+              decoration:
+                  InputDecoration(labelText: uiText(context, 'Reference')),
             ),
           ],
-          onChanged: (value) => setState(() => _method = value ?? 'cash'),
         ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _reference,
-          decoration: InputDecoration(labelText: uiText(context, 'Reference')),
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const LText('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.of(context).pop({
-          'account': _account,
-          'amount': asNum(_amount.text),
-          'method': _method,
-          'reference': _reference.text.trim(),
-        }),
-        child: const LText('Record rent'),
-      ),
-    ],
-  );
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const LText('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop({
+              'account': _account,
+              'amount': asNum(_amount.text),
+              'method': _method,
+              'reference': _reference.text.trim(),
+            }),
+            child: const LText('Record rent'),
+          ),
+        ],
+      );
 }

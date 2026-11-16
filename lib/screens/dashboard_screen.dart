@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
+import '../core/events/data_revision.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
 import '../l10n/app_localizations.dart';
@@ -20,6 +21,30 @@ class DashboardScreen extends StatefulWidget {
 class _DashboardScreenState extends State<DashboardScreen> {
   Future<Map<String, dynamic>>? _kpis;
   bool _started = false;
+  bool _listenerAdded = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _addListener();
+  }
+
+  @override
+  void dispose() {
+    _removeListener();
+    super.dispose();
+  }
+
+  void _addListener() {
+    if (_listenerAdded) return;
+    DataRevision.notifier.addListener(_reload);
+    _listenerAdded = true;
+  }
+
+  void _removeListener() {
+    DataRevision.notifier.removeListener(_reload);
+    _listenerAdded = false;
+  }
 
   @override
   void didChangeDependencies() {
@@ -33,11 +58,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
   void _reload() {
     final session = SessionScope.of(context);
     if (session.isCustomer) return;
-    _kpis = session.client
-        .from('v_dashboard_kpis')
-        .select()
-        .maybeSingle()
-        .then(
+    _kpis = session.client.from('v_dashboard_kpis').select().maybeSingle().then(
           (row) => row == null
               ? <String, dynamic>{}
               : Map<String, dynamic>.from(row),
@@ -77,19 +98,19 @@ class _DashboardScreenState extends State<DashboardScreen> {
   ];
 
   String _moduleLabel(AppLocalizations strings, String name) => switch (name) {
-    'pos' => strings.newSale,
-    'sales' => strings.salesModule,
-    'production' => strings.productionModule,
-    'inventory' => strings.inventoryModule,
-    'cash' => strings.cashModule,
-    'people' => strings.peopleModule,
-    'payroll' => strings.payrollModule,
-    'rentals' => strings.rentalsModule,
-    'credit' => strings.payablesModule,
-    'approvals' => strings.approvals,
-    'reports' => strings.reportsModule,
-    _ => strings.settingsModule,
-  };
+        'pos' => strings.newSale,
+        'sales' => strings.salesModule,
+        'production' => strings.productionModule,
+        'inventory' => strings.inventoryModule,
+        'cash' => strings.cashModule,
+        'people' => strings.peopleModule,
+        'payroll' => strings.payrollModule,
+        'rentals' => strings.rentalsModule,
+        'credit' => strings.payablesModule,
+        'approvals' => strings.approvals,
+        'reports' => strings.reportsModule,
+        _ => strings.settingsModule,
+      };
 
   @override
   Widget build(BuildContext context) {
@@ -138,8 +159,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                   final columns = constraints.maxWidth >= 1000
                       ? 4
                       : constraints.maxWidth >= 620
-                      ? 3
-                      : 2;
+                          ? 3
+                          : 2;
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -183,8 +204,8 @@ class _WelcomeHeader extends StatelessWidget {
     final portal = branch.isAdmin
         ? strings.adminPortal
         : branch.isManager
-        ? strings.managerPortal
-        : strings.teamPortal;
+            ? strings.managerPortal
+            : strings.teamPortal;
     return AppHeroHeader(
       kicker: portal,
       title: session.fullName == null
@@ -258,8 +279,8 @@ class _KpiGrid extends StatelessWidget {
           final columns = constraints.maxWidth >= 1000
               ? 3
               : constraints.maxWidth >= 620
-              ? 2
-              : 1;
+                  ? 2
+                  : 1;
           return GridView.count(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
@@ -291,27 +312,28 @@ class _ModuleCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Card(
-    clipBehavior: Clip.antiAlias,
-    child: InkWell(
-      onTap: onTap,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Icon(icon, size: 30, color: Theme.of(context).colorScheme.primary),
-            Text(
-              label,
-              style: Theme.of(context).textTheme.titleMedium,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+        clipBehavior: Clip.antiAlias,
+        child: InkWell(
+          onTap: onTap,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Icon(icon,
+                    size: 30, color: Theme.of(context).colorScheme.primary),
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    ),
-  );
+      );
 }
 
 class _CustomerDashboard extends StatefulWidget {

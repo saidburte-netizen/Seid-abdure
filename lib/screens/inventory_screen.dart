@@ -1,3 +1,4 @@
+import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -80,7 +81,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
         receiptNo = (await session.client.rpc(
           'next_number',
           params: {'p_prefix': 'GRN'},
-        )).toString();
+        ))
+            .toString();
       } catch (_) {
         receiptNo = 'GRN-${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -116,7 +118,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
         // the PO status to partial/received. Do not duplicate that work here.
         await session.client.from('goods_receipt_items').insert(items);
       }
-      if (mounted) showSnack(context, 'Goods received as $receiptNo.');
+      if (mounted) showSnack(context, 'Goods received as $receiptNo');
+      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }
@@ -139,9 +142,9 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       await session.client
           .from('stock_counts')
-          .update({'status': 'completed'})
-          .eq('id', count['id']);
-      if (mounted) showSnack(context, 'Stock count approved.');
+          .update({'status': 'completed'}).eq('id', count['id']);
+      if (mounted) showSnack(context, 'Stock count approved');
+      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }

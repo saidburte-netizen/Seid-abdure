@@ -176,12 +176,12 @@ class _CrudTabState extends State<CrudTab> {
   }
 
   Future<List<Map<String, dynamic>>> _rowsForExport() => _repo.listAll(
-    widget.spec.table,
-    orderBy: widget.spec.orderBy,
-    ascending: widget.spec.ascending,
-    branchScoped: widget.spec.branchScoped,
-    equals: widget.filters,
-  );
+        widget.spec.table,
+        orderBy: widget.spec.orderBy,
+        ascending: widget.spec.ascending,
+        branchScoped: widget.spec.branchScoped,
+        equals: widget.filters,
+      );
 
   List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> rows) {
     if (_query.trim().isEmpty) return rows;
@@ -286,9 +286,8 @@ class _CrudTabState extends State<CrudTab> {
                     label: const LText('CSV'),
                   ),
                   OutlinedButton.icon(
-                    onPressed: rows.isEmpty
-                        ? null
-                        : () => _exportPdf(context, rows),
+                    onPressed:
+                        rows.isEmpty ? null : () => _exportPdf(context, rows),
                     icon: const Icon(Icons.picture_as_pdf_outlined),
                     label: const LText('PDF'),
                   ),
@@ -327,8 +326,7 @@ class _CrudTabState extends State<CrudTab> {
                             height: 320,
                             child: EmptyView(
                               icon: Icons.table_rows_outlined,
-                              message:
-                                  widget.emptyMessage ??
+                              message: widget.emptyMessage ??
                                   uiTextFormat(context, 'noRecords', {
                                     'name': uiText(context, widget.spec.title),
                                   }),
@@ -419,72 +417,74 @@ class _CrudTabState extends State<CrudTab> {
     BuildContext context,
     _CrudSnapshot snapshot,
     List<Map<String, dynamic>> rows,
-  ) => ListView.separated(
-    padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-    itemCount: rows.length,
-    separatorBuilder: (_, __) => const SizedBox(height: 8),
-    itemBuilder: (context, index) {
-      final row = rows[index];
-      final titleKey = widget.spec.effectiveListColumns.isEmpty
-          ? widget.spec.fields.first.key
-          : widget.spec.effectiveListColumns.first;
-      return Card(
-        clipBehavior: Clip.antiAlias,
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
+  ) =>
+      ListView.separated(
+        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+        itemCount: rows.length,
+        separatorBuilder: (_, __) => const SizedBox(height: 8),
+        itemBuilder: (context, index) {
+          final row = rows[index];
+          final titleKey = widget.spec.effectiveListColumns.isEmpty
+              ? widget.spec.fields.first.key
+              : widget.spec.effectiveListColumns.first;
+          return Card(
+            clipBehavior: Clip.antiAlias,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Expanded(
-                    child: Text(
-                      _display(
-                        context,
-                        widget.spec.field(titleKey),
-                        row[titleKey],
-                        snapshot.lookups,
-                      ),
-                      style: Theme.of(context).textTheme.titleMedium,
-                    ),
-                  ),
-                  _actionsWidget(context, snapshot, row),
-                ],
-              ),
-              for (final key
-                  in widget.spec.effectiveListColumns.skip(1).take(4))
-                Padding(
-                  padding: const EdgeInsets.only(top: 6),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                  Row(
                     children: [
-                      SizedBox(
-                        width: 120,
-                        child: Text(
-                          uiText(
-                            context,
-                            widget.spec.field(key)?.label ?? prettyLabel(key),
-                          ),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
                       Expanded(
-                        child: _valueWidget(
-                          context,
-                          widget.spec.field(key),
-                          row[key],
-                          snapshot.lookups,
+                        child: Text(
+                          _display(
+                            context,
+                            widget.spec.field(titleKey),
+                            row[titleKey],
+                            snapshot.lookups,
+                          ),
+                          style: Theme.of(context).textTheme.titleMedium,
                         ),
                       ),
+                      _actionsWidget(context, snapshot, row),
                     ],
                   ),
-                ),
-            ],
-          ),
-        ),
+                  for (final key
+                      in widget.spec.effectiveListColumns.skip(1).take(4))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: 120,
+                            child: Text(
+                              uiText(
+                                context,
+                                widget.spec.field(key)?.label ??
+                                    prettyLabel(key),
+                              ),
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                          Expanded(
+                            child: _valueWidget(
+                              context,
+                              widget.spec.field(key),
+                              row[key],
+                              snapshot.lookups,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          );
+        },
       );
-    },
-  );
 
   Widget _valueWidget(
     BuildContext context,
@@ -542,7 +542,7 @@ class _CrudTabState extends State<CrudTab> {
     if (field.type == FieldType.date) return formatDate(value);
     if (field.type == FieldType.datetime) {
       final parsed = asDateTime(value);
-      return _dateTimeText(parsed);
+      return parsed == null ? "" : _dateTimeText(parsed);
     }
     if (field.type == FieldType.time) return formatTime(value);
     if (field.type == FieldType.json) {
@@ -623,9 +623,8 @@ class _CrudTabState extends State<CrudTab> {
             child: ListTile(
               leading: Icon(
                 action.icon,
-                color: action.danger
-                    ? Theme.of(context).colorScheme.error
-                    : null,
+                color:
+                    action.danger ? Theme.of(context).colorScheme.error : null,
               ),
               title: Text(
                 action.label,
@@ -880,8 +879,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         final text = raw == null
             ? ''
             : raw is String
-            ? raw
-            : const JsonEncoder.withIndent('  ').convert(raw);
+                ? raw
+                : const JsonEncoder.withIndent('  ').convert(raw);
         _controllers[field.key] = TextEditingController(text: text);
       } else {
         _controllers[field.key] = TextEditingController(
@@ -939,8 +938,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
                         for (final field in widget.spec.fields)
                           if (!field.generated)
                             SizedBox(
-                              width:
-                                  field.width ??
+                              width: field.width ??
                                   ((media.width > 720
                                               ? 640
                                               : media.width * 0.9) /
@@ -1061,8 +1059,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-              ? 'Required'
-              : null,
+                  ? 'Required'
+                  : null,
           onTap: () async {
             final now = DateTime.now();
             final selected = await showDatePicker(
@@ -1091,8 +1089,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-              ? uiText(context, 'Required')
-              : null,
+                  ? uiText(context, 'Required')
+                  : null,
           onTap: () async {
             final now = DateTime.now();
             final current = _values[field.key] as DateTime?;
@@ -1183,6 +1181,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
         );
       case FieldType.multiline:
+      case FieldType.json:
         return TextFormField(
           controller: _controllers[field.key],
           minLines: 2,
@@ -1196,8 +1195,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-              ? 'Required'
-              : null,
+                  ? 'Required'
+                  : null,
         );
       case FieldType.text:
       case FieldType.time:
@@ -1214,8 +1213,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-              ? 'Required'
-              : null,
+                  ? 'Required'
+                  : null,
         );
     }
   }
@@ -1241,9 +1240,12 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         case FieldType.time:
         case FieldType.text:
         case FieldType.multiline:
+        case FieldType.json:
           payload[field.key] = text.isEmpty && field.required ? null : text;
         case FieldType.select:
           payload[field.key] = text.isEmpty ? null : text;
+        case FieldType.datetime:
+          payload[field.key] = text.isEmpty ? null : asDateTime(text);
         case FieldType.boolean:
           break;
       }

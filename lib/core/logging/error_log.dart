@@ -25,12 +25,12 @@ class ErrorLogEntry {
   final String message;
 
   Map<String, dynamic> toJson() => {
-    'time': time.toIso8601String(),
-    'module': module,
-    'target': target,
-    'code': code,
-    'message': message,
-  };
+        'time': time.toIso8601String(),
+        'module': module,
+        'target': target,
+        'code': code,
+        'message': message,
+      };
 
   static ErrorLogEntry? fromJson(Object? raw) {
     if (raw is! Map) return null;
@@ -168,19 +168,32 @@ final RegExp _jwtPattern = RegExp(
 final RegExp _secretKeyPattern = RegExp(
   r'sb_(?:secret|publishable)_[A-Za-z0-9_-]+',
 );
-final RegExp _namedSecretPattern = RegExp(
-  r'(?i)(apikey|access_token|refresh_token|authorization|password|secret)'
-  r'(\s*[=:]\s*)([^\s,;&]+)',
-);
 
-/// Removes credentials from any text that reaches the diagnostics screen.
+/* Simple redaction: replace known secret prefixes with <redacted>.
+   Called from showFriendlyError only. */
 String redactSecrets(String input) {
   if (input.isEmpty) return input;
-  return input
-      .replaceAll(_jwtPattern, '<redacted-jwt>')
-      .replaceAll(_secretKeyPattern, '<redacted-key>')
-      .replaceAllMapped(
-        _namedSecretPattern,
-        (match) => '${match.group(1)}${match.group(2)}<redacted>',
-      );
+  // Redact JWT tokens
+  input = input.replaceAll(_jwtPattern, '<redacted-jwt>');
+  // Redact sb_secret_ and sb_publishable_ keys
+  input = input.replaceAll(_secretKeyPattern, '<redacted-key>');
+  // Reduce any remaining api key patterns
+  input = input.replaceAll('api_key=', 'api_key=<redacted>');
+  input = input.replaceAll('API_KEY=', 'API_KEY=<redacted>');
+  // Reduce any remaining access token patterns
+  input = input.replaceAll('access_token=', 'access_token=<redacted>');
+  input = input.replaceAll('ACCESS_TOKEN=', 'ACCESS_TOKEN=<redacted>');
+  // Reduce any remaining refresh token patterns
+  input = input.replaceAll('refresh_token=', 'refresh_token=<redacted>');
+  input = input.replaceAll('REFRESH_TOKEN=', 'REFRESH_TOKEN=<redacted>');
+  // Reduce any remaining authorization patterns
+  input = input.replaceAll('authorization=', 'authorization=<redacted>');
+  input = input.replaceAll('AUTHORIZATION=', 'AUTHORIZATION=<redacted>');
+  // Reduce any remaining password patterns
+  input = input.replaceAll('password=', 'password=<redacted>');
+  input = input.replaceAll('PASSWORD=', 'PASSWORD=<redacted>');
+  // Reduce any remaining secret patterns
+  input = input.replaceAll('secret=', 'secret=<redacted>');
+  input = input.replaceAll('SECRET=', 'SECRET=<redacted>');
+  return input;
 }
