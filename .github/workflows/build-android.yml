@@ -307,7 +307,7 @@ jobs:
         run: |
           set -euo pipefail
           printf 'sdk.dir=%s\n' "${ANDROID_HOME:-${ANDROID_SDK_ROOT}}" > tool/smoke_a11y/local.properties
-          if ! android/gradlew -p tool/smoke_a11y :app:assembleDebug --no-daemon --console=plain > helper-build.log 2>&1; then
+          if ! (cd tool/smoke_a11y && ./gradlew :app:assembleDebug --no-daemon --console=plain) > helper-build.log 2>&1; then
             tail -n 40 helper-build.log
             tail -n 40 helper-build.log | while IFS= read -r line; do echo "::error::$line"; done
             exit 1
