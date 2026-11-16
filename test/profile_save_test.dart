@@ -89,7 +89,10 @@ void main() {
 
     expect(updateRequest, isNotNull);
     expect(updateRequest!.url.path, endsWith('/rest/v1/profiles'));
-    expect(jsonDecode(updateRequest!.body), {'full_name': 'Updated Name'});
+    expect(jsonDecode(updateRequest!.body), {
+      'full_name': 'Updated Name',
+      'phone': '0911000000',
+    });
     expect(find.text('Profile updated.'), findsOneWidget);
     expect(controller.fullName, 'Updated Name');
     expect(find.byType(CircularProgressIndicator), findsNothing);
@@ -134,7 +137,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 60));
     await tester.pumpAndSettle();
 
-    expect(jsonDecode(request.body), {'full_name': 'Updated Name'});
+    expect(jsonDecode(request.body), {
+      'full_name': 'Updated Name',
+      'phone': '0911000000',
+    });
     expect(find.text('Save'), findsOneWidget);
     expect(
       find.text(
