@@ -48,12 +48,20 @@ Widget _app(AuthController controller) => BakeryApp(
   initialLocation: '/cash',
 );
 
+Future<void> _pumpUntilFound(WidgetTester tester, Finder finder) async {
+  for (var attempt = 0; attempt < 30 && finder.evaluate().isEmpty; attempt++) {
+    await tester.pump(const Duration(milliseconds: 100));
+  }
+  expect(finder, findsOneWidget);
+}
+
 Future<void> _openNewCashAccount(WidgetTester tester) async {
   await tester.pumpWidget(_app(_testController!));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Accounts'));
-  await tester.pump(const Duration(milliseconds: 500));
-  await tester.tap(find.byTooltip('Add'));
+  final addButton = find.byTooltip('Add');
+  await _pumpUntilFound(tester, addButton);
+  await tester.tap(addButton);
   await tester.pump(const Duration(milliseconds: 500));
   await tester.enterText(find.byType(TextFormField).at(0), 'seya');
   await tester.enterText(find.byType(TextFormField).at(2), '17000');
@@ -74,7 +82,7 @@ http.Response _jsonResponse(http.Request request, Object value) =>
     );
 
 void main() {
-  setUp(() async {
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
     SaveDiagnostics.instance.resetForTesting();
     _testController = null;
