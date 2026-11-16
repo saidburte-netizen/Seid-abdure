@@ -72,12 +72,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   void _reload() {
     if (!mounted) return;
-    setState(() => _kpis = _loadKpis());
+    setState(() {
+      _kpis = _loadKpis();
+    });
   }
 
   Future<void> _refresh() async {
     final future = _loadKpis();
-    setState(() => _kpis = future);
+    setState(() {
+      _kpis = future;
+    });
     await future;
   }
 
@@ -260,10 +264,76 @@ class _KpiGrid extends StatelessWidget {
             childAspectRatio: columns == 1 ? 3.2 : 2.4,
             children: [
               for (final card in cards)
-                StatCard(label: card.$1, value: card.$2, icon: card.$3),
+                _DashboardKpiCard(
+                  label: card.$1,
+                  value: card.$2,
+                  icon: card.$3,
+                ),
             ],
           );
         },
+      ),
+    );
+  }
+}
+
+class _DashboardKpiCard extends StatelessWidget {
+  const _DashboardKpiCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+  });
+
+  final String label;
+  final String value;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: scheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(12),
+        border: Border(
+          left: BorderSide(color: scheme.primary, width: 3),
+          top: BorderSide(color: scheme.outlineVariant),
+          right: BorderSide(color: scheme.outlineVariant),
+          bottom: BorderSide(color: scheme.outlineVariant),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: scheme.primary),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.labelMedium,
+                ),
+                const SizedBox(height: 4),
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    value,
+                    maxLines: 1,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }

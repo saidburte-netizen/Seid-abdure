@@ -85,6 +85,7 @@ void main() {
     _setPortal(controller);
     tester.view.physicalSize = const Size(1200, 2400);
     tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
 
     await tester.pumpWidget(
       BakeryApp(

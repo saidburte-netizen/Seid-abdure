@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
 
-import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
@@ -9,9 +8,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:brade_and_cake_house/auth/auth_controller.dart';
-import 'package:brade_and_cake_house/l10n/app_localizations.dart';
-import 'package:brade_and_cake_house/l10n/oromo_framework_localizations.dart';
-import 'package:brade_and_cake_house/screens/settings/profile_screen.dart';
+import 'package:brade_and_cake_house/app.dart';
+
+import 'support/fake_backend.dart';
 
 http.Response _profileResponse(http.Request request) => http.Response(
   '{"id":"profile-user"}',
@@ -52,14 +51,11 @@ Future<AuthController> _controller(
   return controller;
 }
 
-Widget _profileApp(AuthController controller) => MaterialApp(
-  locale: const Locale('en'),
-  supportedLocales: AppLocalizations.supportedLocales,
-  localizationsDelegates: const [
-    ...oromoFrameworkLocalizationsDelegates,
-    ...AppLocalizations.localizationsDelegates,
-  ],
-  home: SessionScope(controller: controller, child: const ProfileScreen()),
+Widget _profileApp(AuthController controller) => BakeryApp(
+  client: controller.client,
+  authController: controller,
+  signInGateway: FakeSignInGateway(admin: true),
+  initialLocation: '/settings/profile',
 );
 
 void main() {
