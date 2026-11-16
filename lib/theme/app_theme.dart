@@ -92,8 +92,9 @@ class AppTheme {
         thickness: 1,
       ),
       tabBarTheme: const TabBarThemeData(
-        labelColor: BrandColors.deepGreen,
-        unselectedLabelColor: BrandColors.chocolate,
+        dividerColor: Colors.transparent,
+        labelColor: BrandColors.ivory,
+        unselectedLabelColor: BrandColors.cream,
         indicatorColor: BrandColors.gold,
         labelStyle: TextStyle(fontWeight: FontWeight.w700),
         unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
@@ -296,6 +297,7 @@ class AppTheme {
         thickness: 1,
       ),
       tabBarTheme: const TabBarThemeData(
+        dividerColor: Colors.transparent,
         labelColor: BrandColors.lightGold,
         unselectedLabelColor: BrandColors.cream,
         indicatorColor: BrandColors.gold,

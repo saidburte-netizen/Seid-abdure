@@ -152,11 +152,12 @@ class PayrollScreen extends StatelessWidget {
     final session = SessionScope.of(context);
     return ModuleScaffold(
       title: uiText(context, 'Payroll'),
+      kpiKinds: const [KpiKind.staffPresent, KpiKind.cashBalance],
       body: DefaultTabController(
         length: 3,
         child: Column(
           children: [
-            const TabBar(
+            const AppTabBar(
               tabs: [
                 Tab(text: 'Payroll runs'),
                 Tab(text: 'Payslips'),

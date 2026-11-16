@@ -48,7 +48,7 @@ class OromoWidgetsLocalizationsDelegate
 }
 
 const List<LocalizationsDelegate<dynamic>>
-    oromoFrameworkLocalizationsDelegates = [
+oromoFrameworkLocalizationsDelegates = [
   OromoMaterialLocalizationsDelegate(),
   OromoCupertinoLocalizationsDelegate(),
   OromoWidgetsLocalizationsDelegate(),

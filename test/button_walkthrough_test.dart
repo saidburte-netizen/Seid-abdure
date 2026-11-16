@@ -31,11 +31,11 @@ const _routes = [
 
 /// Every control that looks tappable in the current tree.
 Finder _controls() => find.byWidgetPredicate(
-      (widget) =>
-          (widget is ButtonStyleButton && widget.onPressed != null) ||
-          (widget is IconButton && widget.onPressed != null) ||
-          (widget is FloatingActionButton && widget.onPressed != null),
-    );
+  (widget) =>
+      (widget is ButtonStyleButton && widget.onPressed != null) ||
+      (widget is IconButton && widget.onPressed != null) ||
+      (widget is FloatingActionButton && widget.onPressed != null),
+);
 
 Future<void> _pumpRoute(
   WidgetTester tester,

@@ -30,8 +30,8 @@ class ProductionScreen extends StatelessWidget {
     try {
       await session.client
           .from('production_batches')
-          .update({'status': 'completed', 'completed_at': nowIso()}).eq(
-              'id', batch['id']);
+          .update({'status': 'completed', 'completed_at': nowIso()})
+          .eq('id', batch['id']);
       if (context.mounted) {
         showSnack(context, 'Production batch completed');
         DataRevision.bump();
@@ -60,7 +60,8 @@ class ProductionScreen extends StatelessWidget {
     try {
       await session.client
           .from('cake_orders')
-          .update({'status': next}).eq('id', order['id']);
+          .update({'status': next})
+          .eq('id', order['id']);
       if (context.mounted) {
         showSnack(
           context,
@@ -81,11 +82,12 @@ class ProductionScreen extends StatelessWidget {
     final session = SessionScope.of(context);
     return ModuleScaffold(
       title: uiText(context, 'Production & catalog'),
+      kpiKinds: const [KpiKind.lowStock, KpiKind.todaySales],
       body: DefaultTabController(
         length: 8,
         child: Column(
           children: [
-            const TabBar(
+            const AppTabBar(
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [

@@ -121,7 +121,8 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
       for (final entry in values.entries) {
         await client
             .from('app_settings')
-            .update({'value': entry.value}).eq('key', entry.key);
+            .update({'value': entry.value})
+            .eq('key', entry.key);
       }
       if (!mounted) return;
       setState(() => _dirty = false);
@@ -153,121 +154,119 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? ErrorView(message: _error!, onRetry: _load)
-              : ListView(
-                  padding: const EdgeInsets.all(16),
-                  children: [
-                    SectionCard(
-                      title: strings.businessName,
-                      child: TextField(
-                        controller: _businessName,
-                        decoration: InputDecoration(
-                          labelText: strings.businessName,
-                        ),
-                        onChanged: (_) => _markDirty(),
-                      ),
+          ? ErrorView(message: _error!, onRetry: _load)
+          : ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                SectionCard(
+                  title: strings.businessName,
+                  child: TextField(
+                    controller: _businessName,
+                    decoration: InputDecoration(
+                      labelText: strings.businessName,
                     ),
-                    SectionCard(
-                      title: strings.slogan,
-                      child: TextField(
-                        controller: _slogan,
-                        decoration: InputDecoration(labelText: strings.slogan),
-                        onChanged: (_) => _markDirty(),
-                      ),
-                    ),
-                    SectionCard(
-                      title: strings.currency,
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _currencyCode,
-                              decoration: InputDecoration(
-                                labelText: uiText(context, 'Code'),
-                              ),
-                              textCapitalization: TextCapitalization.characters,
-                              onChanged: (_) => _markDirty(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: _currencySymbol,
-                              decoration: InputDecoration(
-                                labelText: uiText(context, 'Symbol'),
-                              ),
-                              onChanged: (_) => _markDirty(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SectionCard(
-                      title: uiText(context, 'Tax rates'),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _vat,
-                              decoration: InputDecoration(
-                                labelText: strings.vatRate,
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                              onChanged: (_) => _markDirty(),
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: TextField(
-                              controller: _tot,
-                              decoration: InputDecoration(
-                                labelText: strings.totRate,
-                              ),
-                              keyboardType:
-                                  const TextInputType.numberWithOptions(
-                                decimal: true,
-                              ),
-                              onChanged: (_) => _markDirty(),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    SectionCard(
-                      title: strings.defaultLanguage,
-                      child: DropdownButtonFormField<String>(
-                        initialValue: _defaultLanguage,
-                        decoration: InputDecoration(
-                          labelText: strings.defaultLanguage,
-                        ),
-                        items: const [
-                          DropdownMenuItem(value: 'en', child: Text('English')),
-                          DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
-                          DropdownMenuItem(
-                            value: 'om',
-                            child: LText('Afaan Oromoo'),
-                          ),
-                        ],
-                        onChanged: (value) {
-                          if (value == null) return;
-                          setState(() {
-                            _defaultLanguage = value;
-                            _dirty = true;
-                          });
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    FilledButton.icon(
-                      onPressed: _saving ? null : _save,
-                      icon: const Icon(Icons.save_outlined),
-                      label: Text(_saving ? strings.saving : strings.save),
-                    ),
-                  ],
+                    onChanged: (_) => _markDirty(),
+                  ),
                 ),
+                SectionCard(
+                  title: strings.slogan,
+                  child: TextField(
+                    controller: _slogan,
+                    decoration: InputDecoration(labelText: strings.slogan),
+                    onChanged: (_) => _markDirty(),
+                  ),
+                ),
+                SectionCard(
+                  title: strings.currency,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _currencyCode,
+                          decoration: InputDecoration(
+                            labelText: uiText(context, 'Code'),
+                          ),
+                          textCapitalization: TextCapitalization.characters,
+                          onChanged: (_) => _markDirty(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _currencySymbol,
+                          decoration: InputDecoration(
+                            labelText: uiText(context, 'Symbol'),
+                          ),
+                          onChanged: (_) => _markDirty(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SectionCard(
+                  title: uiText(context, 'Tax rates'),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _vat,
+                          decoration: InputDecoration(
+                            labelText: strings.vatRate,
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          onChanged: (_) => _markDirty(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: TextField(
+                          controller: _tot,
+                          decoration: InputDecoration(
+                            labelText: strings.totRate,
+                          ),
+                          keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true,
+                          ),
+                          onChanged: (_) => _markDirty(),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                SectionCard(
+                  title: strings.defaultLanguage,
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _defaultLanguage,
+                    decoration: InputDecoration(
+                      labelText: strings.defaultLanguage,
+                    ),
+                    items: const [
+                      DropdownMenuItem(value: 'en', child: Text('English')),
+                      DropdownMenuItem(value: 'am', child: Text('አማርኛ')),
+                      DropdownMenuItem(
+                        value: 'om',
+                        child: LText('Afaan Oromoo'),
+                      ),
+                    ],
+                    onChanged: (value) {
+                      if (value == null) return;
+                      setState(() {
+                        _defaultLanguage = value;
+                        _dirty = true;
+                      });
+                    },
+                  ),
+                ),
+                const SizedBox(height: 12),
+                FilledButton.icon(
+                  onPressed: _saving ? null : _save,
+                  icon: const Icon(Icons.save_outlined),
+                  label: Text(_saving ? strings.saving : strings.save),
+                ),
+              ],
+            ),
     );
   }
 }

@@ -31,7 +31,8 @@ class _SecurityScreenState extends State<SecurityScreen> {
   }
 
   void _updateDirty() {
-    final dirty = _current.text.isNotEmpty ||
+    final dirty =
+        _current.text.isNotEmpty ||
         _password.text.isNotEmpty ||
         _confirm.text.isNotEmpty;
     if (dirty != _dirty) setState(() => _dirty = dirty);

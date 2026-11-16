@@ -10,6 +10,8 @@ import '../data/formatting.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/schema.dart';
+import '../theme/app_theme.dart';
+import 'app_ui.dart';
 import 'common.dart';
 import '../l10n/ui_text.dart';
 
@@ -176,12 +178,12 @@ class _CrudTabState extends State<CrudTab> {
   }
 
   Future<List<Map<String, dynamic>>> _rowsForExport() => _repo.listAll(
-        widget.spec.table,
-        orderBy: widget.spec.orderBy,
-        ascending: widget.spec.ascending,
-        branchScoped: widget.spec.branchScoped,
-        equals: widget.filters,
-      );
+    widget.spec.table,
+    orderBy: widget.spec.orderBy,
+    ascending: widget.spec.ascending,
+    branchScoped: widget.spec.branchScoped,
+    equals: widget.filters,
+  );
 
   List<Map<String, dynamic>> _filtered(List<Map<String, dynamic>> rows) {
     if (_query.trim().isEmpty) return rows;
@@ -242,79 +244,18 @@ class _CrudTabState extends State<CrudTab> {
                   ],
                 ),
               ),
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                crossAxisAlignment: WrapCrossAlignment.center,
-                children: [
-                  SizedBox(
-                    width: 280,
-                    child: TextField(
-                      controller: _search,
-                      decoration: InputDecoration(
-                        isDense: true,
-                        labelText: uiTextFormat(context, 'searchRecords', {
-                          'name': uiText(context, widget.spec.title),
-                        }),
-                        prefixIcon: const Icon(Icons.search),
-                        suffixIcon: _query.isEmpty
-                            ? null
-                            : IconButton(
-                                tooltip: uiText(context, 'Clear search'),
-                                icon: const Icon(Icons.clear),
-                                onPressed: () {
-                                  _search.clear();
-                                  setState(() => _query = '');
-                                },
-                              ),
-                      ),
-                      onChanged: (value) => setState(() => _query = value),
-                    ),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: _refresh,
-                    icon: const Icon(Icons.refresh),
-                    label: const LText('Refresh'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed: rows.isEmpty
-                        ? null
-                        : () => _export(context, snapshot, rows),
-                    icon: const Icon(Icons.download_outlined),
-                    label: const LText('CSV'),
-                  ),
-                  OutlinedButton.icon(
-                    onPressed:
-                        rows.isEmpty ? null : () => _exportPdf(context, rows),
-                    icon: const Icon(Icons.picture_as_pdf_outlined),
-                    label: const LText('PDF'),
-                  ),
-                  if (_canWrite && widget.spec.canCreate)
-                    FilledButton.icon(
-                      onPressed: () => _openForm(context, snapshot, null),
-                      icon: const Icon(Icons.add),
-                      label: Text(
-                        uiTextFormat(context, 'newRecord', {
-                          'name': uiText(context, widget.spec.singular),
-                        }),
-                      ),
-                    ),
-                ],
-              ),
+            AppToolbar(
+              searchController: _search,
+              onSearchChanged: (value) => setState(() => _query = value),
+              onRefresh: _refresh,
+              onCsv: rows.isEmpty
+                  ? null
+                  : () => _export(context, snapshot, rows),
+              onPdf: rows.isEmpty ? null : () => _exportPdf(context, rows),
+              onAdd: _canWrite && widget.spec.canCreate
+                  ? () => _openForm(context, snapshot, null)
+                  : null,
             ),
-            if (widget.spec.description != null)
-              Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 18,
-                  vertical: 4,
-                ),
-                child: Text(
-                  uiText(context, widget.spec.description!),
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refresh,
@@ -326,7 +267,8 @@ class _CrudTabState extends State<CrudTab> {
                             height: 320,
                             child: EmptyView(
                               icon: Icons.table_rows_outlined,
-                              message: widget.emptyMessage ??
+                              message:
+                                  widget.emptyMessage ??
                                   uiTextFormat(context, 'noRecords', {
                                     'name': uiText(context, widget.spec.title),
                                   }),
@@ -417,74 +359,87 @@ class _CrudTabState extends State<CrudTab> {
     BuildContext context,
     _CrudSnapshot snapshot,
     List<Map<String, dynamic>> rows,
-  ) =>
-      ListView.separated(
-        padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
-        itemCount: rows.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 8),
-        itemBuilder: (context, index) {
-          final row = rows[index];
-          final titleKey = widget.spec.effectiveListColumns.isEmpty
-              ? widget.spec.fields.first.key
-              : widget.spec.effectiveListColumns.first;
-          return Card(
-            clipBehavior: Clip.antiAlias,
-            child: Padding(
-              padding: const EdgeInsets.all(12),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Text(
-                          _display(
-                            context,
-                            widget.spec.field(titleKey),
-                            row[titleKey],
-                            snapshot.lookups,
-                          ),
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                      ),
-                      _actionsWidget(context, snapshot, row),
-                    ],
-                  ),
-                  for (final key
-                      in widget.spec.effectiveListColumns.skip(1).take(4))
-                    Padding(
-                      padding: const EdgeInsets.only(top: 6),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SizedBox(
-                            width: 120,
-                            child: Text(
-                              uiText(
-                                context,
-                                widget.spec.field(key)?.label ??
-                                    prettyLabel(key),
-                              ),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                          ),
-                          Expanded(
-                            child: _valueWidget(
-                              context,
-                              widget.spec.field(key),
-                              row[key],
-                              snapshot.lookups,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                ],
-              ),
-            ),
-          );
-        },
+  ) => ListView.builder(
+    key: const Key('record-list'),
+    padding: const EdgeInsets.fromLTRB(0, 4, 0, 24),
+    itemCount: rows.length,
+    itemBuilder: (context, index) {
+      final row = rows[index];
+      final columns = widget.spec.effectiveListColumns.isEmpty
+          ? [widget.spec.fields.first.key]
+          : widget.spec.effectiveListColumns;
+      final titleKey = columns.first;
+      final title = _display(
+        context,
+        widget.spec.field(titleKey),
+        row[titleKey],
+        snapshot.lookups,
       );
+      final detail = <String>[];
+      for (final key in columns.skip(1).take(3)) {
+        final value = _display(
+          context,
+          widget.spec.field(key),
+          row[key],
+          snapshot.lookups,
+        );
+        if (value.isEmpty || value == '—') continue;
+        detail.add(
+          '${uiText(context, widget.spec.field(key)?.label ?? prettyLabel(key))}: $value',
+        );
+      }
+      String? status;
+      for (final key in columns) {
+        final field = widget.spec.field(key);
+        if (field?.type != FieldType.select) continue;
+        final value = row[key];
+        if (value == null || value.toString().isEmpty) continue;
+        status = _display(context, field, value, snapshot.lookups);
+        break;
+      }
+      final statusColor = _statusColor(status);
+      final amountKey = columns.length > 1 ? columns[1] : null;
+      return AppListCard(
+        key: index == 0 ? const Key('first-record') : null,
+        icon: Icons.receipt_long_outlined,
+        title: title,
+        subtitle: detail.join(' • '),
+        trailingText: amountKey == null
+            ? null
+            : _display(
+                context,
+                widget.spec.field(amountKey),
+                row[amountKey],
+                snapshot.lookups,
+              ),
+        statusLabel: status,
+        statusColor: statusColor,
+        onTap: () => _openForm(context, snapshot, row),
+        trailing: _actionsWidget(context, snapshot, row),
+      );
+    },
+  );
+
+  Color? _statusColor(String? status) {
+    final value = status?.toLowerCase() ?? '';
+    if (value.isEmpty) return null;
+    if (value.contains('reject') ||
+        value.contains('overdue') ||
+        value.contains('cancel') ||
+        value.contains('void') ||
+        value.contains('inactive') ||
+        value.contains('closed')) {
+      return BrandColors.error;
+    }
+    if (value.contains('pending') ||
+        value.contains('partial') ||
+        value.contains('draft') ||
+        value.contains('late') ||
+        value.contains('unpaid')) {
+      return BrandColors.gold;
+    }
+    return BrandColors.forestGreen;
+  }
 
   Widget _valueWidget(
     BuildContext context,
@@ -623,8 +578,9 @@ class _CrudTabState extends State<CrudTab> {
             child: ListTile(
               leading: Icon(
                 action.icon,
-                color:
-                    action.danger ? Theme.of(context).colorScheme.error : null,
+                color: action.danger
+                    ? Theme.of(context).colorScheme.error
+                    : null,
               ),
               title: Text(
                 action.label,
@@ -879,8 +835,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         final text = raw == null
             ? ''
             : raw is String
-                ? raw
-                : const JsonEncoder.withIndent('  ').convert(raw);
+            ? raw
+            : const JsonEncoder.withIndent('  ').convert(raw);
         _controllers[field.key] = TextEditingController(text: text);
       } else {
         _controllers[field.key] = TextEditingController(
@@ -938,7 +894,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
                         for (final field in widget.spec.fields)
                           if (!field.generated)
                             SizedBox(
-                              width: field.width ??
+                              width:
+                                  field.width ??
                                   ((media.width > 720
                                               ? 640
                                               : media.width * 0.9) /
@@ -1059,8 +1016,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-                  ? 'Required'
-                  : null,
+              ? 'Required'
+              : null,
           onTap: () async {
             final now = DateTime.now();
             final selected = await showDatePicker(
@@ -1089,8 +1046,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-                  ? uiText(context, 'Required')
-                  : null,
+              ? uiText(context, 'Required')
+              : null,
           onTap: () async {
             final now = DateTime.now();
             final current = _values[field.key] as DateTime?;
@@ -1181,7 +1138,6 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
         );
       case FieldType.multiline:
-      case FieldType.json:
         return TextFormField(
           controller: _controllers[field.key],
           minLines: 2,
@@ -1195,8 +1151,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-                  ? 'Required'
-                  : null,
+              ? 'Required'
+              : null,
         );
       case FieldType.text:
       case FieldType.time:
@@ -1213,8 +1169,8 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-                  ? 'Required'
-                  : null,
+              ? 'Required'
+              : null,
         );
     }
   }

@@ -32,12 +32,15 @@ class ApprovalsScreen extends StatelessWidget {
     );
     if (note == null) return;
     try {
-      await session.client.from('approvals').update({
-        'status': approve ? 'approved' : 'rejected',
-        'approver_id': session.userId,
-        'decision_note': note['note'],
-        'decided_at': nowIso(),
-      }).eq('id', approval['id']);
+      await session.client
+          .from('approvals')
+          .update({
+            'status': approve ? 'approved' : 'rejected',
+            'approver_id': session.userId,
+            'decision_note': note['note'],
+            'decided_at': nowIso(),
+          })
+          .eq('id', approval['id']);
       if (context.mounted) {
         showSnack(context, approve ? 'Request approved.' : 'Request rejected.');
       }
@@ -53,6 +56,7 @@ class ApprovalsScreen extends StatelessWidget {
     final session = SessionScope.of(context);
     return ModuleScaffold(
       title: uiText(context, 'Approvals'),
+      kpiKinds: const [KpiKind.cashBalance, KpiKind.todaySales],
       body: CrudTab(
         spec: specFor('approvals'),
         readPermission: 'expenses.approve',

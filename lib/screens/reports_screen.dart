@@ -34,61 +34,53 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(
-        title: uiText(context, 'Reports & analytics'),
-        body: Column(
-          children: [
-            Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 4),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      initialValue: _selected,
-                      isExpanded: true,
-                      decoration: InputDecoration(
-                        labelText: uiText(context, 'Report view'),
-                        prefixIcon: const Icon(Icons.analytics_outlined),
+    title: uiText(context, 'Reports & analytics'),
+    kpiKinds: const [KpiKind.cashBalance, KpiKind.todaySales, KpiKind.lowStock],
+    body: Column(
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 10, 16, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  initialValue: _selected,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: uiText(context, 'Report view'),
+                    prefixIcon: const Icon(Icons.analytics_outlined),
+                    isDense: true,
+                  ),
+                  items: [
+                    for (final entry in _reports.entries)
+                      DropdownMenuItem(
+                        value: entry.key,
+                        child: Text(entry.value),
                       ),
-                      items: [
-                        for (final entry in _reports.entries)
-                          DropdownMenuItem(
-                            value: entry.key,
-                            child: Text(entry.value),
-                          ),
-                      ],
-                      onChanged: (value) {
-                        if (value != null) setState(() => _selected = value);
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  OutlinedButton.icon(
-                    onPressed: () => setState(() => _refreshSeed++),
-                    icon: const Icon(Icons.refresh),
-                    label: const LText('Refresh'),
-                  ),
-                ],
-              ),
-            ),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 18),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  _reports[_selected] ?? _selected,
-                  style: Theme.of(context).textTheme.titleMedium,
+                  ],
+                  onChanged: (value) {
+                    if (value != null) setState(() => _selected = value);
+                  },
                 ),
               ),
-            ),
-            Expanded(
-              child: CrudTab(
-                key: ValueKey('$_selected-$_refreshSeed'),
-                spec: specFor(_selected),
-                readPermission: 'reports.view',
-                alwaysReadOnly: true,
+              const SizedBox(width: 12),
+              OutlinedButton.icon(
+                onPressed: () => setState(() => _refreshSeed++),
+                icon: const Icon(Icons.refresh),
+                label: const LText('Refresh'),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      );
+        Expanded(
+          child: CrudTab(
+            key: ValueKey('$_selected-$_refreshSeed'),
+            spec: specFor(_selected),
+            readPermission: 'reports.view',
+            alwaysReadOnly: true,
+          ),
+        ),
+      ],
+    ),
+  );
 }

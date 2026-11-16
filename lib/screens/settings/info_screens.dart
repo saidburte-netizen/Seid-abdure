@@ -32,8 +32,9 @@ class AboutScreen extends StatelessWidget {
             future: PackageInfo.fromPlatform(),
             builder: (context, snapshot) {
               final info = snapshot.data;
-              final version =
-                  info == null ? '—' : '${info.version} (${info.buildNumber})';
+              final version = info == null
+                  ? '—'
+                  : '${info.version} (${info.buildNumber})';
               return SectionCard(
                 title: strings.about,
                 child: Column(
@@ -162,16 +163,16 @@ class _AboutRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Padding(
-        padding: const EdgeInsets.symmetric(vertical: 5),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            SizedBox(
-              width: 120,
-              child: Text(label, style: Theme.of(context).textTheme.bodySmall),
-            ),
-            Expanded(child: Text(value)),
-          ],
+    padding: const EdgeInsets.symmetric(vertical: 5),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 120,
+          child: Text(label, style: Theme.of(context).textTheme.bodySmall),
         ),
-      );
+        Expanded(child: Text(value)),
+      ],
+    ),
+  );
 }

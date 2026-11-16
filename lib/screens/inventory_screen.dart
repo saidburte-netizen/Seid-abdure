@@ -81,8 +81,7 @@ class _InventoryScreenState extends State<InventoryScreen> {
         receiptNo = (await session.client.rpc(
           'next_number',
           params: {'p_prefix': 'GRN'},
-        ))
-            .toString();
+        )).toString();
       } catch (_) {
         receiptNo = 'GRN-${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -142,7 +141,8 @@ class _InventoryScreenState extends State<InventoryScreen> {
     try {
       await session.client
           .from('stock_counts')
-          .update({'status': 'completed'}).eq('id', count['id']);
+          .update({'status': 'completed'})
+          .eq('id', count['id']);
       if (mounted) showSnack(context, 'Stock count approved');
       DataRevision.bump();
     } catch (error) {
@@ -155,11 +155,12 @@ class _InventoryScreenState extends State<InventoryScreen> {
     final session = SessionScope.of(context);
     return ModuleScaffold(
       title: uiText(context, 'Inventory & purchasing'),
+      kpiKinds: const [KpiKind.lowStock, KpiKind.cashBalance],
       body: DefaultTabController(
         length: 14,
         child: Column(
           children: [
-            const TabBar(
+            const AppTabBar(
               isScrollable: true,
               tabAlignment: TabAlignment.start,
               tabs: [

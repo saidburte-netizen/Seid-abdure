@@ -16,6 +16,18 @@ ROOT = Path(__file__).resolve().parents[1]
 
 # English source -> (Amharic, Afaan Oromoo)
 UI: dict[str, tuple[str, str]] = {
+    "Search records": ("መዝገቦችን ፈልግ", "Galmee barbaadi"),
+    "Refresh": ("አድስ", "Haaromsi"),
+    "Export CSV": ("CSV አውጣ", "CSV baasi"),
+    "Export PDF": ("PDF አውጣ", "PDF baasi"),
+    "Add": ("ጨምር", "Dabalii"),
+    "Cash balance": ("የጥሬ ገንዘብ ቀሪ ሂሳብ", "Haftee maallaqa harkaa"),
+    "Today's sales": ("የዛሬ ሽያጭ", "Gurgurtaa har'aa"),
+    "Low stock": ("ያነሰ ክምችት", "Kuusaa xiqqaa"),
+    "Overdue": ("ያለፈ ጊዜ", "Yeroon darbe"),
+    "Rent due": ("የሚከፈል ኪራይ", "Kiraa kaffalamuu qabu"),
+    "Staff present": ("የተገኙ ሰራተኞች", "Hojjettoota argaman"),
+    "No records yet": ("እስካሁን መዝገብ የለም", "Galmeen ammatti hin jiru"),
     "Branches": ("ቅርንጫፎች", "Dameewwan"),
     "Users & roles": ("ተጠቃሚዎች እና ሚናዎች", "Fayyadamtoota fi gaheewwan"),
     "Assign branch, role and active status": (
@@ -394,7 +406,7 @@ String _translateWords(String code, String english) {{
 /// Translates a template such as `newRecord` and replaces `{{name}}` style
 /// placeholders. The template itself is never shown to the user.
 String uiTemplateForLocale(String code, String key) {{
-  if (code == 'en') return key;
+  if (code == 'en') return uiTemplateSources[key] ?? key;
   return _templateTranslations[code]?[key] ?? key;
 }}
 
