@@ -296,12 +296,7 @@ class _DashboardKpiCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: scheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(12),
-        border: Border(
-          left: BorderSide(color: scheme.primary, width: 3),
-          top: BorderSide(color: scheme.outlineVariant),
-          right: BorderSide(color: scheme.outlineVariant),
-          bottom: BorderSide(color: scheme.outlineVariant),
-        ),
+        border: Border.all(color: scheme.outlineVariant),
       ),
       child: Row(
         children: [
