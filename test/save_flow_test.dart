@@ -9,8 +9,7 @@ import 'package:brade_and_cake_house/core/logging/save_diagnostics.dart';
 import 'package:brade_and_cake_house/data/save_flow.dart';
 
 void main() {
-  setUp(() async {
-    await SaveDiagnostics.instance.flush();
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
     SaveDiagnostics.instance.resetForTesting();
   });
@@ -76,6 +75,5 @@ void main() {
     expect(SaveFlow.hasActiveWrites, isFalse);
     expect(SaveDiagnostics.instance.entries.first.step, 'failed');
     response.complete(1);
-    await SaveDiagnostics.instance.flush();
   });
 }

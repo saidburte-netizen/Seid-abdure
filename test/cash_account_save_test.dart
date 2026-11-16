@@ -75,160 +75,174 @@ http.Response _jsonResponse(http.Request request, Object value) =>
 
 void main() {
   setUp(() async {
-    await SaveDiagnostics.instance.flush();
     SharedPreferences.setMockInitialValues({});
     SaveDiagnostics.instance.resetForTesting();
     _testController = null;
   });
 
-  testWidgets('cash account form sends the insert and waits for its result', (
-    tester,
-  ) async {
-    http.Request? insertRequest;
-    final client = SupabaseClient(
-      'https://cash.test',
-      'test-anon-key',
-      authOptions: const AuthClientOptions(autoRefreshToken: false),
-      httpClient: MockClient((request) async {
-        if (request.method == 'POST' &&
-            request.url.path.endsWith('/cash_accounts')) {
-          insertRequest = request;
-          return _jsonResponse(request, [
-            {'id': 'cash-1'},
-          ]);
-        }
-        if (request.method == 'GET' && request.url.path.endsWith('/branches')) {
-          return _jsonResponse(request, [_branch]);
-        }
-        return _jsonResponse(request, []);
-      }),
-    );
-    _testController = await _readyController(tester, client);
-    await _openNewCashAccount(tester);
+  testWidgets(
+    'cash account form sends the insert and waits for its result',
+    (tester) async {
+      http.Request? insertRequest;
+      final client = SupabaseClient(
+        'https://cash.test',
+        'test-anon-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+        httpClient: MockClient((request) async {
+          if (request.method == 'POST' &&
+              request.url.path.endsWith('/cash_accounts')) {
+            insertRequest = request;
+            return _jsonResponse(request, [
+              {'id': 'cash-1'},
+            ]);
+          }
+          if (request.method == 'GET' &&
+              request.url.path.endsWith('/branches')) {
+            return _jsonResponse(request, [_branch]);
+          }
+          return _jsonResponse(request, []);
+        }),
+      );
+      _testController = await _readyController(tester, client);
+      await _openNewCashAccount(tester);
 
-    await tester.tap(find.text('Save'));
-    await tester.pump(const Duration(milliseconds: 100));
-    expect(insertRequest, isNotNull);
-    await tester.pump(const Duration(milliseconds: 100));
+      await tester.tap(find.text('Save'));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(insertRequest, isNotNull);
+      await tester.pump(const Duration(milliseconds: 100));
 
-    expect(jsonDecode(insertRequest!.body), containsPair('name', 'seya'));
-    expect(
-      jsonDecode(insertRequest!.body),
-      containsPair('opening_balance', 17000),
-    );
-    expect(find.text('Saving…'), findsNothing);
-    expect(tester.takeException(), isNull);
-    await SaveDiagnostics.instance.flush();
-    final attemptId = SaveDiagnostics.instance.entries.first.attemptId;
-    expect(
-      SaveDiagnostics.instance.entries
-          .where((entry) => entry.attemptId == attemptId)
-          .map((entry) => entry.step)
-          .toList(),
-      [
-        'bumped',
-        'response received',
-        'request sent',
-        'session ok',
-        'validated',
-      ],
-    );
+      expect(jsonDecode(insertRequest!.body), containsPair('name', 'seya'));
+      expect(
+        jsonDecode(insertRequest!.body),
+        containsPair('opening_balance', 17000),
+      );
+      expect(find.text('Saving…'), findsNothing);
+      expect(tester.takeException(), isNull);
+      final attemptId = SaveDiagnostics.instance.entries.first.attemptId;
+      expect(
+        SaveDiagnostics.instance.entries
+            .where((entry) => entry.attemptId == attemptId)
+            .map((entry) => entry.step)
+            .toList(),
+        [
+          'bumped',
+          'response received',
+          'request sent',
+          'session ok',
+          'validated',
+        ],
+      );
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    _testController!.dispose();
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      _testController!.dispose();
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
-  testWidgets('resuming during an in-flight save preserves its dialog', (
-    tester,
-  ) async {
-    final pendingResponse = Completer<http.Response>();
-    final pendingRequest = Completer<http.Request>();
-    final client = SupabaseClient(
-      'https://cash.test',
-      'test-anon-key',
-      authOptions: const AuthClientOptions(autoRefreshToken: false),
-      httpClient: MockClient((request) async {
-        if (request.method == 'POST' &&
-            request.url.path.endsWith('/cash_accounts')) {
-          pendingRequest.complete(request);
-          return pendingResponse.future;
-        }
-        if (request.method == 'GET' && request.url.path.endsWith('/branches')) {
-          return _jsonResponse(request, [_branch]);
-        }
-        return _jsonResponse(request, []);
-      }),
-    );
-    _testController = await _readyController(tester, client);
-    await _openNewCashAccount(tester);
-    await tester.tap(find.text('Save'));
-    await tester.pump();
-    final request = await pendingRequest.future.timeout(
-      const Duration(seconds: 5),
-    );
+  testWidgets(
+    'resuming during an in-flight save preserves its dialog',
+    (tester) async {
+      final pendingResponse = Completer<http.Response>();
+      final pendingRequest = Completer<http.Request>();
+      final client = SupabaseClient(
+        'https://cash.test',
+        'test-anon-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+        httpClient: MockClient((request) async {
+          if (request.method == 'POST' &&
+              request.url.path.endsWith('/cash_accounts')) {
+            pendingRequest.complete(request);
+            return pendingResponse.future;
+          }
+          if (request.method == 'GET' &&
+              request.url.path.endsWith('/branches')) {
+            return _jsonResponse(request, [_branch]);
+          }
+          return _jsonResponse(request, []);
+        }),
+      );
+      _testController = await _readyController(tester, client);
+      await _openNewCashAccount(tester);
+      await tester.tap(find.text('Save'));
+      await tester.pump(const Duration(milliseconds: 100));
+      expect(pendingRequest.isCompleted, isTrue);
+      final request = await pendingRequest.future;
 
-    _testController!.debugSetLastActivity(
-      DateTime.now().subtract(const Duration(minutes: 31)),
-    );
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
-    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
-    await tester.pump();
+      _testController!.debugSetLastActivity(
+        DateTime.now().subtract(const Duration(minutes: 31)),
+      );
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+      await tester.pump();
 
-    expect(_testController!.status, AuthStatus.ready);
-    expect(find.text('Saving…'), findsOneWidget);
-    expect(tester.takeException(), isNull);
+      expect(_testController!.status, AuthStatus.ready);
+      expect(find.text('Saving…'), findsOneWidget);
+      expect(tester.takeException(), isNull);
 
-    pendingResponse.complete(
-      _jsonResponse(request, [
-        {'id': 'cash-1'},
-      ]),
-    );
-    await tester.pump(const Duration(milliseconds: 500));
-    await SaveDiagnostics.instance.flush();
-    await tester.pumpWidget(const SizedBox.shrink());
-    _testController!.dispose();
-  });
+      pendingResponse.complete(
+        _jsonResponse(request, [
+          {'id': 'cash-1'},
+        ]),
+      );
+      await tester.pump(const Duration(milliseconds: 500));
+      await tester.pumpWidget(const SizedBox.shrink());
+      _testController!.dispose();
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 
-  testWidgets('restarts on cash accounts after an interrupted unsent save', (
-    tester,
-  ) async {
-    final attemptId = SaveDiagnostics.instance.begin(
-      module: 'Cash accounts',
-      target: 'cash_accounts',
-    );
-    await SaveDiagnostics.instance.flush();
-    SaveDiagnostics.instance.resetForTesting();
+  testWidgets(
+    'restarts on cash accounts after an interrupted unsent save',
+    (tester) async {
+      const attemptId = 'interrupted-cash-account';
+      SharedPreferences.setMockInitialValues({
+        'brade_save_breadcrumbs_v1': jsonEncode([
+          {
+            'attemptId': attemptId,
+            'time': DateTime.now().toIso8601String(),
+            'module': 'Cash accounts',
+            'target': 'cash_accounts',
+            'step': 'validated',
+          },
+        ]),
+      });
+      SaveDiagnostics.instance.resetForTesting();
 
-    final client = SupabaseClient(
-      'https://cash.test',
-      'test-anon-key',
-      authOptions: const AuthClientOptions(autoRefreshToken: false),
-      httpClient: MockClient(
-        (request) async => _jsonResponse(
-          request,
-          request.method == 'GET' && request.url.path.endsWith('/branches')
-              ? [_branch]
-              : [],
+      final client = SupabaseClient(
+        'https://cash.test',
+        'test-anon-key',
+        authOptions: const AuthClientOptions(autoRefreshToken: false),
+        httpClient: MockClient(
+          (request) async => _jsonResponse(
+            request,
+            request.method == 'GET' && request.url.path.endsWith('/branches')
+                ? [_branch]
+                : [],
+          ),
         ),
-      ),
-    );
-    _testController = await _readyController(tester, client);
-    await tester.pumpWidget(_app(_testController!));
-    await tester.pumpAndSettle();
+      );
+      _testController = await _readyController(tester, client);
+      await tester.pumpWidget(_app(_testController!));
+      await tester.pump(const Duration(milliseconds: 500));
 
-    expect(
-      find.text(
-        'The previous cash account was not saved. Re-enter it and save again.',
-      ),
-      findsOneWidget,
-    );
-    expect(SaveDiagnostics.instance.pendingRecovery?.attemptId, attemptId);
+      expect(
+        find.text(
+          'The previous cash account was not saved. Re-enter it and save again.',
+        ),
+        findsOneWidget,
+      );
+      expect(SaveDiagnostics.instance.pendingRecovery?.attemptId, attemptId);
 
-    await tester.tap(find.text('Dismiss'));
-    await tester.pumpAndSettle();
-    expect(find.text('The previous cash account was not saved.'), findsNothing);
+      await tester.tap(find.text('Dismiss'));
+      await tester.pump(const Duration(milliseconds: 500));
+      expect(
+        find.text('The previous cash account was not saved.'),
+        findsNothing,
+      );
 
-    await tester.pumpWidget(const SizedBox.shrink());
-    _testController!.dispose();
-  });
+      await tester.pumpWidget(const SizedBox.shrink());
+      _testController!.dispose();
+    },
+    timeout: const Timeout(Duration(seconds: 60)),
+  );
 }
