@@ -4,7 +4,7 @@ plugins {
 
 android {
     namespace = "net.bradeandcake.smokea11y"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "net.bradeandcake.smokea11y"
