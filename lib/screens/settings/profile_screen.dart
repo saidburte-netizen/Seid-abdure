@@ -109,16 +109,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final contentType = avatarContentType(extension);
       final path =
           '$userId/avatar_${DateTime.now().millisecondsSinceEpoch}.$extension';
-      await session.client.storage
-          .from('avatars')
-          .uploadBinary(
+      await session.client.storage.from('avatars').uploadBinary(
             path,
             bytes,
             fileOptions: FileOptions(contentType: contentType, upsert: true),
           );
-      final publicUrl = session.client.storage
-          .from('avatars')
-          .getPublicUrl(path);
+      final publicUrl =
+          session.client.storage.from('avatars').getPublicUrl(path);
       await session.updateProfile(avatarUrl: publicUrl);
       if (!mounted) return;
       showSnack(context, strings.avatarUploaded);

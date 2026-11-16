@@ -1,3 +1,4 @@
+import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -18,16 +19,14 @@ class PeopleScreen extends StatelessWidget {
     bool approve,
   ) async {
     try {
-      await session.client
-          .from('leave_requests')
-          .update({
-            'status': approve ? 'approved' : 'rejected',
-            'approved_by': session.userId,
-            'decided_at': nowIso(),
-          })
-          .eq('id', leave['id']);
+      await session.client.from('leave_requests').update({
+        'status': approve ? 'approved' : 'rejected',
+        'approved_by': session.userId,
+        'decided_at': nowIso(),
+      }).eq('id', leave['id']);
       if (context.mounted) {
         showSnack(context, approve ? 'Leave approved.' : 'Leave rejected.');
+        DataRevision.bump();
       }
     } catch (error) {
       if (context.mounted) {

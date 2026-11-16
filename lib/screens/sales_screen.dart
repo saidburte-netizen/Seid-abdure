@@ -1,3 +1,4 @@
+import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -47,7 +48,8 @@ class _SalesScreenState extends State<SalesScreen> {
         returnNo = (await session.client.rpc(
           'next_number',
           params: {'p_prefix': 'RETURN'},
-        )).toString();
+        ))
+            .toString();
       } catch (_) {
         returnNo = 'RETURN-${DateTime.now().millisecondsSinceEpoch}';
       }
@@ -84,8 +86,7 @@ class _SalesScreenState extends State<SalesScreen> {
       // would double the refund and the stock movement.
       await session.client
           .from('sales')
-          .update({'status': 'returned'})
-          .eq('id', sale['id']);
+          .update({'status': 'returned'}).eq('id', sale['id']);
       if (mounted) {
         showSnack(context, 'Return $returnNo recorded.');
       }
@@ -133,6 +134,7 @@ class _SalesScreenState extends State<SalesScreen> {
       );
       if (mounted) {
         showSnack(context, AppLocalizations.of(context).voidSaleSuccess);
+        DataRevision.bump();
       }
     } catch (error) {
       if (!mounted) return;
@@ -215,7 +217,8 @@ class _SalesScreenState extends State<SalesScreen> {
           'p_notes': result['notes'] ?? '',
         },
       );
-      if (mounted) showSnack(context, 'Day closed successfully.');
+      if (mounted) showSnack(context, 'Day closed successfully');
+      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }
@@ -425,59 +428,59 @@ class _ReturnDialogState extends State<_ReturnDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: Text('Return ${widget.sale['receipt_no']}'),
-    content: SizedBox(
-      width: 520,
-      child: _loading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-          ? Text(_error!)
-          : SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: _reason,
-                    decoration: InputDecoration(
-                      labelText: uiText(context, 'Reason'),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  for (final item in _items)
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            '${item['product_name']} (${item['quantity']})',
-                          ),
-                        ),
-                        SizedBox(
-                          width: 90,
-                          child: TextField(
-                            controller: _quantities[item['id']],
-                            keyboardType: TextInputType.number,
+        title: Text('Return ${widget.sale['receipt_no']}'),
+        content: SizedBox(
+          width: 520,
+          child: _loading
+              ? const Center(child: CircularProgressIndicator())
+              : _error != null
+                  ? Text(_error!)
+                  : SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextField(
+                            controller: _reason,
                             decoration: InputDecoration(
-                              labelText: uiText(context, 'Return qty'),
+                              labelText: uiText(context, 'Reason'),
                             ),
                           ),
-                        ),
-                      ],
+                          const SizedBox(height: 12),
+                          for (final item in _items)
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    '${item['product_name']} (${item['quantity']})',
+                                  ),
+                                ),
+                                SizedBox(
+                                  width: 90,
+                                  child: TextField(
+                                    controller: _quantities[item['id']],
+                                    keyboardType: TextInputType.number,
+                                    decoration: InputDecoration(
+                                      labelText: uiText(context, 'Return qty'),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                        ],
+                      ),
                     ),
-                ],
-              ),
-            ),
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const LText('Cancel'),
-      ),
-      FilledButton(
-        onPressed: _loading || _error != null ? null : _submit,
-        child: const LText('Record return'),
-      ),
-    ],
-  );
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const LText('Cancel'),
+          ),
+          FilledButton(
+            onPressed: _loading || _error != null ? null : _submit,
+            child: const LText('Record return'),
+          ),
+        ],
+      );
 }
 
 class _CloseDayDialog extends StatefulWidget {
@@ -500,36 +503,36 @@ class _CloseDayDialogState extends State<_CloseDayDialog> {
 
   @override
   Widget build(BuildContext context) => AlertDialog(
-    title: const LText('Close business day'),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        TextField(
-          controller: _counted,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(
-            labelText: uiText(context, 'Counted cash'),
+        title: const LText('Close business day'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: _counted,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: uiText(context, 'Counted cash'),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _notes,
+              decoration: InputDecoration(labelText: uiText(context, 'Notes')),
+              maxLines: 2,
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const LText('Cancel'),
           ),
-        ),
-        const SizedBox(height: 12),
-        TextField(
-          controller: _notes,
-          decoration: InputDecoration(labelText: uiText(context, 'Notes')),
-          maxLines: 2,
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const LText('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.of(
-          context,
-        ).pop({'counted': _counted.text, 'notes': _notes.text.trim()}),
-        child: const Text('Close day'),
-      ),
-    ],
-  );
+          FilledButton(
+            onPressed: () => Navigator.of(
+              context,
+            ).pop({'counted': _counted.text, 'notes': _notes.text.trim()}),
+            child: const Text('Close day'),
+          ),
+        ],
+      );
 }

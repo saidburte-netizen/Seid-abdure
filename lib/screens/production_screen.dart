@@ -1,3 +1,4 @@
+import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -29,9 +30,12 @@ class ProductionScreen extends StatelessWidget {
     try {
       await session.client
           .from('production_batches')
-          .update({'status': 'completed', 'completed_at': nowIso()})
-          .eq('id', batch['id']);
-      if (context.mounted) showSnack(context, 'Production batch completed.');
+          .update({'status': 'completed', 'completed_at': nowIso()}).eq(
+              'id', batch['id']);
+      if (context.mounted) {
+        showSnack(context, 'Production batch completed');
+        DataRevision.bump();
+      }
     } catch (error) {
       if (context.mounted) {
         showFriendlyError(context, error);
@@ -56,8 +60,7 @@ class ProductionScreen extends StatelessWidget {
     try {
       await session.client
           .from('cake_orders')
-          .update({'status': next})
-          .eq('id', order['id']);
+          .update({'status': next}).eq('id', order['id']);
       if (context.mounted) {
         showSnack(
           context,

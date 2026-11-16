@@ -1,3 +1,4 @@
+import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -32,7 +33,10 @@ class PayrollScreen extends StatelessWidget {
         'fn_generate_payroll',
         params: {'p_run_id': run['id']},
       );
-      if (context.mounted) showSnack(context, 'Payslips generated.');
+      if (context.mounted) {
+        showSnack(context, 'Payslips generated');
+        DataRevision.bump();
+      }
     } catch (error) {
       if (context.mounted) {
         showFriendlyError(context, error);

@@ -2800,7 +2800,8 @@ final Map<String, TableSpec> tableSpecs = {
     listColumns: const ['invoice_no', 'period_start', 'amount', 'status'],
     description: 'Live table `rent_invoices`.',
     fields: [
-      FieldSpec('invoice_no', 'Invoice no', hint: 'Leave blank to auto-generate'),
+      FieldSpec('invoice_no', 'Invoice no',
+          hint: 'Leave blank to auto-generate'),
       FieldSpec(
         'lease_id',
         'Lease',
