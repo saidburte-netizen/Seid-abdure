@@ -4,6 +4,8 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'save_flow.dart';
+
 export '../core/errors/friendly_error.dart';
 
 /// A thin, branch-scoped data access layer.
@@ -151,8 +153,14 @@ class BranchRepository {
     if (branchScoped && branchId.isNotEmpty) {
       payload['branch_id'] = branchId;
     }
-    final row = await client.from(table).insert(payload).select().single();
-    return Map<String, dynamic>.from(row);
+    return SaveFlow.write(
+      module: 'Data',
+      target: table,
+      action: () async {
+        final row = await client.from(table).insert(payload).select().single();
+        return Map<String, dynamic>.from(row);
+      },
+    );
   }
 
   Future<Map<String, dynamic>> update(
@@ -161,13 +169,19 @@ class BranchRepository {
     Map<String, dynamic> values, {
     String primaryKey = 'id',
   }) async {
-    final row = await client
-        .from(table)
-        .update(values)
-        .eq(primaryKey, id)
-        .select()
-        .single();
-    return Map<String, dynamic>.from(row);
+    return SaveFlow.write(
+      module: 'Data',
+      target: table,
+      action: () async {
+        final row = await client
+            .from(table)
+            .update(values)
+            .eq(primaryKey, id)
+            .select()
+            .single();
+        return Map<String, dynamic>.from(row);
+      },
+    );
   }
 
   Future<void> delete(
@@ -175,13 +189,21 @@ class BranchRepository {
     Object id, {
     String primaryKey = 'id',
   }) async {
-    await client.from(table).delete().eq(primaryKey, id);
+    await SaveFlow.write(
+      module: 'Data',
+      target: table,
+      action: () => client.from(table).delete().eq(primaryKey, id),
+    );
   }
 
   Future<Object?> rpc(
     String function, [
     Map<String, Object?> params = const {},
-  ]) => client.rpc(function, params: params);
+  ]) => SaveFlow.write(
+    module: 'Data',
+    target: function,
+    action: () => client.rpc(function, params: params),
+  );
 
   Future<List<Map<String, dynamic>>> lookup(
     String table, {
@@ -202,12 +224,18 @@ class BranchRepository {
     Map<String, dynamic> values, {
     String onConflict = 'id',
   }) async {
-    final row = await client
-        .from(table)
-        .upsert(values, onConflict: onConflict)
-        .select()
-        .single();
-    return Map<String, dynamic>.from(row);
+    return SaveFlow.write(
+      module: 'Data',
+      target: table,
+      action: () async {
+        final row = await client
+            .from(table)
+            .upsert(values, onConflict: onConflict)
+            .select()
+            .single();
+        return Map<String, dynamic>.from(row);
+      },
+    );
   }
 
   Future<Map<String, dynamic>?> appSetting(String key) =>

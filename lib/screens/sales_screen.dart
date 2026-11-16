@@ -1,4 +1,3 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
@@ -6,6 +5,7 @@ import '../auth/void_sale_access.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -45,26 +45,32 @@ class _SalesScreenState extends State<SalesScreen> {
       }
       String returnNo;
       try {
-        returnNo = (await session.client.rpc(
-          'next_number',
-          params: {'p_prefix': 'RETURN'},
+        returnNo = (await SaveFlow.write(
+          module: 'Sales & returns',
+          target: 'next_number',
+          action: () =>
+              session.client.rpc('next_number', params: {'p_prefix': 'RETURN'}),
         )).toString();
       } catch (_) {
         returnNo = 'RETURN-${DateTime.now().millisecondsSinceEpoch}';
       }
-      final returned = await session.client
-          .from('sale_returns')
-          .insert({
-            'return_no': returnNo,
-            'sale_id': sale['id'],
-            'return_date': dateOnly(DateTime.now()),
-            'reason': result['reason'],
-            'refund_amount': result['refund'],
-            'cash_account_id': accounts.first['id'],
-            'created_by': session.userId,
-          })
-          .select()
-          .single();
+      final returned = await SaveFlow.write(
+        module: 'Sales & returns',
+        target: 'sale_returns',
+        action: () => session.client
+            .from('sale_returns')
+            .insert({
+              'return_no': returnNo,
+              'sale_id': sale['id'],
+              'return_date': dateOnly(DateTime.now()),
+              'reason': result['reason'],
+              'refund_amount': result['refund'],
+              'cash_account_id': accounts.first['id'],
+              'created_by': session.userId,
+            })
+            .select()
+            .single(),
+      );
       final lines = (result['lines'] as List)
           .map((line) => Map<String, dynamic>.from(line as Map))
           .map(
@@ -78,15 +84,23 @@ class _SalesScreenState extends State<SalesScreen> {
           )
           .toList();
       if (lines.isNotEmpty) {
-        await session.client.from('sale_return_items').insert(lines);
+        await SaveFlow.write(
+          module: 'Sales & returns',
+          target: 'sale_return_items',
+          action: () => session.client.from('sale_return_items').insert(lines),
+        );
       }
       // The database owns the refund cash row (trg_returns_cash) and the
       // restored stock rows (trg_return_items_stock). Inserting them here
       // would double the refund and the stock movement.
-      await session.client
-          .from('sales')
-          .update({'status': 'returned'})
-          .eq('id', sale['id']);
+      await SaveFlow.write(
+        module: 'Sales & returns',
+        target: 'sales',
+        action: () => session.client
+            .from('sales')
+            .update({'status': 'returned'})
+            .eq('id', sale['id']),
+      );
       if (mounted) {
         showSnack(context, 'Return $returnNo recorded.');
       }
@@ -125,16 +139,19 @@ class _SalesScreenState extends State<SalesScreen> {
     );
     if (!confirmed || !mounted) return;
     try {
-      await session.client.rpc(
-        'void_sale',
-        params: {
-          'target_sale': sale['id'],
-          'reason': (input['reason'] ?? '').toString().trim(),
-        },
+      await SaveFlow.write(
+        module: 'Sales & returns',
+        target: 'void_sale',
+        action: () => session.client.rpc(
+          'void_sale',
+          params: {
+            'target_sale': sale['id'],
+            'reason': (input['reason'] ?? '').toString().trim(),
+          },
+        ),
       );
       if (mounted) {
         showSnack(context, AppLocalizations.of(context).voidSaleSuccess);
-        DataRevision.bump();
       }
     } catch (error) {
       if (!mounted) return;
@@ -208,17 +225,20 @@ class _SalesScreenState extends State<SalesScreen> {
     );
     if (result == null) return;
     try {
-      await session.client.rpc(
-        'fn_close_day',
-        params: {
-          'p_branch': branch.branchId,
-          'p_date': dateOnly(DateTime.now()),
-          'p_counted': asNum(result['counted']),
-          'p_notes': result['notes'] ?? '',
-        },
+      await SaveFlow.write(
+        module: 'Sales & returns',
+        target: 'fn_close_day',
+        action: () => session.client.rpc(
+          'fn_close_day',
+          params: {
+            'p_branch': branch.branchId,
+            'p_date': dateOnly(DateTime.now()),
+            'p_counted': asNum(result['counted']),
+            'p_notes': result['notes'] ?? '',
+          },
+        ),
       );
       if (mounted) showSnack(context, 'Day closed successfully');
-      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }

@@ -1,5 +1,7 @@
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../data/save_flow.dart';
+
 /// The narrow slice of the backend that the sign-in screen needs.
 ///
 /// The screen depends on this interface instead of [SupabaseClient] so tests
@@ -32,12 +34,22 @@ class SupabaseSignInGateway implements SignInGateway {
   final SupabaseClient client;
 
   @override
-  Future<bool?> hasAdmin() async =>
-      readBoolOrNull(await client.rpc('has_admin'));
+  Future<bool?> hasAdmin() async => readBoolOrNull(
+    await SaveFlow.read(
+      module: 'Sign in',
+      target: 'has_admin',
+      action: () => client.rpc('has_admin'),
+    ),
+  );
 
   @override
-  Future<bool?> customerSignupAllowed() async =>
-      readBoolOrNull(await client.rpc('customer_signup_allowed'));
+  Future<bool?> customerSignupAllowed() async => readBoolOrNull(
+    await SaveFlow.read(
+      module: 'Sign in',
+      target: 'customer_signup_allowed',
+      action: () => client.rpc('customer_signup_allowed'),
+    ),
+  );
 
   @override
   Future<void> signIn({required String email, required String password}) async {

@@ -36,6 +36,8 @@ jobs:
         run: python3 tool/check_schema.py
       - name: Drift test — app schema vs live schema snapshot
         run: python3 tool/payload_drift_test.py
+      - name: Enforce the shared save flow for every database write
+        run: python3 tool/check_save_flow.py
       - name: Verify the main Android manifest allows network access
         run: |
           set -euo pipefail

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../auth/auth_controller.dart';
 import '../brand/brand.dart';
 import '../core/logging/app_logger.dart';
+import '../data/save_flow.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/app_scaffold.dart';
 import '../widgets/app_ui.dart';
@@ -25,7 +26,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final strings = AppLocalizations.of(context);
     setState(() => _runningAlerts = true);
     try {
-      await SessionScope.of(context).client.rpc('fn_generate_alerts');
+      await SaveFlow.write(
+        module: strings.settings,
+        target: 'fn_generate_alerts',
+        action: () => SessionScope.of(context).client.rpc('fn_generate_alerts'),
+      );
       if (!mounted) return;
       showSnack(context, strings.alertsGenerated);
     } catch (error) {

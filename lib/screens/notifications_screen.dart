@@ -1,9 +1,9 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 import '../l10n/ui_text.dart';
@@ -61,10 +61,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _markRead(Map<String, dynamic> notification) async {
     final session = SessionScope.of(context);
     try {
-      await session.client
-          .from('notifications')
-          .update({'is_read': true, 'read_at': nowIso()})
-          .eq('id', notification['id']);
+      await SaveFlow.write(
+        module: 'Notifications',
+        target: 'notifications',
+        action: () => session.client
+            .from('notifications')
+            .update({'is_read': true, 'read_at': nowIso()})
+            .eq('id', notification['id']),
+      );
       await _load();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
@@ -76,17 +80,23 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     try {
       final uid = session.userId;
       if (uid == null) return;
-      var query = session.client
-          .from('notifications')
-          .update({'is_read': true, 'read_at': nowIso()})
-          .eq('is_read', false);
-      final role = session.roleCode;
-      if (role != null) {
-        query = query.or('user_id.eq.$uid,role_code.eq.$role');
-      } else {
-        query = query.eq('user_id', uid);
-      }
-      await query;
+      await SaveFlow.write(
+        module: 'Notifications',
+        target: 'notifications',
+        action: () async {
+          var query = session.client
+              .from('notifications')
+              .update({'is_read': true, 'read_at': nowIso()})
+              .eq('is_read', false);
+          final role = session.roleCode;
+          if (role != null) {
+            query = query.or('user_id.eq.$uid,role_code.eq.$role');
+          } else {
+            query = query.eq('user_id', uid);
+          }
+          await query;
+        },
+      );
       await _load();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
@@ -96,10 +106,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Future<void> _refreshAlerts() async {
     final session = SessionScope.of(context);
     try {
-      await session.client.rpc('fn_generate_alerts');
+      await SaveFlow.write(
+        module: 'Notifications',
+        target: 'fn_generate_alerts',
+        action: () => session.client.rpc('fn_generate_alerts'),
+      );
       await _load();
       if (mounted) showSnack(context, 'Alerts generated');
-      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }
@@ -285,15 +298,21 @@ class _NotificationPreferencesState extends State<_NotificationPreferences> {
     current[field] = value;
     setState(() => _rows[type] = current);
     try {
-      final id = current['id'];
-      if (id == null) {
-        await session.client.from('notification_settings').insert(current);
-      } else {
-        await session.client
-            .from('notification_settings')
-            .update(current)
-            .eq('id', id);
-      }
+      await SaveFlow.write(
+        module: 'Notifications',
+        target: 'notification_settings',
+        action: () async {
+          final id = current['id'];
+          if (id == null) {
+            await session.client.from('notification_settings').insert(current);
+          } else {
+            await session.client
+                .from('notification_settings')
+                .update(current)
+                .eq('id', id);
+          }
+        },
+      );
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }

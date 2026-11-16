@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/events/data_revision.dart';
 import '../data/schema.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
@@ -31,6 +32,23 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
   String _selected = 'v_dashboard_kpis';
   int _refreshSeed = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    DataRevision.notifier.addListener(_reloadFromRevision);
+  }
+
+  @override
+  void dispose() {
+    DataRevision.notifier.removeListener(_reloadFromRevision);
+    super.dispose();
+  }
+
+  void _reloadFromRevision() {
+    if (!mounted) return;
+    setState(() => _refreshSeed++);
+  }
 
   @override
   Widget build(BuildContext context) => ModuleScaffold(

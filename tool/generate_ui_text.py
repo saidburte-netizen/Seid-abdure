@@ -250,6 +250,20 @@ UI: dict[str, tuple[str, str]] = {
     "Saved.": ("ተቀምጧል።", "Olkaa'ame."),
     "Deleted.": ("ጠፍቷል።", "Haqame."),
     "PDF exported.": ("PDF ተልኳል።", "PDF al-ergame."),
+    "Pending approval": ("ማጽደቅ በመጠባበቅ ላይ", "Mirkaneessaa eegaa jira"),
+    "Record payment": ("ክፍያ መዝግብ", "Kaffaltii galmeessi"),
+    "Payable created from bill.": (
+        "ከደረሰኝ የሚከፈል ተፈጥሯል።",
+        "Kaffaltii nagahee irraa uumame.",
+    ),
+    "Payable payment recorded.": (
+        "የሚከፈል ክፍያ ተመዝግቧል።",
+        "Kaffaltiin kaffalame galmeeffame.",
+    ),
+    "Cash balance includes approved entries. Pending entries wait for approval.": (
+        "የገንዘብ ቀሪ ሂሳብ የጸደቁ መዝገቦችን ያካትታል። በመጠባበቅ ላይ ያሉ መዝገቦች ማጽደቅ ይጠብቃሉ።",
+        "Haftee maallaqaa galmee mirkanaa'an qofa dabalata. Galmeen eegaa jiru mirkaneessa eeggata.",
+    ),
 }
 
 TEMPLATE_SOURCES: dict[str, str] = {

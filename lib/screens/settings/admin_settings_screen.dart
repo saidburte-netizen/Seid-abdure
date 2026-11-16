@@ -7,6 +7,7 @@ import '../../data/export.dart';
 import '../../data/formatting.dart';
 import '../../data/pdf_export.dart';
 import '../../data/repository.dart';
+import '../../data/save_flow.dart';
 import '../../data/schema.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
@@ -157,18 +158,24 @@ class _RolePermissionsScreenState extends State<RolePermissionsScreen> {
     final key = '$role|$permission';
     setState(() => _savingKey = key);
     try {
-      if (enabled) {
-        await session.client.from('role_permissions').insert({
-          'role_code': role,
-          'permission_code': permission,
-        });
-      } else {
-        await session.client
-            .from('role_permissions')
-            .delete()
-            .eq('role_code', role)
-            .eq('permission_code', permission);
-      }
+      await SaveFlow.write(
+        module: 'Users & roles',
+        target: 'role_permissions',
+        action: () async {
+          if (enabled) {
+            await session.client.from('role_permissions').insert({
+              'role_code': role,
+              'permission_code': permission,
+            });
+          } else {
+            await session.client
+                .from('role_permissions')
+                .delete()
+                .eq('role_code', role)
+                .eq('permission_code', permission);
+          }
+        },
+      );
       if (!mounted) return;
       setState(() {
         if (enabled) {

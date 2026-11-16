@@ -1,8 +1,8 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -19,17 +19,20 @@ class PeopleScreen extends StatelessWidget {
     bool approve,
   ) async {
     try {
-      await session.client
-          .from('leave_requests')
-          .update({
-            'status': approve ? 'approved' : 'rejected',
-            'approved_by': session.userId,
-            'decided_at': nowIso(),
-          })
-          .eq('id', leave['id']);
+      await SaveFlow.write(
+        module: 'People & HR',
+        target: 'leave_requests',
+        action: () => session.client
+            .from('leave_requests')
+            .update({
+              'status': approve ? 'approved' : 'rejected',
+              'approved_by': session.userId,
+              'decided_at': nowIso(),
+            })
+            .eq('id', leave['id']),
+      );
       if (context.mounted) {
         showSnack(context, approve ? 'Leave approved.' : 'Leave rejected.');
-        DataRevision.bump();
       }
     } catch (error) {
       if (context.mounted) {

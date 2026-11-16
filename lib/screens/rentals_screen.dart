@@ -1,9 +1,9 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/common.dart';
@@ -29,12 +29,15 @@ class RentalsScreen extends StatelessWidget {
     );
     if (!confirmed) return;
     try {
-      await session.client.rpc(
-        'fn_generate_rent_invoices',
-        params: {'p_date': dateOnly(DateTime.now())},
+      await SaveFlow.write(
+        module: 'Rentals',
+        target: 'fn_generate_rent_invoices',
+        action: () => session.client.rpc(
+          'fn_generate_rent_invoices',
+          params: {'p_date': dateOnly(DateTime.now())},
+        ),
       );
       if (context.mounted) showSnack(context, 'Rent invoices generated');
-      DataRevision.bump();
     } catch (error) {
       if (context.mounted) {
         showFriendlyError(context, error);
@@ -66,15 +69,19 @@ class RentalsScreen extends StatelessWidget {
             _RentPaymentDialog(invoice: invoice, accounts: accounts),
       );
       if (result == null) return;
-      await session.client.from('rent_payments').insert({
-        'invoice_id': invoice['id'],
-        'cash_account_id': result['account'],
-        'amount': result['amount'],
-        'payment_date': dateOnly(DateTime.now()),
-        'method': result['method'],
-        'reference': result['reference'],
-        'received_by': session.userId,
-      });
+      await SaveFlow.write(
+        module: 'Rentals',
+        target: 'rent_payments',
+        action: () => session.client.from('rent_payments').insert({
+          'invoice_id': invoice['id'],
+          'cash_account_id': result['account'],
+          'amount': result['amount'],
+          'payment_date': dateOnly(DateTime.now()),
+          'method': result['method'],
+          'reference': result['reference'],
+          'received_by': session.userId,
+        }),
+      );
       if (context.mounted) showSnack(context, 'Rent payment recorded.');
     } catch (error) {
       if (context.mounted) {

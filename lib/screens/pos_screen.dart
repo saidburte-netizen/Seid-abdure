@@ -1,4 +1,3 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
@@ -7,6 +6,7 @@ import '../data/formatting.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/sale_math.dart';
+import '../data/save_flow.dart';
 import '../widgets/common.dart';
 import '../widgets/module_scaffold.dart';
 import '../l10n/ui_text.dart';
@@ -158,9 +158,11 @@ class _PosScreenState extends State<PosScreen> {
   Future<String> _nextReceipt() async {
     final session = SessionScope.of(context);
     try {
-      final value = await session.client.rpc(
-        'next_number',
-        params: {'p_prefix': 'SALE'},
+      final value = await SaveFlow.write(
+        module: 'Point of sale',
+        target: 'next_number',
+        action: () =>
+            session.client.rpc('next_number', params: {'p_prefix': 'SALE'}),
       );
       final text = value?.toString() ?? '';
       if (text.isNotEmpty) return text;
@@ -173,17 +175,14 @@ class _PosScreenState extends State<PosScreen> {
   Future<void> _complete() async {
     if (_cart.isEmpty) {
       showSnack(context, 'Add at least one product to the sale');
-      DataRevision.bump();
       return;
     }
     if (_storeId == null) {
       showSnack(context, 'Create a store before selling');
-      DataRevision.bump();
       return;
     }
     if (_method != 'credit' && _accountId == null) {
       showSnack(context, 'Create a cash account before selling');
-      DataRevision.bump();
       return;
     }
     if (_method == 'credit' && _customerId == null) {
@@ -217,32 +216,36 @@ class _PosScreenState extends State<PosScreen> {
       final discount = totals.discount;
       final tax = totals.tax;
       final total = totals.total;
-      final sale = await session.client
-          .from('sales')
-          .insert({
-            'receipt_no': receiptNo,
-            'branch_id': branch.branchId,
-            'store_id': _storeId,
-            'customer_id': _customerId,
-            'cashier_id': session.userId,
-            'sale_date': dateOnly(DateTime.now()),
-            'subtotal': subtotal,
-            'discount_amount': discount,
-            'tax_amount': tax,
-            'total_amount': total,
-            'paid_amount': paid,
-            'payment_status': paid >= total
-                ? 'paid'
-                : paid > 0
-                ? 'partial'
-                : _method == 'credit'
-                ? 'credit'
-                : 'unpaid',
-            'status': 'completed',
-            'notes': _notes.text.trim(),
-          })
-          .select()
-          .single();
+      final sale = await SaveFlow.write(
+        module: 'Point of sale',
+        target: 'sales',
+        action: () => session.client
+            .from('sales')
+            .insert({
+              'receipt_no': receiptNo,
+              'branch_id': branch.branchId,
+              'store_id': _storeId,
+              'customer_id': _customerId,
+              'cashier_id': session.userId,
+              'sale_date': dateOnly(DateTime.now()),
+              'subtotal': subtotal,
+              'discount_amount': discount,
+              'tax_amount': tax,
+              'total_amount': total,
+              'paid_amount': paid,
+              'payment_status': paid >= total
+                  ? 'paid'
+                  : paid > 0
+                  ? 'partial'
+                  : _method == 'credit'
+                  ? 'credit'
+                  : 'unpaid',
+              'status': 'completed',
+              'notes': _notes.text.trim(),
+            })
+            .select()
+            .single(),
+      );
       final saleId = sale['id'] as String;
       final items = <Map<String, dynamic>>[];
       var lineIndex = 0;
@@ -260,28 +263,40 @@ class _PosScreenState extends State<PosScreen> {
           'line_total': line.lineTotal,
         });
       }
-      await session.client.from('sale_items').insert(items);
+      await SaveFlow.write(
+        module: 'Point of sale',
+        target: 'sale_items',
+        action: () => session.client.from('sale_items').insert(items),
+      );
       if (_method == 'credit') {
         // The database trigger creates the receivable from this payment row.
-        await session.client.from('sale_payments').insert({
-          'sale_id': saleId,
-          'cash_account_id': null,
-          'method': 'credit',
-          'amount': total,
-          'reference': const Uuid().v4().substring(0, 8),
-          'paid_at': nowIso(),
-          'received_by': session.userId,
-        });
+        await SaveFlow.write(
+          module: 'Point of sale',
+          target: 'sale_payments',
+          action: () => session.client.from('sale_payments').insert({
+            'sale_id': saleId,
+            'cash_account_id': null,
+            'method': 'credit',
+            'amount': total,
+            'reference': const Uuid().v4().substring(0, 8),
+            'paid_at': nowIso(),
+            'received_by': session.userId,
+          }),
+        );
       } else if (paid > 0) {
-        await session.client.from('sale_payments').insert({
-          'sale_id': saleId,
-          'cash_account_id': _accountId,
-          'method': _method,
-          'amount': paid,
-          'reference': const Uuid().v4().substring(0, 8),
-          'paid_at': nowIso(),
-          'received_by': session.userId,
-        });
+        await SaveFlow.write(
+          module: 'Point of sale',
+          target: 'sale_payments',
+          action: () => session.client.from('sale_payments').insert({
+            'sale_id': saleId,
+            'cash_account_id': _accountId,
+            'method': _method,
+            'amount': paid,
+            'reference': const Uuid().v4().substring(0, 8),
+            'paid_at': nowIso(),
+            'received_by': session.userId,
+          }),
+        );
       }
       if (!mounted) return;
       await _showReceipt(

@@ -1,8 +1,8 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -28,13 +28,16 @@ class ProductionScreen extends StatelessWidget {
     );
     if (!confirmed) return;
     try {
-      await session.client
-          .from('production_batches')
-          .update({'status': 'completed', 'completed_at': nowIso()})
-          .eq('id', batch['id']);
+      await SaveFlow.write(
+        module: 'Production & catalog',
+        target: 'production_batches',
+        action: () => session.client
+            .from('production_batches')
+            .update({'status': 'completed', 'completed_at': nowIso()})
+            .eq('id', batch['id']),
+      );
       if (context.mounted) {
         showSnack(context, 'Production batch completed');
-        DataRevision.bump();
       }
     } catch (error) {
       if (context.mounted) {
@@ -58,10 +61,14 @@ class ProductionScreen extends StatelessWidget {
     };
     if (next == null) return;
     try {
-      await session.client
-          .from('cake_orders')
-          .update({'status': next})
-          .eq('id', order['id']);
+      await SaveFlow.write(
+        module: 'Production & catalog',
+        target: 'cake_orders',
+        action: () => session.client
+            .from('cake_orders')
+            .update({'status': next})
+            .eq('id', order['id']),
+      );
       if (context.mounted) {
         showSnack(
           context,

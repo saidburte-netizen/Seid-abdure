@@ -5,6 +5,7 @@ import '../auth/auth_controller.dart';
 import '../core/events/data_revision.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/brand_ui.dart';
 import '../widgets/common.dart';
@@ -77,7 +78,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<void> _alerts() async {
     final session = SessionScope.of(context);
     try {
-      await session.client.rpc('fn_generate_alerts');
+      await SaveFlow.write(
+        module: 'Dashboard',
+        target: 'fn_generate_alerts',
+        action: () => session.client.rpc('fn_generate_alerts'),
+      );
       if (mounted) {
         showSnack(context, AppLocalizations.of(context).alertsGenerated);
       }
