@@ -59,7 +59,7 @@ Future<void> _openNewCashAccount(WidgetTester tester) async {
   await tester.pumpWidget(_app(_testController!));
   await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Accounts'));
-  final addButton = find.byTooltip('Add');
+  final addButton = find.byTooltip('Add').hitTestable();
   await _pumpUntilFound(tester, addButton);
   await tester.tap(addButton);
   await tester.pump(const Duration(milliseconds: 500));

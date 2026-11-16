@@ -108,6 +108,7 @@ class SaveDiagnostics extends ChangeNotifier {
     } finally {
       _loaded = true;
       _loading = null;
+      _queuePersist();
       notifyListeners();
     }
   }
@@ -142,6 +143,7 @@ class SaveDiagnostics extends ChangeNotifier {
   }
 
   void _queuePersist() {
+    if (!_loaded) return;
     _persistTail = _persistTail.then((_) async {
       try {
         final preferences = await SharedPreferences.getInstance();
