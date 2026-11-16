@@ -1,9 +1,9 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -46,29 +46,36 @@ class CreditScreen extends StatelessWidget {
       );
       if (result == null) return;
       if (type == 'receivable') {
-        await session.client.from('receivable_payments').insert({
-          'receivable_id': row['id'],
-          'cash_account_id': result['account'],
-          'amount': result['amount'],
-          'payment_date': dateOnly(DateTime.now()),
-          'method': result['method'],
-          'reference': result['reference'],
-          'received_by': session.userId,
-        });
+        await SaveFlow.write(
+          module: 'Credit & debit control',
+          target: 'receivable_payments',
+          action: () => session.client.from('receivable_payments').insert({
+            'receivable_id': row['id'],
+            'cash_account_id': result['account'],
+            'amount': result['amount'],
+            'payment_date': dateOnly(DateTime.now()),
+            'method': result['method'],
+            'reference': result['reference'],
+            'received_by': session.userId,
+          }),
+        );
       } else {
-        await session.client.from('payable_payments').insert({
-          'payable_id': row['id'],
-          'cash_account_id': result['account'],
-          'amount': result['amount'],
-          'payment_date': dateOnly(DateTime.now()),
-          'method': result['method'],
-          'reference': result['reference'],
-          'paid_by': session.userId,
-        });
+        await SaveFlow.write(
+          module: 'Credit & debit control',
+          target: 'payable_payments',
+          action: () => session.client.from('payable_payments').insert({
+            'payable_id': row['id'],
+            'cash_account_id': result['account'],
+            'amount': result['amount'],
+            'payment_date': dateOnly(DateTime.now()),
+            'method': result['method'],
+            'reference': result['reference'],
+            'paid_by': session.userId,
+          }),
+        );
       }
       if (context.mounted) {
         showSnack(context, 'Payment recorded');
-        DataRevision.bump();
       }
     } catch (error) {
       if (context.mounted) {
@@ -93,14 +100,18 @@ class CreditScreen extends StatelessWidget {
     );
     if (!confirmed) return;
     try {
-      await session.client
-          .from('write_offs')
-          .update({
-            'status': 'approved',
-            'approved_by': session.userId,
-            'decided_at': nowIso(),
-          })
-          .eq('id', row['id']);
+      await SaveFlow.write(
+        module: 'Credit & debit control',
+        target: 'write_offs',
+        action: () => session.client
+            .from('write_offs')
+            .update({
+              'status': 'approved',
+              'approved_by': session.userId,
+              'decided_at': nowIso(),
+            })
+            .eq('id', row['id']),
+      );
       if (context.mounted) showSnack(context, 'Write-off approved.');
     } catch (error) {
       if (context.mounted) {

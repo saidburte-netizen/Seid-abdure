@@ -3,8 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
-import '../core/events/data_revision.dart';
-import '../core/logging/error_log.dart';
 import '../data/export.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
@@ -389,13 +387,24 @@ class _CrudTabState extends State<CrudTab> {
         );
       }
       String? status;
-      for (final key in columns) {
-        final field = widget.spec.field(key);
-        if (field?.type != FieldType.select) continue;
-        final value = row[key];
-        if (value == null || value.toString().isEmpty) continue;
-        status = _display(context, field, value, snapshot.lookups);
-        break;
+      final statusValue = row['status'];
+      if (statusValue != null && statusValue.toString().isNotEmpty) {
+        status = _display(
+          context,
+          widget.spec.field('status'),
+          statusValue,
+          snapshot.lookups,
+        );
+      }
+      if (status == null) {
+        for (final key in columns) {
+          final field = widget.spec.field(key);
+          if (field?.type != FieldType.select) continue;
+          final value = row[key];
+          if (value == null || value.toString().isEmpty) continue;
+          status = _display(context, field, value, snapshot.lookups);
+          break;
+        }
       }
       final statusColor = _statusColor(status);
       final amountKey = columns.length > 1 ? columns[1] : null;
@@ -476,6 +485,9 @@ class _CrudTabState extends State<CrudTab> {
   ) {
     if (value == null || value.toString().isEmpty) return '—';
     if (field == null) return asText(value);
+    if (field.key == 'status' && value.toString().toLowerCase() == 'pending') {
+      return uiText(context, 'Pending approval');
+    }
     if (field.type == FieldType.lookup) {
       final options = lookups[field.key] ?? const [];
       for (final option in options) {
@@ -484,9 +496,13 @@ class _CrudTabState extends State<CrudTab> {
       return asText(value);
     }
     if (field.type == FieldType.select) {
-      return field.options[value.toString()] == null
-          ? uiText(context, prettyLabel(value.toString()))
-          : uiText(context, field.options[value.toString()]!);
+      final raw = value.toString();
+      if (raw.toLowerCase() == 'pending') {
+        return uiText(context, 'Pending approval');
+      }
+      return field.options[raw] == null
+          ? uiText(context, prettyLabel(raw))
+          : uiText(context, field.options[raw]!);
     }
     if (field.type == FieldType.boolean) {
       return uiText(context, value == true ? 'Yes' : 'No');
@@ -659,28 +675,19 @@ class _CrudTabState extends State<CrudTab> {
         row: row,
         lookups: snapshot.lookups,
         onSubmit: (payload) async {
-          try {
-            if (row == null) {
-              await _repo.insert(
-                widget.spec.table,
-                payload,
-                branchScoped: widget.spec.branchScoped,
-              );
-            } else {
-              await _repo.update(
-                widget.spec.table,
-                row[widget.spec.primaryKey],
-                payload,
-                primaryKey: widget.spec.primaryKey,
-              );
-            }
-          } catch (error) {
-            ErrorLog.instance.record(
-              module: widget.spec.title,
-              target: widget.spec.table,
-              error: error,
+          if (row == null) {
+            await _repo.insert(
+              widget.spec.table,
+              payload,
+              branchScoped: widget.spec.branchScoped,
             );
-            rethrow;
+          } else {
+            await _repo.update(
+              widget.spec.table,
+              row[widget.spec.primaryKey],
+              payload,
+              primaryKey: widget.spec.primaryKey,
+            );
           }
         },
       ),
@@ -692,7 +699,6 @@ class _CrudTabState extends State<CrudTab> {
         'name': uiText(context, widget.spec.singular),
       }),
     );
-    DataRevision.bump();
     await _refresh();
     widget.onChanged?.call();
   }

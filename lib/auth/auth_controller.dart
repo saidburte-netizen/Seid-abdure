@@ -9,6 +9,7 @@ import '../core/locale/locale_preferences.dart';
 import '../core/logging/app_logger.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 
 enum AuthStatus { loading, signedOut, needsMembership, ready, error }
 
@@ -365,11 +366,15 @@ class AuthController extends ChangeNotifier {
   }
 
   Future<void> createFirstBranch() async {
-    await client.from('branches').insert({
-      'code': 'MAIN',
-      'name': 'Jimma branch',
-      'is_active': true,
-    });
+    await SaveFlow.write(
+      module: 'Account',
+      target: 'branches',
+      action: () => client.from('branches').insert({
+        'code': 'MAIN',
+        'name': 'Jimma branch',
+        'is_active': true,
+      }),
+    );
     await retry();
   }
 
@@ -402,10 +407,14 @@ class AuthController extends ChangeNotifier {
     }
     if (userId == null) return;
     try {
-      await client
-          .from('profiles')
-          .update({'language': languageCode ?? 'en'})
-          .eq('id', userId!);
+      await SaveFlow.write(
+        module: 'Account',
+        target: 'profiles',
+        action: () => client
+            .from('profiles')
+            .update({'language': languageCode ?? 'en'})
+            .eq('id', userId!),
+      );
       profileLanguage = languageCode ?? 'en';
     } catch (error, stack) {
       AppLogger.error('Could not save the profile language', error, stack);
@@ -441,7 +450,11 @@ class AuthController extends ChangeNotifier {
     if (phone != null) payload['phone'] = phone.trim();
     if (avatarUrl != null) payload['avatar_url'] = avatarUrl;
     if (payload.isEmpty) return;
-    await client.from('profiles').update(payload).eq('id', userId!);
+    await SaveFlow.write(
+      module: 'Account',
+      target: 'profiles',
+      action: () => client.from('profiles').update(payload).eq('id', userId!),
+    );
     if (payload.containsKey('full_name')) this.fullName = fullName!.trim();
     if (payload.containsKey('phone')) this.phone = phone!.trim();
     if (payload.containsKey('avatar_url')) this.avatarUrl = avatarUrl;

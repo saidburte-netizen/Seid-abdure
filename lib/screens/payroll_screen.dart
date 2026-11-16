@@ -1,9 +1,9 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -29,13 +29,16 @@ class PayrollScreen extends StatelessWidget {
     );
     if (!confirmed) return;
     try {
-      await session.client.rpc(
-        'fn_generate_payroll',
-        params: {'p_run_id': run['id']},
+      await SaveFlow.write(
+        module: 'Payroll',
+        target: 'fn_generate_payroll',
+        action: () => session.client.rpc(
+          'fn_generate_payroll',
+          params: {'p_run_id': run['id']},
+        ),
       );
       if (context.mounted) {
         showSnack(context, 'Payslips generated');
-        DataRevision.bump();
       }
     } catch (error) {
       if (context.mounted) {
@@ -69,10 +72,14 @@ class PayrollScreen extends StatelessWidget {
         values['approved_at'] = nowIso();
       }
       if (status == 'paid') values['paid_at'] = nowIso();
-      await session.client
-          .from('payroll_runs')
-          .update(values)
-          .eq('id', run['id']);
+      await SaveFlow.write(
+        module: 'Payroll',
+        target: 'payroll_runs',
+        action: () => session.client
+            .from('payroll_runs')
+            .update(values)
+            .eq('id', run['id']),
+      );
       if (context.mounted) {
         showSnack(
           context,

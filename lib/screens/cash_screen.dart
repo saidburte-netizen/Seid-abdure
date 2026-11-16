@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -17,23 +18,30 @@ class CashScreen extends StatelessWidget {
     AuthController session,
     Map<String, dynamic> bill,
   ) async {
-    try {
-      await session.client.from('payables').insert({
-        'supplier_id': bill['supplier_id'],
-        'bill_id': bill['id'],
-        'description': bill['description'] ?? 'Bill ${bill['bill_no']}',
-        'amount': bill['amount'],
-        'paid_amount': bill['paid_amount'] ?? 0,
-        'balance': asNum(bill['amount']) - asNum(bill['paid_amount']),
-        'due_date': bill['due_date'],
-        'status': 'open',
-        'created_by': session.userId,
-      });
-      if (context.mounted) showSnack(context, 'Payable created from bill.');
-    } catch (error) {
-      if (context.mounted) {
-        showFriendlyError(context, error);
-      }
+    final saved = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _CreatePayableDialog(
+        bill: bill,
+        onSave: () => SaveFlow.write(
+          module: 'Cash & expenses',
+          target: 'payables',
+          action: () => session.client.from('payables').insert({
+            'supplier_id': bill['supplier_id'],
+            'bill_id': bill['id'],
+            'description': bill['description'] ?? 'Bill ${bill['bill_no']}',
+            'amount': bill['amount'],
+            'paid_amount': bill['paid_amount'] ?? 0,
+            'balance': asNum(bill['amount']) - asNum(bill['paid_amount']),
+            'due_date': bill['due_date'],
+            'status': 'open',
+            'created_by': session.userId,
+          }),
+        ),
+      ),
+    );
+    if (saved == true && context.mounted) {
+      showSnack(context, uiText(context, 'Payable created from bill.'));
     }
   }
 
@@ -55,25 +63,31 @@ class CashScreen extends StatelessWidget {
         throw Exception('Create a cash account before paying a payable.');
       }
       if (!context.mounted) return;
-      final result = await showDialog<Map<String, dynamic>>(
+      final saved = await showDialog<bool>(
         context: context,
+        barrierDismissible: false,
         builder: (context) => _PaymentDialog(
           title: uiText(context, 'Pay payable'),
           accounts: accounts,
           suggested: asNum(payable['balance']),
+          onSave: (result) => SaveFlow.write(
+            module: 'Cash & expenses',
+            target: 'payable_payments',
+            action: () => session.client.from('payable_payments').insert({
+              'payable_id': payable['id'],
+              'cash_account_id': result['account'],
+              'amount': result['amount'],
+              'payment_date': dateOnly(DateTime.now()),
+              'method': result['method'],
+              'reference': result['reference'],
+              'paid_by': session.userId,
+            }),
+          ),
         ),
       );
-      if (result == null) return;
-      await session.client.from('payable_payments').insert({
-        'payable_id': payable['id'],
-        'cash_account_id': result['account'],
-        'amount': result['amount'],
-        'payment_date': dateOnly(DateTime.now()),
-        'method': result['method'],
-        'reference': result['reference'],
-        'paid_by': session.userId,
-      });
-      if (context.mounted) showSnack(context, 'Payable payment recorded.');
+      if (saved == true && context.mounted) {
+        showSnack(context, uiText(context, 'Payable payment recorded.'));
+      }
     } catch (error) {
       if (context.mounted) {
         showFriendlyError(context, error);
@@ -95,6 +109,7 @@ class CashScreen extends StatelessWidget {
         length: 8,
         child: Column(
           children: [
+            const _PendingCashNote(),
             const AppTabBar(
               isScrollable: true,
               tabAlignment: TabAlignment.start,
@@ -187,16 +202,109 @@ class CashScreen extends StatelessWidget {
   }
 }
 
+class _PendingCashNote extends StatelessWidget {
+  const _PendingCashNote();
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 2, 16, 0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(Icons.info_outline, size: 16, color: scheme.onSurfaceVariant),
+          const SizedBox(width: 6),
+          Expanded(
+            child: Text(
+              uiText(
+                context,
+                'Cash balance includes approved entries. Pending entries wait for approval.',
+              ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodySmall?.copyWith(fontSize: 10.5, height: 1.15),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CreatePayableDialog extends StatefulWidget {
+  const _CreatePayableDialog({required this.bill, required this.onSave});
+
+  final Map<String, dynamic> bill;
+  final Future<void> Function() onSave;
+
+  @override
+  State<_CreatePayableDialog> createState() => _CreatePayableDialogState();
+}
+
+class _CreatePayableDialogState extends State<_CreatePayableDialog> {
+  bool _saving = false;
+  Object? _error;
+
+  Future<void> _save() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave();
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(uiText(context, 'Create payable')),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        if (_error != null) ...[
+          FriendlyErrorBox(error: _error!),
+          const SizedBox(height: 12),
+        ],
+        Text(asText(widget.bill['description'], fallback: 'Bill')),
+        const SizedBox(height: 8),
+        Text(
+          '${uiText(context, 'Amount')}: '
+          '${formatMoney(widget.bill['amount'])}',
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: _saving ? null : () => Navigator.of(context).pop(false),
+        child: const LText('Cancel'),
+      ),
+      FilledButton(
+        onPressed: _saving ? null : _save,
+        child: Text(uiText(context, _saving ? 'Saving…' : 'Create payable')),
+      ),
+    ],
+  );
+}
+
 class _PaymentDialog extends StatefulWidget {
   const _PaymentDialog({
     required this.title,
     required this.accounts,
     required this.suggested,
+    required this.onSave,
   });
 
   final String title;
   final List<Map<String, dynamic>> accounts;
   final num suggested;
+  final Future<void> Function(Map<String, dynamic> result) onSave;
 
   @override
   State<_PaymentDialog> createState() => _PaymentDialogState();
@@ -209,6 +317,8 @@ class _PaymentDialogState extends State<_PaymentDialog> {
   final _reference = TextEditingController();
   late String _account = widget.accounts.first['id'] as String;
   String _method = 'cash';
+  bool _saving = false;
+  Object? _error;
 
   @override
   void dispose() {
@@ -217,12 +327,37 @@ class _PaymentDialogState extends State<_PaymentDialog> {
     super.dispose();
   }
 
+  Future<void> _save() async {
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
+    try {
+      await widget.onSave({
+        'account': _account,
+        'amount': asNum(_amount.text),
+        'method': _method,
+        'reference': _reference.text.trim(),
+      });
+      if (mounted) Navigator.of(context).pop(true);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => AlertDialog(
     title: Text(widget.title),
     content: Column(
       mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
+        if (_error != null) ...[
+          FriendlyErrorBox(error: _error!),
+          const SizedBox(height: 12),
+        ],
         DropdownButtonFormField<String>(
           initialValue: _account,
           decoration: InputDecoration(
@@ -235,11 +370,14 @@ class _PaymentDialogState extends State<_PaymentDialog> {
                 child: Text(asText(account['name'])),
               ),
           ],
-          onChanged: (value) => setState(() => _account = value ?? _account),
+          onChanged: _saving
+              ? null
+              : (value) => setState(() => _account = value ?? _account),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _amount,
+          enabled: !_saving,
           keyboardType: TextInputType.number,
           decoration: InputDecoration(labelText: uiText(context, 'Amount')),
         ),
@@ -258,28 +396,26 @@ class _PaymentDialogState extends State<_PaymentDialog> {
             ),
             DropdownMenuItem(value: 'card', child: Text('Card')),
           ],
-          onChanged: (value) => setState(() => _method = value ?? 'cash'),
+          onChanged: _saving
+              ? null
+              : (value) => setState(() => _method = value ?? 'cash'),
         ),
         const SizedBox(height: 8),
         TextField(
           controller: _reference,
+          enabled: !_saving,
           decoration: InputDecoration(labelText: uiText(context, 'Reference')),
         ),
       ],
     ),
     actions: [
       TextButton(
-        onPressed: () => Navigator.of(context).pop(),
+        onPressed: _saving ? null : () => Navigator.of(context).pop(false),
         child: const LText('Cancel'),
       ),
       FilledButton(
-        onPressed: () => Navigator.of(context).pop({
-          'account': _account,
-          'amount': asNum(_amount.text),
-          'method': _method,
-          'reference': _reference.text.trim(),
-        }),
-        child: const Text('Record payment'),
+        onPressed: _saving ? null : _save,
+        child: Text(uiText(context, _saving ? 'Saving…' : 'Record payment')),
       ),
     ],
   );

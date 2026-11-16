@@ -182,6 +182,12 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Saved.": "ተቀምጧል።",
     "Deleted.": "ጠፍቷል።",
     "PDF exported.": "PDF ተልኳል።",
+    "Pending approval": "ማጽደቅ በመጠባበቅ ላይ",
+    "Record payment": "ክፍያ መዝግብ",
+    "Payable created from bill.": "ከደረሰኝ የሚከፈል ተፈጥሯል።",
+    "Payable payment recorded.": "የሚከፈል ክፍያ ተመዝግቧል።",
+    "Cash balance includes approved entries. Pending entries wait for approval.":
+        "የገንዘብ ቀሪ ሂሳብ የጸደቁ መዝገቦችን ያካትታል። በመጠባበቅ ላይ ያሉ መዝገቦች ማጽደቅ ይጠብቃሉ።",
   },
   'om': {
     "Search records": "Galmee barbaadi",
@@ -368,6 +374,12 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Saved.": "Olkaa'ame.",
     "Deleted.": "Haqame.",
     "PDF exported.": "PDF al-ergame.",
+    "Pending approval": "Mirkaneessaa eegaa jira",
+    "Record payment": "Kaffaltii galmeessi",
+    "Payable created from bill.": "Kaffaltii nagahee irraa uumame.",
+    "Payable payment recorded.": "Kaffaltiin kaffalame galmeeffame.",
+    "Cash balance includes approved entries. Pending entries wait for approval.":
+        "Haftee maallaqaa galmee mirkanaa'an qofa dabalata. Galmeen eegaa jiru mirkaneessa eeggata.",
   },
 };
 
@@ -1177,6 +1189,11 @@ const List<String> uiTextKeys = [
   "Saved.",
   "Deleted.",
   "PDF exported.",
+  "Pending approval",
+  "Record payment",
+  "Payable created from bill.",
+  "Payable payment recorded.",
+  "Cash balance includes approved entries. Pending entries wait for approval.",
 ];
 
 const List<String> uiTemplateKeys = [

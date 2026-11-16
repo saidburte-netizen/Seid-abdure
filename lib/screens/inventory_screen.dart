@@ -1,9 +1,9 @@
-import '../core/events/data_revision.dart';
 import 'package:flutter/material.dart';
 
 import '../auth/auth_controller.dart';
 import '../data/formatting.dart';
 import '../data/repository.dart';
+import '../data/save_flow.dart';
 import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
@@ -78,25 +78,31 @@ class _InventoryScreenState extends State<InventoryScreen> {
       if (storeId == null) return;
       String receiptNo;
       try {
-        receiptNo = (await session.client.rpc(
-          'next_number',
-          params: {'p_prefix': 'GRN'},
+        receiptNo = (await SaveFlow.write(
+          module: 'Inventory & purchasing',
+          target: 'next_number',
+          action: () =>
+              session.client.rpc('next_number', params: {'p_prefix': 'GRN'}),
         )).toString();
       } catch (_) {
         receiptNo = 'GRN-${DateTime.now().millisecondsSinceEpoch}';
       }
-      final receipt = await session.client
-          .from('goods_receipts')
-          .insert({
-            'receipt_no': receiptNo,
-            'po_id': order['id'],
-            'store_id': storeId,
-            'received_date': dateOnly(DateTime.now()),
-            'received_by': session.userId,
-            'notes': 'Received from purchase order ${order['po_number']}',
-          })
-          .select()
-          .single();
+      final receipt = await SaveFlow.write(
+        module: 'Inventory & purchasing',
+        target: 'goods_receipts',
+        action: () => session.client
+            .from('goods_receipts')
+            .insert({
+              'receipt_no': receiptNo,
+              'po_id': order['id'],
+              'store_id': storeId,
+              'received_date': dateOnly(DateTime.now()),
+              'received_by': session.userId,
+              'notes': 'Received from purchase order ${order['po_number']}',
+            })
+            .select()
+            .single(),
+      );
       final items = <Map<String, dynamic>>[];
       for (final raw in (lines as List)) {
         final line = Map<String, dynamic>.from(raw as Map);
@@ -115,10 +121,14 @@ class _InventoryScreenState extends State<InventoryScreen> {
       if (items.isNotEmpty) {
         // The database trigger adds stock, advances PO quantities, and sets
         // the PO status to partial/received. Do not duplicate that work here.
-        await session.client.from('goods_receipt_items').insert(items);
+        await SaveFlow.write(
+          module: 'Inventory & purchasing',
+          target: 'goods_receipt_items',
+          action: () =>
+              session.client.from('goods_receipt_items').insert(items),
+        );
       }
       if (mounted) showSnack(context, 'Goods received as $receiptNo');
-      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }
@@ -139,12 +149,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
     );
     if (!confirmed) return;
     try {
-      await session.client
-          .from('stock_counts')
-          .update({'status': 'completed'})
-          .eq('id', count['id']);
+      await SaveFlow.write(
+        module: 'Inventory & purchasing',
+        target: 'stock_counts',
+        action: () => session.client
+            .from('stock_counts')
+            .update({'status': 'completed'})
+            .eq('id', count['id']),
+      );
       if (mounted) showSnack(context, 'Stock count approved');
-      DataRevision.bump();
     } catch (error) {
       if (mounted) showFriendlyError(context, error);
     }

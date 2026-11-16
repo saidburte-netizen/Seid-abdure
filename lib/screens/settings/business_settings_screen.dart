@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../core/errors/friendly_error.dart';
+import '../../data/save_flow.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
 import '../../widgets/common.dart';
@@ -118,12 +119,18 @@ class _BusinessSettingsScreenState extends State<BusinessSettingsScreen> {
           'supported': const ['en', 'am', 'om'],
         },
       };
-      for (final entry in values.entries) {
-        await client
-            .from('app_settings')
-            .update({'value': entry.value})
-            .eq('key', entry.key);
-      }
+      await SaveFlow.write(
+        module: 'Business settings',
+        target: 'app_settings',
+        action: () async {
+          for (final entry in values.entries) {
+            await client
+                .from('app_settings')
+                .update({'value': entry.value})
+                .eq('key', entry.key);
+          }
+        },
+      );
       if (!mounted) return;
       setState(() => _dirty = false);
       showSnack(context, strings.saved);
