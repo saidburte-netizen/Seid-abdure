@@ -337,16 +337,9 @@ class AuthController extends ChangeNotifier {
   }
 
   void _expireAfterInactivity() {
-    final lastActivity = _lastActivity;
-    final elapsed = lastActivity == null
-        ? inactivityTimeout
-        : DateTime.now().difference(lastActivity);
-    if (SaveFlow.hasActiveWrites || elapsed < inactivityTimeout) {
-      final remaining = elapsed < inactivityTimeout
-          ? inactivityTimeout - elapsed
-          : const Duration(seconds: 1);
+    if (SaveFlow.hasActiveWrites) {
       _inactivityTimer = Timer(
-        SaveFlow.hasActiveWrites ? const Duration(seconds: 1) : remaining,
+        const Duration(seconds: 1),
         _expireAfterInactivity,
       );
       return;

@@ -50,17 +50,17 @@ Widget _app(AuthController controller) => BakeryApp(
 
 Future<void> _openNewCashAccount(WidgetTester tester) async {
   await tester.pumpWidget(_app(_testController!));
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.text('Accounts'));
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.tap(find.byTooltip('Add'));
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 500));
   await tester.enterText(find.byType(TextFormField).at(0), 'seya');
   await tester.enterText(find.byType(TextFormField).at(2), '17000');
   await tester.tap(find.byType(DropdownButtonFormField<String>).at(1));
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 300));
   await tester.tap(find.text('Cash drawer').last);
-  await tester.pumpAndSettle();
+  await tester.pump(const Duration(milliseconds: 300));
 }
 
 AuthController? _testController;
@@ -107,9 +107,10 @@ void main() {
     await _openNewCashAccount(tester);
 
     await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-
+    await tester.pump(const Duration(milliseconds: 100));
     expect(insertRequest, isNotNull);
+    await tester.pump(const Duration(milliseconds: 100));
+
     expect(jsonDecode(insertRequest!.body), containsPair('name', 'seya'));
     expect(
       jsonDecode(insertRequest!.body),
@@ -162,7 +163,9 @@ void main() {
     await _openNewCashAccount(tester);
     await tester.tap(find.text('Save'));
     await tester.pump();
-    final request = await pendingRequest.future;
+    final request = await pendingRequest.future.timeout(
+      const Duration(seconds: 5),
+    );
 
     _testController!.debugSetLastActivity(
       DateTime.now().subtract(const Duration(minutes: 31)),
@@ -180,7 +183,7 @@ void main() {
         {'id': 'cash-1'},
       ]),
     );
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 500));
     await SaveDiagnostics.instance.flush();
     await tester.pumpWidget(const SizedBox.shrink());
     _testController!.dispose();
