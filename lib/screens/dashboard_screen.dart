@@ -21,6 +21,8 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   Future<Map<String, dynamic>>? _kpis;
+  Future<List<Map<String, dynamic>>>? _stock;
+  Future<List<Map<String, dynamic>>>? _cashflow;
   bool _started = false;
   bool _listenerAdded = false;
 
@@ -59,8 +61,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
   Future<Map<String, dynamic>> _loadKpis() {
     final session = SessionScope.of(context);
     if (session.isCustomer) return Future.value(const {});
-    return session.client
-        .from('v_dashboard_kpis')
+    final kpis = session.client
+        .from('v_dashboard_overview')
         .select()
         .maybeSingle()
         .then(
@@ -68,6 +70,24 @@ class _DashboardScreenState extends State<DashboardScreen> {
               ? <String, dynamic>{}
               : Map<String, dynamic>.from(row),
         );
+    _stock = session.client
+        .from('v_stock_overview')
+        .select()
+        .order('is_low', ascending: false)
+        .order('quantity', ascending: true)
+        .limit(8)
+        .then(
+          (rows) => [for (final row in rows) Map<String, dynamic>.from(row)],
+        );
+    _cashflow = session.client
+        .from('v_cashflow_daily')
+        .select()
+        .order('day', ascending: false)
+        .limit(7)
+        .then(
+          (rows) => [for (final row in rows) Map<String, dynamic>.from(row)],
+        );
+    return kpis;
   }
 
   void _reload() {
@@ -82,7 +102,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
     setState(() {
       _kpis = future;
     });
-    await future;
+    await Future.wait([
+      future,
+      _stock ?? Future.value(),
+      _cashflow ?? Future.value(),
+    ]);
   }
 
   Future<void> _alerts() async {
@@ -106,6 +130,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ('cash', Icons.account_balance_wallet_outlined, 'cash.view'),
     ('sales', Icons.receipt_long_outlined, 'sales.view'),
     ('inventory', Icons.inventory_2_outlined, 'inventory.view'),
+    ('products', Icons.sell_outlined, 'products.manage'),
+    ('stock', Icons.warehouse_outlined, 'inventory.view'),
     ('production', Icons.bakery_dining, 'production.manage'),
     ('people', Icons.groups_outlined, 'hr.view'),
     ('payroll', Icons.receipt_long_outlined, 'payroll.manage'),
@@ -121,6 +147,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
     'sales' => strings.salesModule,
     'production' => strings.productionModule,
     'inventory' => strings.inventoryModule,
+    'products' => strings.productsModule,
+    'stock' => strings.stockModule,
     'cash' => strings.cashModule,
     'people' => strings.peopleModule,
     'payroll' => strings.payrollModule,
@@ -203,6 +231,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 },
               ),
             ),
+            _StockOnHandCard(
+              future: _stock,
+              onViewAll: () => context.push('/stock'),
+            ),
+            _CashflowCard(future: _cashflow),
           ],
         ),
       ),
@@ -341,6 +374,165 @@ class _DashboardKpiCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _StockOnHandCard extends StatelessWidget {
+  const _StockOnHandCard({required this.future, required this.onViewAll});
+
+  final Future<List<Map<String, dynamic>>>? future;
+  final VoidCallback onViewAll;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 0),
+      child: SectionCard(
+        title: uiText(context, 'Stock on hand'),
+        trailing: TextButton(
+          onPressed: onViewAll,
+          child: Text(uiText(context, 'View all')),
+        ),
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const LinearProgressIndicator();
+            }
+            if (snapshot.hasError) {
+              return Text(uiText(context, 'Stock is temporarily unavailable.'));
+            }
+            final rows = snapshot.data ?? const [];
+            if (rows.isEmpty) {
+              return Text(uiText(context, 'No stock items yet.'));
+            }
+            final low = rows.where((row) => row['is_low'] == true).length;
+            return Column(
+              children: [
+                if (low > 0)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Chip(
+                      visualDensity: VisualDensity.compact,
+                      label: Text('${uiText(context, 'Low stock')}: $low'),
+                    ),
+                  ),
+                for (final row in rows) _StockLine(row: row),
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _StockLine extends StatelessWidget {
+  const _StockLine({required this.row});
+
+  final Map<String, dynamic> row;
+
+  @override
+  Widget build(BuildContext context) {
+    final min = asNum(row['min_stock']);
+    final quantity = asNum(row['quantity']);
+    final low = row['is_low'] == true;
+    final ratio = min <= 0 ? 0.0 : (quantity / min).clamp(0.0, 1.0);
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  asText(row['name']),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              Text(
+                '${quantity.toStringAsFixed(2)} '
+                '${uiText(context, asText(row['unit_name']).isEmpty ? asText(row['unit_code']) : asText(row['unit_name']))}',
+                style: TextStyle(
+                  color: low ? Theme.of(context).colorScheme.error : null,
+                  fontWeight: low ? FontWeight.w700 : null,
+                ),
+              ),
+            ],
+          ),
+          if (min > 0) ...[
+            const SizedBox(height: 3),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: ratio,
+                minHeight: 5,
+                backgroundColor: Theme.of(
+                  context,
+                ).colorScheme.surfaceContainerHighest,
+                color: low
+                    ? Theme.of(context).colorScheme.error
+                    : Theme.of(context).colorScheme.primary,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _CashflowCard extends StatelessWidget {
+  const _CashflowCard({required this.future});
+
+  final Future<List<Map<String, dynamic>>>? future;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+      child: SectionCard(
+        title: uiText(context, 'Cashflow'),
+        child: FutureBuilder<List<Map<String, dynamic>>>(
+          future: future,
+          builder: (context, snapshot) {
+            if (snapshot.connectionState != ConnectionState.done) {
+              return const LinearProgressIndicator();
+            }
+            if (snapshot.hasError) {
+              return Text(
+                uiText(context, 'Cashflow is temporarily unavailable.'),
+              );
+            }
+            final rows = snapshot.data ?? const [];
+            if (rows.isEmpty) {
+              return Text(uiText(context, 'No cash movements yet.'));
+            }
+            return Column(
+              children: [
+                for (final row in rows)
+                  ListTile(
+                    dense: true,
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(asText(row['day'])),
+                    trailing: Text(
+                      formatMoney(row['net']),
+                      style: TextStyle(
+                        color: asNum(row['net']) < 0
+                            ? Theme.of(context).colorScheme.error
+                            : Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
       ),
     );
   }

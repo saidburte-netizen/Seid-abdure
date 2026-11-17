@@ -213,6 +213,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 route: '/settings/audit',
               ),
+            if (isAdmin)
+              _tile(
+                context,
+                icon: Icons.troubleshoot_outlined,
+                title: uiText(context, 'Diagnostics'),
+                subtitle: uiText(
+                  context,
+                  'Save breadcrumbs and technical errors',
+                ),
+                route: '/settings/diagnostics',
+              ),
             if (session.can('reports.view'))
               _tile(
                 context,

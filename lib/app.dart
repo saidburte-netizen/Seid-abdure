@@ -11,6 +11,8 @@ import 'core/connectivity/offline_banner.dart';
 import 'core/errors/friendly_error.dart';
 import 'core/logging/app_logger.dart';
 import 'core/logging/save_diagnostics.dart';
+import 'core/logging/save_trace.dart';
+import 'core/persistence/pending_save_store.dart';
 import 'l10n/app_localizations.dart';
 import 'l10n/oromo_framework_localizations.dart';
 import 'screens/approvals_screen.dart';
@@ -22,16 +24,19 @@ import 'screens/notifications_screen.dart';
 import 'screens/payroll_screen.dart';
 import 'screens/people_screen.dart';
 import 'screens/pos_screen.dart';
+import 'screens/products_screen.dart';
 import 'screens/production_screen.dart';
 import 'screens/rentals_screen.dart';
 import 'screens/reports_screen.dart';
 import 'screens/sales_screen.dart';
 import 'screens/settings/admin_settings_screen.dart';
 import 'screens/settings/business_settings_screen.dart';
+import 'screens/settings/diagnostics_screen.dart';
 import 'screens/settings/info_screens.dart';
 import 'screens/settings/profile_screen.dart';
 import 'screens/settings/security_screen.dart';
 import 'screens/settings_screen.dart';
+import 'screens/stock_screen.dart';
 import 'theme/app_theme.dart';
 import 'widgets/app_scaffold.dart';
 import 'widgets/common.dart';
@@ -96,12 +101,15 @@ class _BakeryRouterState extends State<_BakeryRouter>
   SaveBreadcrumb? _pendingSaveRecovery;
   bool _saveRecoveryLoaded = false;
   bool _saveRecoveryNavigated = false;
+  bool _pendingSaveChecked = false;
 
   static const _routePermissions = {
     '/pos': 'pos.use',
     '/sales': 'sales.view',
     '/production': 'production.manage',
     '/inventory': 'inventory.view',
+    '/products': 'products.manage',
+    '/stock': 'inventory.view',
     '/cash': 'cash.view',
     '/people': 'hr.view',
     '/payroll': 'payroll.manage',
@@ -118,6 +126,8 @@ class _BakeryRouterState extends State<_BakeryRouter>
     'sales': 'sales.view',
     'pos': 'pos.use',
     'inventory': 'inventory.view',
+    'products': 'products.manage',
+    'stock': 'inventory.view',
     'cash': 'cash.view',
     'people': 'hr.view',
     'payroll': 'payroll.manage',
@@ -166,6 +176,9 @@ class _BakeryRouterState extends State<_BakeryRouter>
               return location == '/branch-setup' ? null : '/branch-setup';
             }
             if (location == '/branch-setup') return '/';
+            if (location == '/settings/diagnostics' && !_auth.isAdmin) {
+              return '/access-denied';
+            }
             if (location == '/access-denied') return null;
             final moduleName = state.pathParameters['name'];
             if (moduleName != null) {
@@ -211,6 +224,14 @@ class _BakeryRouterState extends State<_BakeryRouter>
         GoRoute(
           path: '/inventory',
           builder: (context, state) => const InventoryScreen(),
+        ),
+        GoRoute(
+          path: '/products',
+          builder: (context, state) => const ProductsScreen(),
+        ),
+        GoRoute(
+          path: '/stock',
+          builder: (context, state) => const StockScreen(),
         ),
         GoRoute(
           path: '/cash',
@@ -320,6 +341,10 @@ class _BakeryRouterState extends State<_BakeryRouter>
               builder: (context, state) => const BrandingScreen(),
             ),
             GoRoute(
+              path: 'diagnostics',
+              builder: (context, state) => const DiagnosticsScreen(),
+            ),
+            GoRoute(
               path: 'about',
               builder: (context, state) => const AboutScreen(),
             ),
@@ -366,7 +391,12 @@ class _BakeryRouterState extends State<_BakeryRouter>
       ],
     );
     _auth?.addListener(_restoreInterruptedSave);
+    _auth?.addListener(_maybeRestorePendingSave);
     unawaited(_loadInterruptedSave());
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      unawaited(SaveTrace.instance.load());
+      unawaited(_maybeRestorePendingSave());
+    });
   }
 
   Future<void> _loadInterruptedSave() async {
@@ -413,11 +443,44 @@ class _BakeryRouterState extends State<_BakeryRouter>
     _router.go('/cash?tab=accounts');
   }
 
+  Future<void> _maybeRestorePendingSave() async {
+    if (_pendingSaveChecked || _auth?.status != AuthStatus.ready) return;
+    _pendingSaveChecked = true;
+    await SaveDiagnostics.instance.load();
+    final pending = await PendingSaveStore.instance.take();
+    if (!mounted || pending == null) return;
+    final current = _router.routerDelegate.currentConfiguration.uri.toString();
+    final handledByCashRecovery =
+        SaveDiagnostics.instance.pendingRecoveryFor('cash_accounts') != null &&
+        pending.route.startsWith('/cash');
+    if (pending.route.isNotEmpty &&
+        pending.route != current &&
+        !handledByCashRecovery) {
+      _router.go(pending.route);
+    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final context = _scaffoldMessengerKey.currentContext;
+      if (!mounted || context == null) return;
+      _scaffoldMessengerKey.currentState?.showSnackBar(
+        SnackBar(
+          content: Text(
+            uiText(
+              context,
+              'Your previous entry was not saved. Please enter it again.',
+            ),
+          ),
+        ),
+      );
+    });
+  }
+
   Widget _moduleScreen(String name) => switch (name) {
     'production' => const ProductionScreen(),
     'sales' => const SalesScreen(),
     'pos' => const PosScreen(),
     'inventory' => const InventoryScreen(),
+    'products' => const ProductsScreen(),
+    'stock' => const StockScreen(),
     'cash' => const CashScreen(),
     'people' => const PeopleScreen(),
     'payroll' => const PayrollScreen(),
@@ -441,6 +504,7 @@ class _BakeryRouterState extends State<_BakeryRouter>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _auth?.removeListener(_restoreInterruptedSave);
+    _auth?.removeListener(_maybeRestorePendingSave);
     _router.dispose();
     if (_ownsAuth) _auth?.dispose();
     super.dispose();

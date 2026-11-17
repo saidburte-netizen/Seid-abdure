@@ -21,9 +21,12 @@ import 'support/sample_backend.dart';
 /// see every main screen.
 const _screens = <String, String>{
   '/': 'home-dashboard',
-  '/pos': 'sales-pos',
+  '/pos': 'new-sale',
   '/sales': 'sales',
   '/inventory': 'inventory',
+  '/cash': 'cash',
+  '/products': 'products',
+  '/stock': 'stock',
   '/rentals': 'rentals',
   '/people': 'people-hr',
   '/payroll': 'payroll',
@@ -65,6 +68,39 @@ void main() {
       tabController.animateTo(tabController.length - 1);
       await tester.pump(const Duration(milliseconds: 350));
       await _capture(tester, out, 'customers-list');
+    }
+
+    // Rentals invoices and the prominent Receive payment form.
+    await _pump(tester, controller, '/rentals');
+    final rentalsTabs = find.byType(TabBarView);
+    if (rentalsTabs.evaluate().isNotEmpty) {
+      final rentalsTabController = DefaultTabController.of(
+        tester.element(rentalsTabs.first),
+      );
+      rentalsTabController.animateTo(3);
+      await tester.pumpAndSettle();
+      await _capture(tester, out, 'rentals-invoices');
+      final pay = find.text('Receive payment');
+      if (pay.evaluate().isNotEmpty) {
+        await tester.ensureVisible(pay.first);
+        await tester.tap(pay.first);
+        await tester.pumpAndSettle();
+        await _capture(tester, out, 'rentals-payment-form');
+        final cancel = find.text('Cancel');
+        if (cancel.evaluate().isNotEmpty) {
+          await tester.tap(cancel.first);
+          await tester.pumpAndSettle();
+        }
+      }
+    }
+
+    // HR employee form with the minimum name-only fields.
+    await _pump(tester, controller, '/people');
+    final hrAdd = find.byTooltip('Add');
+    if (hrAdd.evaluate().isNotEmpty) {
+      await tester.tap(hrAdd.first);
+      await tester.pump(const Duration(milliseconds: 450));
+      await _capture(tester, out, 'hr-employee-form');
     }
 
     // One add-record form, opened from the first writable list screen that

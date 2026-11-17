@@ -102,6 +102,12 @@ class AppLocalizationsAm extends AppLocalizations {
   String get inventoryModule => 'ክምችት';
 
   @override
+  String get productsModule => 'ምርቶች';
+
+  @override
+  String get stockModule => 'ክምችት';
+
+  @override
   String get cashModule => 'ጥሬ ገንዘብ እና ወጪዎች';
 
   @override
@@ -281,6 +287,10 @@ class AppLocalizationsAm extends AppLocalizations {
   @override
   String get errorServiceUnavailable =>
       'አገልግሎቱ ለጊዜው አይገኝም። እባክዎ በአጭር ጊዜ ውስጥ እንደገና ይሞክሩ።';
+
+  @override
+  String get errorSaveTimeout =>
+      'ማስቀመጥ በጣም ረጅም ጊዜ ወስዷል። እባክዎ ግንኙነትዎን ያረጋግጡ እና እንደገና ይሞክሩ።';
 
   @override
   String get errorInvalidCredentials => 'ኢሜይል ወይም የይለፍ ቃል ትክክል አይደለም።';

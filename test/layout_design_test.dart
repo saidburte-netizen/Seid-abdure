@@ -21,6 +21,8 @@ const _screens = [
   '/sales',
   '/production',
   '/inventory',
+  '/products',
+  '/stock',
   '/cash',
   '/people',
   '/payroll',

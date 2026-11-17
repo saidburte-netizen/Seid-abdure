@@ -30,7 +30,8 @@ SupabaseClient _changingKpiClient(num Function() todaySales) {
 
       if (path.endsWith('/rpc/fn_generate_alerts')) return json('null');
       if (request.method != 'GET') return json('[]');
-      if (path.contains('v_dashboard_kpis')) {
+      if (path.contains('v_dashboard_kpis') ||
+          path.contains('v_dashboard_overview')) {
         final row = {
           'today_sales': todaySales(),
           'cash_balance': 48350,

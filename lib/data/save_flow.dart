@@ -1,6 +1,8 @@
+import '../core/errors/save_timeout_exception.dart';
 import '../core/events/data_revision.dart';
 import '../core/logging/error_log.dart';
 import '../core/logging/save_diagnostics.dart';
+import '../core/logging/save_trace.dart';
 
 /// The single application write boundary.
 ///
@@ -18,7 +20,10 @@ import '../core/logging/save_diagnostics.dart';
 class SaveFlow {
   SaveFlow._();
 
-  static const writeTimeout = Duration(seconds: 20);
+  /// A save may not hold the UI busy forever. The dialog or screen remains
+  /// open on timeout so the user can retry without re-entering data.
+  static const Duration writeTimeout = Duration(seconds: 25);
+
   static int _activeWrites = 0;
 
   static bool get hasActiveWrites => _activeWrites > 0;
@@ -33,41 +38,73 @@ class SaveFlow {
     final attemptId =
         diagnosticId ??
         SaveDiagnostics.instance.begin(module: module, target: target);
+    final trace = SaveTrace.instance.begin(module: module, target: target);
     _activeWrites++;
     try {
-      SaveDiagnostics.instance.record(
+      _breadcrumb(
+        attemptId: attemptId,
+        module: module,
+        target: target,
+        step: 'session ok',
+      );
+      trace.mark('session ok');
+      _breadcrumb(
         attemptId: attemptId,
         module: module,
         target: target,
         step: 'request sent',
       );
-      final result = await action().timeout(timeout);
-      SaveDiagnostics.instance.record(
+      trace.mark('request sent');
+      final result = await action().timeout(
+        timeout,
+        onTimeout: () {
+          trace.mark('timeout', detail: '${timeout.inSeconds}s');
+          throw SaveTimeoutException();
+        },
+      );
+      _breadcrumb(
         attemptId: attemptId,
         module: module,
         target: target,
         step: 'response received',
       );
+      trace.mark('response received');
       DataRevision.bump();
-      SaveDiagnostics.instance.record(
+      _breadcrumb(
         attemptId: attemptId,
         module: module,
         target: target,
         step: 'bumped',
       );
+      trace.mark('bumped');
       return result;
     } catch (error) {
-      SaveDiagnostics.instance.record(
+      _breadcrumb(
         attemptId: attemptId,
         module: module,
         target: target,
         step: 'failed',
       );
+      trace.fail(error);
       ErrorLog.instance.record(module: module, target: target, error: error);
       rethrow;
     } finally {
       _activeWrites--;
     }
+  }
+
+  static void _breadcrumb({
+    required String attemptId,
+    required String module,
+    required String target,
+    required String step,
+  }) {
+    SaveDiagnostics.instance.record(
+      attemptId: attemptId,
+      module: module,
+      target: target,
+      step: step,
+    );
   }
 
   static Future<T> read<T>({

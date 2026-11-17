@@ -432,6 +432,15 @@ jobs:
             -v ON_ERROR_STOP=1 \
             -f supabase/tests/integration/seed.sql
 
+      - name: Seed the minimum-field payload contract fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/integration/minimum_fields_seed.sql
+
       - name: Run the database integration contract and real RLS
         shell: bash
         run: |
@@ -440,6 +449,15 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 \
             -f supabase/tests/integration/contract.sql
+
+      - name: Run the generated minimum-field payload contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          export PGPASSWORD=postgres
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f supabase/tests/integration/minimum_fields_contract.sql
 
       - name: Show local Supabase status
         if: always()

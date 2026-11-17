@@ -15,6 +15,8 @@ const _routes = [
   '/sales',
   '/production',
   '/inventory',
+  '/products',
+  '/stock',
   '/cash',
   '/people',
   '/payroll',

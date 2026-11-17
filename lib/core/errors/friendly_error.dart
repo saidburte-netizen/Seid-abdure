@@ -7,6 +7,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../l10n/app_localizations.dart';
 import '../../l10n/app_localizations_en.dart';
+import 'save_timeout_exception.dart';
 
 /// The small, user-facing set of error categories used by the app.
 ///
@@ -14,6 +15,7 @@ import '../../l10n/app_localizations_en.dart';
 /// decide what a customer sees.
 enum FriendlyErrorKind {
   offline,
+  saveTimeout,
   serviceUnavailable,
   invalidCredentials,
   emailAlreadyRegistered,
@@ -40,6 +42,7 @@ String friendlyMessage(Object error, {AppLocalizations? strings}) {
   final l10n = strings ?? AppLocalizationsEn();
   return switch (classifyError(error)) {
     FriendlyErrorKind.offline => l10n.errorNoInternet,
+    FriendlyErrorKind.saveTimeout => l10n.errorSaveTimeout,
     FriendlyErrorKind.serviceUnavailable => l10n.errorServiceUnavailable,
     FriendlyErrorKind.invalidCredentials => l10n.errorInvalidCredentials,
     FriendlyErrorKind.emailAlreadyRegistered =>
@@ -71,6 +74,7 @@ extension FriendlyErrorBuildContext on BuildContext {
 FriendlyErrorKind classifyError(Object error) {
   final text = _technicalText(error);
 
+  if (error is SaveTimeoutException) return FriendlyErrorKind.saveTimeout;
   if (_isOffline(error, text)) return FriendlyErrorKind.offline;
   if (_isServerUnavailable(error, text)) {
     return FriendlyErrorKind.serviceUnavailable;

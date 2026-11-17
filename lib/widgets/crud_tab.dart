@@ -1,9 +1,13 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 import '../auth/auth_controller.dart';
 import '../core/logging/save_diagnostics.dart';
+import '../core/logging/save_trace.dart';
+import '../core/persistence/pending_save_store.dart';
 import '../data/export.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
@@ -663,6 +667,89 @@ class _CrudTabState extends State<CrudTab> {
     }
   }
 
+  Map<String, Object?> _autoDefaults(_CrudSnapshot snapshot) {
+    final session = SessionScope.of(context);
+    final defaults = <String, Object?>{};
+    LookupOption? pick(String key, List<String> needles) {
+      for (final option in snapshot.lookups[key] ?? const <LookupOption>[]) {
+        final label = option.label.toLowerCase();
+        if (needles.any(label.contains)) return option;
+      }
+      final options = snapshot.lookups[key] ?? const <LookupOption>[];
+      return options.isEmpty ? null : options.first;
+    }
+
+    for (final field in widget.spec.fields) {
+      if (field.generated) continue;
+      final key = field.key;
+      if (field.type == FieldType.lookup) {
+        if (key == 'branch_id' || key.endsWith('_branch_id')) {
+          defaults[key] = session.selectedBranchId;
+        } else if (key.contains('cash_account')) {
+          defaults[key] = pick(key, const ['cash drawer', 'cash'])?.id;
+        } else if (key.contains('store')) {
+          defaults[key] = pick(key, const ['shop', 'main store'])?.id;
+        } else if (key.contains('unit')) {
+          defaults[key] = pick(key, const ['pcs', 'piece'])?.id;
+        }
+      } else if (field.type == FieldType.date) {
+        if (key == 'date_of_birth' || key == 'termination_date') continue;
+        defaults[key] = DateTime.now();
+      } else if (field.type == FieldType.datetime) {
+        defaults[key] = DateTime.now();
+      } else if (field.type == FieldType.select) {
+        final options = field.options.keys.toList();
+        String? value;
+        if (key == 'txn_type' && options.contains('in')) value = 'in';
+        if (key == 'billing_frequency' && options.contains('monthly')) {
+          value = 'monthly';
+        }
+        if (key == 'account_type' && options.contains('cash_drawer')) {
+          value = 'cash_drawer';
+        }
+        if (key == 'customer_type' && options.contains('retail')) {
+          value = 'retail';
+        }
+        if (key == 'employment_type' && options.contains('full_time')) {
+          value = 'full_time';
+        }
+        if (key == 'property_type' && options.contains('shop')) {
+          value = 'shop';
+        }
+        if (key == 'status') {
+          for (final candidate in const ['active', 'pending', 'unpaid']) {
+            if (options.contains(candidate)) {
+              value = candidate;
+              break;
+            }
+          }
+        }
+        if (value == null && field.required && options.isNotEmpty) {
+          value = options.first;
+        }
+        if (value != null) defaults[key] = value;
+      } else if ((field.type == FieldType.number ||
+              field.type == FieldType.integer) &&
+          field.required) {
+        const manualAmountTables = {
+          'cash_transactions',
+          'cash_transfers',
+          'payable_payments',
+          'receivable_payments',
+          'rent_payments',
+          'bills',
+          'leases',
+        };
+        if (key == 'amount' && manualAmountTables.contains(widget.spec.table)) {
+          continue;
+        }
+        if (key == 'rent_amount' && widget.spec.table == 'leases') continue;
+        defaults[key] = 0;
+      }
+    }
+    return defaults;
+  }
+
   Future<void> _openForm(
     BuildContext context,
     _CrudSnapshot snapshot,
@@ -675,17 +762,12 @@ class _CrudTabState extends State<CrudTab> {
         spec: widget.spec,
         row: row,
         lookups: snapshot.lookups,
+        initialValues: row == null ? _autoDefaults(snapshot) : const {},
         onSubmit: (payload, diagnosticId) async {
           final session = SessionScope.of(context);
           if (session.status != AuthStatus.ready || session.userId == null) {
             throw StateError('The signed-in session is no longer ready.');
           }
-          SaveDiagnostics.instance.record(
-            attemptId: diagnosticId,
-            module: widget.spec.title,
-            target: widget.spec.table,
-            step: 'session ok',
-          );
           if (row == null) {
             await _repo.insert(
               widget.spec.table,
@@ -805,6 +887,7 @@ class _CrudFormDialog extends StatefulWidget {
     required this.row,
     required this.lookups,
     required this.onSubmit,
+    this.initialValues = const {},
   });
 
   final TableSpec spec;
@@ -812,6 +895,7 @@ class _CrudFormDialog extends StatefulWidget {
   final Map<String, List<LookupOption>> lookups;
   final Future<void> Function(Map<String, dynamic> payload, String diagnosticId)
   onSubmit;
+  final Map<String, Object?> initialValues;
 
   @override
   State<_CrudFormDialog> createState() => _CrudFormDialogState();
@@ -830,7 +914,10 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
     super.initState();
     for (final field in widget.spec.fields) {
       if (field.generated) continue;
-      final raw = widget.row?[field.key] ?? field.defaultValue;
+      final raw =
+          widget.row?[field.key] ??
+          widget.initialValues[field.key] ??
+          field.defaultValue;
       if (field.type == FieldType.boolean) {
         _values[field.key] = raw == null ? false : asBool(raw);
       } else if (field.type == FieldType.date) {
@@ -949,8 +1036,20 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
   Future<void> _close() async {
     if (_dirty && !await confirmDiscardChanges(context)) return;
     if (!mounted) return;
+    unawaited(PendingSaveStore.instance.clear());
     Navigator.of(context).pop();
   }
+
+  String _route() {
+    try {
+      return GoRouterState.of(context).uri.toString();
+    } catch (_) {
+      return '/';
+    }
+  }
+
+  String _requiredMessage(BuildContext context, FieldSpec field) =>
+      '${uiText(context, field.label)}: ${uiText(context, 'Required')}';
 
   Widget _buildField(BuildContext context, FieldSpec field) {
     switch (field.type) {
@@ -972,6 +1071,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         }
         return DropdownButtonFormField<String>(
           initialValue: current.isEmpty ? null : current,
+          isExpanded: true,
           decoration: InputDecoration(
             labelText: uiText(context, field.label),
             hintText: field.hint == null ? null : uiText(context, field.hint!),
@@ -984,7 +1084,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
               ),
           ],
           validator: (value) => field.required && value == null
-              ? uiText(context, 'Required')
+              ? _requiredMessage(context, field)
               : null,
           onChanged: (value) {
             _controllers[field.key]?.text = value ?? '';
@@ -1015,7 +1115,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           validator: (value) {
             if (!field.required) return null;
             return value == null || value.isEmpty
-                ? uiText(context, 'Required')
+                ? _requiredMessage(context, field)
                 : null;
           },
           onChanged: (value) {
@@ -1037,7 +1137,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-              ? 'Required'
+              ? _requiredMessage(context, field)
               : null,
           onTap: () async {
             final now = DateTime.now();
@@ -1067,7 +1167,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           ),
           validator: (value) =>
               field.required && (value == null || value.isEmpty)
-              ? uiText(context, 'Required')
+              ? _requiredMessage(context, field)
               : null,
           onTap: () async {
             final now = DateTime.now();
@@ -1114,7 +1214,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           validator: (value) {
             final text = value?.trim() ?? '';
             if (text.isEmpty) {
-              return field.required ? uiText(context, 'Required') : null;
+              return field.required ? _requiredMessage(context, field) : null;
             }
             try {
               jsonDecode(text);
@@ -1140,7 +1240,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) {
             if (field.required && (value == null || value.trim().isEmpty)) {
-              return uiText(context, 'Required');
+              return _requiredMessage(context, field);
             }
             if (value == null || value.trim().isEmpty) return null;
             final number = num.tryParse(value.trim());
@@ -1172,7 +1272,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-              ? 'Required'
+              ? _requiredMessage(context, field)
               : null,
         );
       case FieldType.text:
@@ -1190,7 +1290,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
           },
           validator: (value) =>
               field.required && (value == null || value.trim().isEmpty)
-              ? 'Required'
+              ? _requiredMessage(context, field)
               : null,
         );
     }
@@ -1198,14 +1298,29 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
     final diagnosticId = SaveDiagnostics.instance.begin(
       module: widget.spec.title,
       target: widget.spec.table,
     );
+    SaveTrace.instance.mark(
+      module: widget.spec.title,
+      target: widget.spec.table,
+      step: 'validated',
+    );
+    // Do not await storage here: the save itself must not queue behind a
+    // preference write. The marker is best-effort protection for a process
+    // death, not part of the database transaction.
+    unawaited(
+      PendingSaveStore.instance.begin(
+        route: _route(),
+        module: widget.spec.title,
+        target: widget.spec.table,
+      ),
+    );
+    setState(() {
+      _saving = true;
+      _error = null;
+    });
     final payload = <String, dynamic>{};
     for (final field in widget.spec.fields) {
       if (field.type == FieldType.boolean) {
@@ -1213,38 +1328,45 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         continue;
       }
       final text = _controllers[field.key]?.text.trim() ?? '';
+      if (text.isEmpty) {
+        // A new record omits optional blanks. An edit sends null so clearing a
+        // field actually clears it. Never send an empty string.
+        if (widget.row == null && !field.required) continue;
+        payload[field.key] = null;
+        continue;
+      }
       switch (field.type) {
         case FieldType.number:
-          payload[field.key] = text.isEmpty ? null : num.tryParse(text);
+          payload[field.key] = num.tryParse(text);
         case FieldType.integer:
-          payload[field.key] = text.isEmpty ? null : int.tryParse(text);
+          payload[field.key] = int.tryParse(text);
         case FieldType.lookup:
-          payload[field.key] = text.isEmpty ? null : text;
+          payload[field.key] = text;
         case FieldType.date:
         case FieldType.time:
         case FieldType.text:
         case FieldType.multiline:
         case FieldType.json:
-          payload[field.key] = text.isEmpty && field.required ? null : text;
+          payload[field.key] = text;
         case FieldType.select:
-          payload[field.key] = text.isEmpty ? null : text;
+          payload[field.key] = text;
         case FieldType.datetime:
-          payload[field.key] = text.isEmpty ? null : asDateTime(text);
+          payload[field.key] = asDateTime(text);
         case FieldType.boolean:
           break;
       }
     }
     try {
       await widget.onSubmit(payload, diagnosticId);
-      if (!mounted) return;
       _dirty = false;
-      Navigator.of(context).pop(true);
+      unawaited(PendingSaveStore.instance.clear());
+      if (mounted) Navigator.of(context).pop(true);
     } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _error = error;
-        _saving = false;
-      });
+      // Keep the marker: if Android kills the app while the dialog is still
+      // open, the next launch explains that the entry was not saved.
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 }
