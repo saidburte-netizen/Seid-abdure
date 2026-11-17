@@ -15,10 +15,22 @@ import 'support/sample_backend.dart';
 
 /// Writes real 360x800 PNGs to `build/ui_screenshots/`.
 ///
-/// These are generated on every test run so CI can upload them as the
-/// `ui-screenshots` artifact. They are not golden comparisons: a design change
-/// must not fail the build just because a pixel moved, but a reviewer can still
-/// see every main screen.
+/// Every file below is captured from a running widget after an assertion that
+/// the requested content is actually on screen. CI fails when any of them is
+/// missing, so the uploaded artifact is proof rather than a decorative sheet.
+const _required = <String>{
+  'home-grid',
+  'products-list',
+  'add-product-form',
+  'new-sale',
+  'stock',
+  'dashboard-stock-card',
+  'rentals-invoices',
+  'receive-payment-form',
+  'hr-employee-form',
+  'cash-account-form',
+};
+
 const _screens = <String, String>{
   '/': 'home-dashboard',
   '/pos': 'new-sale',
@@ -34,104 +46,143 @@ const _screens = <String, String>{
 };
 
 void main() {
-  testWidgets('write UI screenshots at 360x800 light English', (tester) async {
+  testWidgets('write required UI screenshots at 360x800 light English', (
+    tester,
+  ) async {
     final out = Directory('build/ui_screenshots')..createSync(recursive: true);
+    for (final file in out.listSync()) {
+      if (file is File && file.path.endsWith('.png')) file.deleteSync();
+    }
+
     final controller = await _controller(tester);
     _setAdmin(controller);
 
+    // Home grid must visibly include Products and Stock tiles.
+    await _pump(tester, controller, '/');
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -700));
+    await tester.pumpAndSettle();
+    expect(find.text('Products'), findsOneWidget);
+    expect(find.text('Stock'), findsOneWidget);
+    await _capture(tester, out, 'home-grid');
+
+    // Dashboard Stock on hand card.
+    await _pump(tester, controller, '/');
+    await tester.drag(find.byType(Scrollable).last, const Offset(0, -340));
+    await tester.pumpAndSettle();
+    expect(find.text('Stock on hand'), findsOneWidget);
+    await _capture(tester, out, 'dashboard-stock-card');
+
+    // Products list with the gold Add product button.
+    await _pump(tester, controller, '/products');
+    expect(find.text('Add product'), findsOneWidget);
+    await _capture(tester, out, 'products-list');
+
+    // Add product form.
+    await tester.tap(find.text('Add product'));
+    await tester.pumpAndSettle();
+    expect(find.text('Add product'), findsWidgets);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await _capture(tester, out, 'add-product-form');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // New sale with a product visible.
+    await _pump(tester, controller, '/pos');
+    expect(find.text('Chocolate cake'), findsWidgets);
+    await _capture(tester, out, 'new-sale');
+
+    // Stock screen with item names and amounts.
+    await _pump(tester, controller, '/stock');
+    expect(find.text('Chocolate cake'), findsWidgets);
+    expect(find.textContaining('12'), findsWidgets);
+    await _capture(tester, out, 'stock');
+
+    // Rentals invoices with Receive payment on the invoice row.
+    await _pump(tester, controller, '/rentals');
+    await _setTab(tester, 3);
+    final payFinder = find.text('Receive payment').first;
+    final payScrollable = find
+        .ancestor(of: payFinder, matching: find.byType(Scrollable))
+        .first;
+    await tester.scrollUntilVisible(payFinder, 200, scrollable: payScrollable);
+    await tester.pumpAndSettle();
+    expect(find.text('Rent invoices'), findsWidgets);
+    expect(find.text('Receive payment'), findsWidgets);
+    await _capture(tester, out, 'rentals-invoices');
+
+    // Receive payment form.
+    final pay = find.text('Receive payment').first;
+    await tester.ensureVisible(pay);
+    await tester.tap(pay);
+    await tester.pumpAndSettle();
+    expect(find.text('Receive payment'), findsWidgets);
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await _capture(tester, out, 'receive-payment-form');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // HR employee form with the name-only minimum fields.
+    await _pump(tester, controller, '/people');
+    await tester.tap(find.byTooltip('Add').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    expect(find.text('Full name'), findsWidgets);
+    await _capture(tester, out, 'hr-employee-form');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // Cash account form on the Accounts tab.
+    await _pump(tester, controller, '/cash');
+    await _setTab(tester, 1);
+    await tester.tap(find.byTooltip('Add').first);
+    await tester.pumpAndSettle();
+    expect(find.byType(AlertDialog), findsOneWidget);
+    await _capture(tester, out, 'cash-account-form');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+
+    // Keep the wider set of context screenshots used by reviewers.
     for (final entry in _screens.entries) {
+      if (_required.contains(entry.value)) continue;
       await _pump(tester, controller, entry.key);
       await _capture(tester, out, entry.value);
     }
-
-    // Cash has several tabs; capture each one.
     await _pump(tester, controller, '/cash');
-    final tabs = find.byType(TabBarView);
-    if (tabs.evaluate().isNotEmpty) {
-      final tabController = DefaultTabController.of(tester.element(tabs.first));
-      for (var i = 0; i < tabController.length; i++) {
-        tabController.animateTo(i);
-        await tester.pump(const Duration(milliseconds: 350));
-        await _capture(tester, out, 'cash-tab-${i + 1}');
-      }
-    } else {
-      await _capture(tester, out, 'cash');
+    for (var i = 0; i < 4; i++) {
+      await _setTab(tester, i);
+      await _capture(tester, out, 'cash-tab-${i + 1}');
     }
 
-    // The Customers list lives in the last Sales tab.
-    await _pump(tester, controller, '/sales');
-    final salesTabs = find.byType(TabBarView);
-    if (salesTabs.evaluate().isNotEmpty) {
-      final tabController = DefaultTabController.of(
-        tester.element(salesTabs.first),
+    for (final name in _required) {
+      expect(
+        File('${out.path}/$name.png').existsSync(),
+        isTrue,
+        reason: 'Required screenshot $name.png is missing',
       );
-      tabController.animateTo(tabController.length - 1);
-      await tester.pump(const Duration(milliseconds: 350));
-      await _capture(tester, out, 'customers-list');
     }
-
-    // Rentals invoices and the prominent Receive payment form.
-    await _pump(tester, controller, '/rentals');
-    final rentalsTabs = find.byType(TabBarView);
-    if (rentalsTabs.evaluate().isNotEmpty) {
-      final rentalsTabController = DefaultTabController.of(
-        tester.element(rentalsTabs.first),
-      );
-      rentalsTabController.animateTo(3);
-      await tester.pumpAndSettle();
-      await _capture(tester, out, 'rentals-invoices');
-      final pay = find.text('Receive payment');
-      if (pay.evaluate().isNotEmpty) {
-        await tester.ensureVisible(pay.first);
-        await tester.tap(pay.first);
-        await tester.pumpAndSettle();
-        await _capture(tester, out, 'rentals-payment-form');
-        final cancel = find.text('Cancel');
-        if (cancel.evaluate().isNotEmpty) {
-          await tester.tap(cancel.first);
-          await tester.pumpAndSettle();
-        }
-      }
-    }
-
-    // HR employee form with the minimum name-only fields.
-    await _pump(tester, controller, '/people');
-    final hrAdd = find.byTooltip('Add');
-    if (hrAdd.evaluate().isNotEmpty) {
-      await tester.tap(hrAdd.first);
-      await tester.pump(const Duration(milliseconds: 450));
-      await _capture(tester, out, 'hr-employee-form');
-    }
-
-    // One add-record form, opened from the first writable list screen that
-    // exposes the gold Add action.
-    var capturedForm = false;
-    for (final route in const [
-      '/people',
-      '/rentals',
-      '/payroll',
-      '/credit',
-      '/production',
-      '/cash',
-    ]) {
-      await _pump(tester, controller, route);
-      final add = find.byTooltip('Add');
-      if (add.evaluate().isEmpty) continue;
-      await tester.tap(add.first);
-      await tester.pump(const Duration(milliseconds: 450));
-      await _capture(tester, out, 'add-record-form');
-      capturedForm = true;
-      break;
-    }
-    if (!capturedForm) {
+    final names =
+        out
+            .listSync()
+            .whereType<File>()
+            .where((file) => file.path.endsWith('.png'))
+            .map((file) => file.uri.pathSegments.last)
+            .toList()
+          ..sort();
+    for (final name in names) {
       // ignore: avoid_print
-      print('SCREENSHOT | add button not found on any writable screen');
+      print('SCREENSHOT | $name');
     }
-
-    controller.dispose();
     // ignore: avoid_print
-    print('SCREENSHOT | wrote ${out.listSync().length} files to ${out.path}');
+    print('SCREENSHOT | wrote ${names.length} files to ${out.path}');
+    controller.dispose();
   });
+}
+
+Future<void> _setTab(WidgetTester tester, int index) async {
+  final bar = find.byType(TabBar).first;
+  final controller = DefaultTabController.of(tester.element(bar));
+  controller.index = index;
+  await tester.pumpAndSettle();
 }
 
 Future<AuthController> _controller(WidgetTester tester) async {
@@ -188,8 +239,6 @@ Future<void> _capture(WidgetTester tester, Directory out, String name) async {
     if (data == null) return;
     File('${out.path}/$name.png').writeAsBytesSync(data.buffer.asUint8List());
   });
-  // ignore: avoid_print
-  print('SCREENSHOT | $name.png');
 }
 
 void _setAdmin(AuthController controller) {

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 import 'package:uuid/uuid.dart';
 
 import '../auth/auth_controller.dart';
@@ -594,9 +595,12 @@ class _PosScreenState extends State<PosScreen> {
       Expanded(
         child: products.isEmpty
             ? EmptyView(
-                message: uiText(
-                  context,
-                  'No active products. Add products in Production.',
+                message: uiText(context, 'No products yet'),
+                icon: Icons.inventory_2_outlined,
+                action: FilledButton.icon(
+                  onPressed: () => context.push('/products/new'),
+                  icon: const Icon(Icons.add),
+                  label: Text(uiText(context, 'Add product')),
                 ),
               )
             : GridView.builder(

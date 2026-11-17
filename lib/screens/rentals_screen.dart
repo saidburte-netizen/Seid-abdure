@@ -7,7 +7,6 @@ import '../data/pdf_export.dart';
 import '../data/repository.dart';
 import '../data/save_flow.dart';
 import '../data/schema.dart';
-import '../l10n/app_localizations.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
@@ -405,14 +404,6 @@ class RentalsScreen extends StatelessWidget {
     return ModuleScaffold(
       title: uiText(context, 'Rentals'),
       kpiKinds: const [KpiKind.rentDue, KpiKind.overdueReceivables],
-      actions: [
-        if (session.can('rentals.manage'))
-          IconButton(
-            tooltip: AppLocalizations.of(context).generateInvoices,
-            onPressed: () => _generateInvoices(context, session),
-            icon: const Icon(Icons.receipt_long_outlined),
-          ),
-      ],
       body: DefaultTabController(
         length: 6,
         child: Column(
@@ -458,6 +449,8 @@ class RentalsScreen extends StatelessWidget {
                   _InvoicesTab(
                     session: session,
                     onNewInvoice: () => _newInvoice(context, session),
+                    onGenerateInvoices: () =>
+                        _generateInvoices(context, session),
                     onReceivePayment: (invoice) =>
                         _recordPayment(context, session, invoice),
                     onHistory: (invoice) =>
@@ -494,12 +487,14 @@ class _InvoicesTab extends StatefulWidget {
   const _InvoicesTab({
     required this.session,
     required this.onNewInvoice,
+    required this.onGenerateInvoices,
     required this.onReceivePayment,
     required this.onHistory,
   });
 
   final AuthController session;
   final Future<void> Function() onNewInvoice;
+  final Future<void> Function() onGenerateInvoices;
   final void Function(Map<String, dynamic> invoice) onReceivePayment;
   final void Function(Map<String, dynamic> invoice) onHistory;
 
@@ -606,18 +601,24 @@ class _InvoicesTabState extends State<_InvoicesTab> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-                child: Row(
+                child: Wrap(
+                  spacing: 8,
+                  runSpacing: 4,
+                  crossAxisAlignment: WrapCrossAlignment.center,
                   children: [
-                    Expanded(
-                      child: Text(
-                        uiText(context, 'Rent invoices'),
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
+                    Text(
+                      uiText(context, 'Rent invoices'),
+                      style: Theme.of(context).textTheme.titleMedium,
                     ),
                     FilledButton.icon(
                       onPressed: widget.onNewInvoice,
                       icon: const Icon(Icons.add),
                       label: Text(uiText(context, 'New invoice')),
+                    ),
+                    OutlinedButton.icon(
+                      onPressed: widget.onGenerateInvoices,
+                      icon: const Icon(Icons.receipt_long_outlined),
+                      label: Text(uiText(context, 'Generate invoices')),
                     ),
                   ],
                 ),
@@ -765,12 +766,11 @@ class _InvoiceCard extends StatelessWidget {
               spacing: 8,
               runSpacing: 4,
               children: [
-                if (balance > 0.001)
-                  FilledButton.icon(
-                    onPressed: onPay,
-                    icon: const Icon(Icons.payments_outlined),
-                    label: Text(uiText(context, 'Receive payment')),
-                  ),
+                FilledButton.icon(
+                  onPressed: onPay,
+                  icon: const Icon(Icons.payments_outlined),
+                  label: Text(uiText(context, 'Receive payment')),
+                ),
                 OutlinedButton.icon(
                   onPressed: onHistory,
                   icon: const Icon(Icons.history),
@@ -1178,12 +1178,16 @@ class _RentPaymentDialogState extends State<_RentPaymentDialog> {
       return;
     }
     if (amount > _balance + 0.001) {
-      setState(
-        () => _error =
-            '${uiText(context, 'Amount is more than the balance')}: '
-            '${formatMoney(_balance)}',
+      final confirmed = await confirmAction(
+        context,
+        title: uiText(context, 'Record overpayment?'),
+        message: uiText(
+          context,
+          'This amount is more than the invoice balance. The extra will be recorded as an overpayment.',
+        ),
+        confirmLabel: uiText(context, 'Record overpayment'),
       );
-      return;
+      if (!confirmed || !mounted) return;
     }
     setState(() {
       _saving = true;

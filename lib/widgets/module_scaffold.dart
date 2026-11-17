@@ -106,6 +106,8 @@ class _PortalDrawer extends StatelessWidget {
         'production.manage',
       ),
       ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.view'),
+      ('/products', 'Products', Icons.sell_outlined, 'products.manage'),
+      ('/stock', 'Stock', Icons.warehouse_outlined, 'inventory.view'),
       (
         '/cash',
         'Cash & expenses',
@@ -215,6 +217,8 @@ String _portalLabel(AppLocalizations strings, String route) => switch (route) {
   '/sales' => strings.salesModule,
   '/production' => strings.productionModule,
   '/inventory' => strings.inventoryModule,
+  '/products' => strings.productsModule,
+  '/stock' => strings.stockModule,
   '/cash' => strings.cashModule,
   '/people' => strings.peopleModule,
   '/payroll' => strings.payrollModule,

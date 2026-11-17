@@ -74,6 +74,25 @@ jobs:
             test/oromo_localizations_test.dart
       - name: Run full Flutter test suite
         run: flutter test
+      - name: Verify required UI screenshots
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          required = [
+              'home-grid', 'products-list', 'add-product-form', 'new-sale',
+              'stock', 'dashboard-stock-card', 'rentals-invoices',
+              'receive-payment-form', 'hr-employee-form', 'cash-account-form',
+          ]
+          out = Path('build/ui_screenshots')
+          missing = [name for name in required if not (out / f'{name}.png').is_file()]
+          for name in required:
+              print(f'SCREENSHOT | {name}.png')
+          if missing:
+              raise SystemExit(f'MISSING SCREENSHOTS: {missing}')
+          print(f'SCREENSHOT | verified {len(required)} required files')
+          PY
+          ls -la build/ui_screenshots
       - name: Upload UI screenshots
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:

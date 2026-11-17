@@ -24,7 +24,11 @@ class ProductFormException implements Exception {
 }
 
 class ProductsScreen extends StatefulWidget {
-  const ProductsScreen({super.key});
+  const ProductsScreen({super.key, this.openFormOnLoad = false});
+
+  /// Used by the POS empty state via `/products/new` so the user lands
+  /// directly in the Add product dialog instead of on the list first.
+  final bool openFormOnLoad;
 
   @override
   State<ProductsScreen> createState() => _ProductsScreenState();
@@ -66,6 +70,18 @@ class _ProductsScreenState extends State<ProductsScreen> {
     if (!_started) {
       _started = true;
       _reload();
+      if (widget.openFormOnLoad) _openFormAfterLoad();
+    }
+  }
+
+  Future<void> _openFormAfterLoad() async {
+    final future = _future;
+    if (future == null) return;
+    try {
+      final data = await future;
+      if (mounted) await _openForm(data, null);
+    } catch (_) {
+      // The list already renders the error; no duplicate dialog needed.
     }
   }
 

@@ -264,6 +264,24 @@ UI: dict[str, tuple[str, str]] = {
         "የገንዘብ ቀሪ ሂሳብ የጸደቁ መዝገቦችን ያካትታል። በመጠባበቅ ላይ ያሉ መዝገቦች ማጽደቅ ይጠብቃሉ።",
         "Haftee maallaqaa galmee mirkanaa'an qofa dabalata. Galmeen eegaa jiru mirkaneessa eeggata.",
     ),
+    "No products yet": ("እስካሁን ምርቶች የሉም።", "Oomishaaleen ammatti hin jiran."),
+    "Generate invoices": ("ደረሰኞችን ፍጠር", "Resiitoota uumi"),
+    "Build number": ("የግንባታ ቁጥር", "Lakkoofsa ijaarsaa"),
+    "Commit": ("ኮሚት", "Galmeessa"),
+    "Branch": ("ቅርንጫፍ", "Damee"),
+    "Unknown": ("አይታወቅም", "Hin beekamu"),
+    "Record overpayment?": (
+        "ከመጠን በላይ ክፍያ መዝግብ?",
+        "Kaffaltii hamma darbii galmeessi?",
+    ),
+    "This amount is more than the invoice balance. The extra will be recorded as an overpayment.": (
+        "ይህ መጠን ከደረሰኝ ቀሪ ሂሳብ በላይ ነው። ትርፉ እንደ ከመጠን በላይ ክፍያ ይመዘገባል።",
+        "Hammi kun haftee resiitii caala. Dambaliin akka kaffaltii hamma darbii galmeeffama.",
+    ),
+    "Record overpayment": (
+        "ከመጠን በላይ ክፍያ መዝግብ",
+        "Kaffaltii hamma darbii galmeessi",
+    ),
 }
 
 TEMPLATE_SOURCES: dict[str, str] = {

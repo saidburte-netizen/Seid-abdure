@@ -42,6 +42,15 @@ jobs:
         run: flutter clean
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Resolve build metadata
+        run: |
+          set -euo pipefail
+          VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          echo "APP_VERSION=${VERSION%+*}" >> "$GITHUB_ENV"
+          echo "APP_BUILD_NUMBER=${VERSION#*+}" >> "$GITHUB_ENV"
+          echo "BUILD_SHA=$GITHUB_SHA" >> "$GITHUB_ENV"
+          echo "BUILD_BRANCH=$GITHUB_REF_NAME" >> "$GITHUB_ENV"
+          echo "BUILD_META | version=${VERSION%+*} | build=${VERSION#*+} | sha=${GITHUB_SHA:0:7} | branch=$GITHUB_REF_NAME"
       - name: Validate Dart Supabase usage against the schema snapshot
         run: python3 tool/check_schema.py
       - name: Verify the main Android manifest allows network access
@@ -103,7 +112,11 @@ jobs:
             --obfuscate \
             --split-debug-info=build/symbols \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=APP_VERSION="$APP_VERSION" \
+            --dart-define=APP_BUILD_NUMBER="$APP_BUILD_NUMBER" \
+            --dart-define=BUILD_SHA="$BUILD_SHA" \
+            --dart-define=BUILD_BRANCH="$BUILD_BRANCH"
           cp build/app/outputs/flutter-apk/app-release.apk brade-cake-house.apk
 
       - name: Scan the release APK for leaked secrets
@@ -135,7 +148,11 @@ jobs:
             --obfuscate \
             --split-debug-info=build/symbols \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=APP_VERSION="$APP_VERSION" \
+            --dart-define=APP_BUILD_NUMBER="$APP_BUILD_NUMBER" \
+            --dart-define=BUILD_SHA="$BUILD_SHA" \
+            --dart-define=BUILD_BRANCH="$BUILD_BRANCH"
           cp build/app/outputs/bundle/release/app-release.aab brade-cake-house.aab
 
       - name: Build the web admin portal for the same release
@@ -146,7 +163,11 @@ jobs:
           set -euo pipefail
           flutter build web --release \
             --dart-define=SUPABASE_URL="$SUPABASE_URL" \
-            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY"
+            --dart-define=SUPABASE_ANON_KEY="$SUPABASE_ANON_KEY" \
+            --dart-define=APP_VERSION="$APP_VERSION" \
+            --dart-define=APP_BUILD_NUMBER="$APP_BUILD_NUMBER" \
+            --dart-define=BUILD_SHA="$BUILD_SHA" \
+            --dart-define=BUILD_BRANCH="$BUILD_BRANCH"
           test -f build/web/index.html
           (cd build/web && zip -r ../../brade-cake-house-web.zip .)
           test -f brade-cake-house-web.zip
@@ -168,7 +189,8 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VERSION="$(grep '^version:' pubspec.yaml | awk '{print $2}')"
+          VERSION="$APP_VERSION+$APP_BUILD_NUMBER"
+          SHORT_SHA="${BUILD_SHA:0:7}"
           if [ "${SIGNING_MODE:-debug}" = "release" ]; then
             SIGNING_SENTENCE="This release is a **release-signed sideload/testing build**."
             SIGNING_DETAIL="The APK and AAB are signed with the repository Android keystore. This app is distributed by sideloading; Google Play is not a target for this release."
@@ -186,7 +208,9 @@ jobs:
             echo "## Build"
             echo
             echo "- Version: \`$VERSION\`"
-            echo "- Commit: \`$GITHUB_SHA\`"
+            echo "- Build number: \`$APP_BUILD_NUMBER\`"
+            echo "- Commit: \`$SHORT_SHA\`"
+            echo "- Branch: \`$BUILD_BRANCH\`"
             echo "- Workflow run: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID"
             echo "- The APK is the install file. The AAB and web ZIP are included for completeness; this release is not a Google Play submission."
             echo "- Emulator smoke: login screen and en/am/om language switch always run; the signed-in dashboard and one POS sale run when the optional SMOKE_EMAIL/SMOKE_PASSWORD repository secrets are configured."
@@ -198,6 +222,13 @@ jobs:
             echo "$SIGNING_SENTENCE"
             echo
             echo "$SIGNING_DETAIL"
+            echo
+            echo "### Build identity"
+            echo
+            echo "- Version: \`$VERSION\`"
+            echo "- Build number: \`$APP_BUILD_NUMBER\`"
+            echo "- Commit: \`$SHORT_SHA\`"
+            echo "- Branch: \`$BUILD_BRANCH\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Verify the APK is a real installable app

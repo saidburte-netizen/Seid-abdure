@@ -5,6 +5,7 @@ import 'package:package_info_plus/package_info_plus.dart';
 
 import '../../auth/auth_controller.dart';
 import '../../brand/brand.dart';
+import '../../core/build_info.dart';
 import '../../core/logging/save_diagnostics.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/app_scaffold.dart';
@@ -37,9 +38,12 @@ class AboutScreen extends StatelessWidget {
             future: PackageInfo.fromPlatform(),
             builder: (context, snapshot) {
               final info = snapshot.data;
-              final version = info == null
-                  ? '—'
-                  : '${info.version} (${info.buildNumber})';
+              final version = BuildInfo.version.isNotEmpty
+                  ? BuildInfo.version
+                  : (info?.version ?? uiText(context, 'Unknown'));
+              final buildNumber = BuildInfo.buildNumber.isNotEmpty
+                  ? BuildInfo.buildNumber
+                  : (info?.buildNumber ?? uiText(context, 'Unknown'));
               return SectionCard(
                 title: strings.about,
                 child: Column(
@@ -47,6 +51,18 @@ class AboutScreen extends StatelessWidget {
                     _AboutRow(label: strings.appTitle, value: Brand.appName),
                     _AboutRow(label: strings.slogan, value: Brand.slogan),
                     _AboutRow(label: strings.versionLabel, value: version),
+                    _AboutRow(
+                      label: uiText(context, 'Build number'),
+                      value: buildNumber,
+                    ),
+                    _AboutRow(
+                      label: uiText(context, 'Commit'),
+                      value: BuildInfo.shortSha,
+                    ),
+                    _AboutRow(
+                      label: uiText(context, 'Branch'),
+                      value: BuildInfo.branch,
+                    ),
                     _AboutRow(
                       label: strings.language,
                       value: 'English • አማርኛ • Afaan Oromoo',

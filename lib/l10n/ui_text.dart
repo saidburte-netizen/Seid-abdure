@@ -188,6 +188,16 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Payable payment recorded.": "የሚከፈል ክፍያ ተመዝግቧል።",
     "Cash balance includes approved entries. Pending entries wait for approval.":
         "የገንዘብ ቀሪ ሂሳብ የጸደቁ መዝገቦችን ያካትታል። በመጠባበቅ ላይ ያሉ መዝገቦች ማጽደቅ ይጠብቃሉ።",
+    "No products yet": "እስካሁን ምርቶች የሉም።",
+    "Generate invoices": "ደረሰኞችን ፍጠር",
+    "Build number": "የግንባታ ቁጥር",
+    "Commit": "ኮሚት",
+    "Branch": "ቅርንጫፍ",
+    "Unknown": "አይታወቅም",
+    "Record overpayment?": "ከመጠን በላይ ክፍያ መዝግብ?",
+    "This amount is more than the invoice balance. The extra will be recorded as an overpayment.":
+        "ይህ መጠን ከደረሰኝ ቀሪ ሂሳብ በላይ ነው። ትርፉ እንደ ከመጠን በላይ ክፍያ ይመዘገባል።",
+    "Record overpayment": "ከመጠን በላይ ክፍያ መዝግብ",
   },
   'om': {
     "Search records": "Galmee barbaadi",
@@ -380,6 +390,16 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Payable payment recorded.": "Kaffaltiin kaffalame galmeeffame.",
     "Cash balance includes approved entries. Pending entries wait for approval.":
         "Haftee maallaqaa galmee mirkanaa'an qofa dabalata. Galmeen eegaa jiru mirkaneessa eeggata.",
+    "No products yet": "Oomishaaleen ammatti hin jiran.",
+    "Generate invoices": "Resiitoota uumi",
+    "Build number": "Lakkoofsa ijaarsaa",
+    "Commit": "Galmeessa",
+    "Branch": "Damee",
+    "Unknown": "Hin beekamu",
+    "Record overpayment?": "Kaffaltii hamma darbii galmeessi?",
+    "This amount is more than the invoice balance. The extra will be recorded as an overpayment.":
+        "Hammi kun haftee resiitii caala. Dambaliin akka kaffaltii hamma darbii galmeeffama.",
+    "Record overpayment": "Kaffaltii hamma darbii galmeessi",
   },
 };
 
@@ -1194,6 +1214,15 @@ const List<String> uiTextKeys = [
   "Payable created from bill.",
   "Payable payment recorded.",
   "Cash balance includes approved entries. Pending entries wait for approval.",
+  "No products yet",
+  "Generate invoices",
+  "Build number",
+  "Commit",
+  "Branch",
+  "Unknown",
+  "Record overpayment?",
+  "This amount is more than the invoice balance. The extra will be recorded as an overpayment.",
+  "Record overpayment",
 ];
 
 const List<String> uiTemplateKeys = [
