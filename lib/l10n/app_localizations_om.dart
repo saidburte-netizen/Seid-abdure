@@ -104,6 +104,12 @@ class AppLocalizationsOm extends AppLocalizations {
   String get inventoryModule => 'Kuusaa';
 
   @override
+  String get productsModule => 'Oomishaalee';
+
+  @override
+  String get stockModule => 'Kuusaa';
+
+  @override
   String get cashModule => 'Maallaqa qulqulluu fi baasii';
 
   @override
@@ -286,6 +292,10 @@ class AppLocalizationsOm extends AppLocalizations {
   @override
   String get errorServiceUnavailable =>
       'Tajaajilli yeroo ammaa hin argamu. Maaloo daqiiqaa muraasa booda deebi\'ii yaalaa.';
+
+  @override
+  String get errorSaveTimeout =>
+      'Kuusuu baay\'ee ture. Maaloo walqunnamtii keessan mirkaneessaa deebi\'ii yaalaa.';
 
   @override
   String get errorInvalidCredentials =>

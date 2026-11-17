@@ -160,6 +160,7 @@ class PayrollScreen extends StatelessWidget {
     return ModuleScaffold(
       title: uiText(context, 'Payroll'),
       kpiKinds: const [KpiKind.staffPresent, KpiKind.cashBalance],
+      actions: [_PayrollWarningAction(session: session)],
       body: DefaultTabController(
         length: 3,
         child: Column(
@@ -229,6 +230,79 @@ class PayrollScreen extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Non-blocking warning action for employees with no salary set. Payroll must
+/// still run with zero salaries; the owner can review the list before posting.
+class _PayrollWarningAction extends StatelessWidget {
+  const _PayrollWarningAction({required this.session});
+
+  final AuthController session;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: session.client
+          .from('employees')
+          .select('full_name, base_salary')
+          .eq('status', 'active')
+          .lte('base_salary', 0)
+          .order('full_name')
+          .then(
+            (rows) => [for (final row in rows) Map<String, dynamic>.from(row)],
+          ),
+      builder: (context, snapshot) {
+        final rows = snapshot.data ?? const [];
+        if (rows.isEmpty) return const SizedBox.shrink();
+        return IconButton(
+          tooltip: uiText(context, 'Zero salary warning'),
+          onPressed: () => showDialog<void>(
+            context: context,
+            builder: (dialogContext) => AlertDialog(
+              title: Text(
+                '${uiText(context, 'Zero salary warning')}: ${rows.length}',
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Text(
+                      uiText(
+                        context,
+                        'Payroll can still run. Review these employees:',
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    for (final row in rows)
+                      ListTile(
+                        dense: true,
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(asText(row['full_name'])),
+                        trailing: Text(formatMoney(row['base_salary'])),
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(dialogContext).pop(),
+                  child: Text(uiText(context, 'Close')),
+                ),
+              ],
+            ),
+          ),
+          icon: Badge(
+            label: Text('${rows.length}'),
+            child: Icon(
+              Icons.warning_amber_rounded,
+              color: Theme.of(context).colorScheme.error,
+            ),
+          ),
+        );
+      },
     );
   }
 }

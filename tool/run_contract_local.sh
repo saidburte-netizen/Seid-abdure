@@ -87,4 +87,10 @@ psql_local "-q -f '$ROOT/supabase/tests/integration/seed.sql'"
 echo "Running contract assertions ..."
 psql_local "-q -f '$ROOT/supabase/tests/integration/contract.sql'"
 
+echo "Seeding minimum-field repository contract fixtures ..."
+psql_local "-q -f '$ROOT/supabase/tests/integration/minimum_fields_seed.sql'"
+
+echo "Running generated minimum-field repository saves ..."
+psql_local "-q -f '$ROOT/supabase/tests/integration/minimum_fields_contract.sql'"
+
 echo "CONTRACT PASSED"

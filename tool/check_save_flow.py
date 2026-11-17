@@ -34,6 +34,10 @@ ALLOWED = {
         "lib/core/logging/error_log.dart",
         "insert",
     ): "inserts into the in-memory diagnostics list; it is not a database write",
+    (
+        "lib/core/logging/save_trace.dart",
+        "insert",
+    ): "inserts into the in-memory trace list; it is not a database write",
 }
 
 

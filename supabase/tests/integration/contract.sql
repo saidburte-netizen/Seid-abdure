@@ -1637,4 +1637,174 @@ select pg_temp.assert_true(
 update public.employees set status = 'active'
 where id = 'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa';
 
+-- ---------------------------------------------------------------------------
+-- Round 4: product stock linking, stock/dashboard views, rent partial payment
+-- ---------------------------------------------------------------------------
+
+-- A tracked product points at its finished-good item and opening stock is a
+-- positive adjustment into the shop store.
+insert into public.items (
+  id, sku, name, item_type, category_id, unit_id, cost_price, min_stock, is_active
+) values (
+  '55555555-5555-5555-5555-555555555505', 'TEST-TRACKED-ITEM',
+  'Tracked product', 'finished_good',
+  '44444444-4444-4444-4444-444444444444',
+  '33333333-3333-3333-3333-333333333333', 20, 2, true
+);
+insert into public.products (
+  id, sku, name, category_id, item_id, unit_id, price, cost, tax_rate, is_active
+) values (
+  '69696969-6969-6969-6969-696969696969', 'TEST-TRACKED-PROD',
+  'Tracked product', '44444444-4444-4444-4444-444444444444',
+  '55555555-5555-5555-5555-555555555505',
+  '33333333-3333-3333-3333-333333333333', 50, 20, 0, true
+);
+insert into public.stock_movements (
+  id, store_id, item_id, movement_type, quantity, unit_cost,
+  reference_type, reference_id, created_by
+) values (
+  '2a2a2a2a-2a2a-2a2a-2a2a-2a2a2a2a2a2a',
+  '22222222-2222-2222-2222-222222222222',
+  '55555555-5555-5555-5555-555555555505',
+  'adjustment', 4, 20, 'opening_stock',
+  '69696969-6969-6969-6969-696969696969',
+  '00000000-0000-0000-0000-000000000001'
+);
+select pg_temp.assert_true(
+  (select item_id = '55555555-5555-5555-5555-555555555505'
+   from public.products where id = '69696969-6969-6969-6969-696969696969'),
+  'product is linked to its stock item'
+);
+select pg_temp.assert_true(
+  (select quantity = 4 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555505'),
+  'opening stock creates a positive stock level'
+);
+
+-- Selling a tracked product reduces stock by the sold quantity.
+insert into public.sales (
+  id, receipt_no, branch_id, store_id, cashier_id, sale_date,
+  subtotal, discount_amount, tax_amount, total_amount, paid_amount,
+  payment_status, status
+) values (
+  '2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b', 'TEST-SALE-TRACKED',
+  '11111111-1111-1111-1111-111111111111',
+  '22222222-2222-2222-2222-222222222222',
+  '00000000-0000-0000-0000-000000000003', now(),
+  100, 0, 0, 100, 100, 'paid', 'completed'
+);
+insert into public.sale_items (
+  sale_id, product_id, product_name, quantity, unit_price,
+  discount_amount, tax_amount, line_total
+) values (
+  '2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b',
+  '69696969-6969-6969-6969-696969696969', 'Tracked product',
+  2, 50, 0, 0, 100
+);
+insert into public.sale_payments (
+  sale_id, cash_account_id, method, amount, received_by
+) values (
+  '2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b',
+  '88888888-8888-8888-8888-888888888881', 'cash', 100,
+  '00000000-0000-0000-0000-000000000003'
+);
+select pg_temp.assert_true(
+  (select quantity = 2 from public.stock_levels
+   where store_id = '22222222-2222-2222-2222-222222222222'
+     and item_id = '55555555-5555-5555-5555-555555555505'),
+  'selling 2 pieces reduces tracked stock by 2'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.sale_payments
+   where sale_id = '2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b'),
+  'sale payment exists'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'sale_payment' and reference_id =
+     (select id from public.sale_payments
+      where sale_id = '2b2b2b2b-2b2b-2b2b-2b2b-2b2b2b2b2b2b')
+     and txn_type = 'in' and amount = 100),
+  'sale payment posts a cash entry'
+);
+
+-- The stock view returns translated unit names and a low-stock flag.
+select pg_temp.assert_true(
+  (select unit_name = 'Test piece' and quantity = 2 and is_low = true
+   from public.v_stock_overview
+   where item_id = '55555555-5555-5555-5555-555555555505'),
+  'stock overview exposes unit names and low-stock state'
+);
+select pg_temp.assert_true(
+  (select stock_value >= 100 from public.v_dashboard_overview),
+  'dashboard overview reflects stock value'
+);
+
+-- Rent partial payment, then full payment, then a rejected overpayment.
+insert into public.rent_invoices (
+  id, invoice_no, lease_id, tenant_id, property_id,
+  period_start, period_end, amount, paid_amount, due_date, status
+) values (
+  '2c2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c', 'TEST-RIN-PARTIAL',
+  'dddddddd-dddd-dddd-dddd-dddddddddddd',
+  'cccccccc-cccc-cccc-cccc-cccccccccccc',
+  'bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb',
+  current_date, current_date + 30, 1000, 0, current_date, 'unpaid'
+);
+insert into public.rent_payments (
+  id, invoice_id, cash_account_id, amount, payment_date, method, received_by
+) values (
+  '2d2d2d2d-2d2d-2d2d-2d2d-2d2d2d2d2d2d',
+  '2c2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c',
+  '88888888-8888-8888-8888-888888888881', 400, current_date, 'cash',
+  '00000000-0000-0000-0000-000000000001'
+);
+select pg_temp.assert_true(
+  (select paid_amount = 400 and status = 'partial'
+   from public.rent_invoices
+   where id = '2c2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c'),
+  'partial rent payment updates invoice status and paid amount'
+);
+select pg_temp.assert_true(
+  (select count(*) = 1 from public.cash_transactions
+   where reference_type = 'rent_payment'
+     and reference_id = '2d2d2d2d-2d2d-2d2d-2d2d-2d2d2d2d2d2d'
+     and txn_type = 'in' and amount = 400),
+  'partial rent payment posts a cash entry'
+);
+insert into public.rent_payments (
+  id, invoice_id, cash_account_id, amount, payment_date, method, received_by
+) values (
+  '2e2e2e2e-2e2e-2e2e-2e2e-2e2e2e2e2e2e',
+  '2c2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c',
+  '88888888-8888-8888-8888-888888888881', 600, current_date, 'telebirr',
+  '00000000-0000-0000-0000-000000000001'
+);
+select pg_temp.assert_true(
+  (select paid_amount = 1000 and status = 'paid'
+   from public.rent_invoices
+   where id = '2c2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c'),
+  'full rent payment settles the invoice'
+);
+select pg_temp.assert_raises(
+  $$insert into public.rent_payments (
+      invoice_id, amount, received_by
+    ) values (
+      '2c2c2c2c-2c2c-2c2c-2c2c-2c2c2c2c2c2c', 1,
+      '00000000-0000-0000-0000-000000000001'
+    )$$,
+  'outstanding balance',
+  'overpayment is rejected after a full rent payment'
+);
+select pg_temp.assert_true(
+  (select rent_collected >= 6000 from public.v_dashboard_overview),
+  'dashboard rent collected includes the partial and full payments'
+);
+select pg_temp.assert_true(
+  (select sum(total_in) >= 6000 from public.v_cashflow_daily
+   where day = current_date),
+  'daily cashflow view reflects rent and sale cash entries'
+);
+
 rollback;

@@ -102,6 +102,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get inventoryModule => 'Inventory';
 
   @override
+  String get productsModule => 'Products';
+
+  @override
+  String get stockModule => 'Stock';
+
+  @override
   String get cashModule => 'Cash & expenses';
 
   @override
@@ -284,6 +290,10 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get errorServiceUnavailable =>
       'Service is temporarily unavailable. Please try again in a moment.';
+
+  @override
+  String get errorSaveTimeout =>
+      'The save took too long. Please check your connection and try again.';
 
   @override
   String get errorInvalidCredentials => 'Incorrect email or password.';

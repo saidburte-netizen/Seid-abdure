@@ -280,6 +280,18 @@ abstract class AppLocalizations {
   /// **'Inventory'**
   String get inventoryModule;
 
+  /// No description provided for @productsModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Products'**
+  String get productsModule;
+
+  /// No description provided for @stockModule.
+  ///
+  /// In en, this message translates to:
+  /// **'Stock'**
+  String get stockModule;
+
   /// No description provided for @cashModule.
   ///
   /// In en, this message translates to:
@@ -633,6 +645,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Service is temporarily unavailable. Please try again in a moment.'**
   String get errorServiceUnavailable;
+
+  /// No description provided for @errorSaveTimeout.
+  ///
+  /// In en, this message translates to:
+  /// **'The save took too long. Please check your connection and try again.'**
+  String get errorSaveTimeout;
 
   /// No description provided for @errorInvalidCredentials.
   ///

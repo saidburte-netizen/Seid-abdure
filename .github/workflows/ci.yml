@@ -32,6 +32,12 @@ jobs:
           cache: true
       - run: flutter pub get
       - run: flutter gen-l10n
+      - name: Verify generated minimum-field artifacts are current
+        run: |
+          set -euo pipefail
+          python3 tool/minimum_fields.py
+          python3 tool/generate_minimum_contract.py
+          git diff --exit-code -- docs/MINIMUM_FIELDS.md supabase/tests/integration/minimum_fields_seed.sql supabase/tests/integration/minimum_fields_contract.sql
       - name: Validate Dart Supabase usage against the schema snapshot
         run: python3 tool/check_schema.py
       - name: Drift test — app schema vs live schema snapshot

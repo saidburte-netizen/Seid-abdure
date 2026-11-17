@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../auth/auth_controller.dart';
+import '../core/events/data_revision.dart';
 import '../data/formatting.dart';
 import '../data/pdf_export.dart';
 import '../data/repository.dart';
@@ -28,6 +29,8 @@ class _PosScreenState extends State<PosScreen> {
   List<Map<String, dynamic>> _customers = const [];
   List<Map<String, dynamic>> _stores = const [];
   List<Map<String, dynamic>> _accounts = const [];
+  List<Map<String, dynamic>> _categories = const [];
+  String? _categoryId;
   String? _customerId;
   String? _storeId;
   String? _accountId;
@@ -38,18 +41,84 @@ class _PosScreenState extends State<PosScreen> {
   String? _error;
 
   @override
+  void initState() {
+    super.initState();
+    DataRevision.notifier.addListener(_onRevision);
+  }
+
+  @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     if (_loading) _load();
   }
 
+  void _onRevision() {
+    if (mounted) _reloadProducts();
+  }
+
+  Future<void> _reloadProducts() async {
+    final session = SessionScope.of(context);
+    final branch = session.selectedBranch;
+    if (branch == null) return;
+    final repo = BranchRepository(session.client, branch.branchId);
+    try {
+      final products = await repo.list(
+        'products',
+        equals: {'is_active': true},
+        orderBy: 'name',
+        branchScoped: false,
+      );
+      final categories = await session.client
+          .from('categories')
+          .select()
+          .eq('kind', 'product')
+          .eq('is_active', true)
+          .order('name');
+      if (!mounted) return;
+      final next = {for (final row in products) row['id'].toString(): row};
+      setState(() {
+        _products
+          ..removeWhere((id, _) => !next.containsKey(id))
+          ..addAll(next);
+        _cart.removeWhere((id, _) => !next.containsKey(id));
+        _categories = [
+          for (final row in categories) Map<String, dynamic>.from(row),
+        ];
+        if (_categoryId != null &&
+            !_categories.any(
+              (category) => category['id']?.toString() == _categoryId,
+            )) {
+          _categoryId = null;
+        }
+      });
+      _setPaidToTotal();
+    } catch (_) {
+      // A background refresh must not replace a usable catalog with an error.
+    }
+  }
+
   @override
   void dispose() {
+    DataRevision.notifier.removeListener(_onRevision);
     _search.dispose();
     _discount.dispose();
     _paid.dispose();
     _notes.dispose();
     super.dispose();
+  }
+
+  String? _preferredId(
+    List<Map<String, dynamic>> rows,
+    List<String> preferredNames,
+  ) {
+    for (final name in preferredNames) {
+      for (final row in rows) {
+        if (asText(row['name']).toLowerCase() == name) {
+          return row['id']?.toString();
+        }
+      }
+    }
+    return rows.isEmpty ? null : rows.first['id']?.toString();
   }
 
   Future<void> _load() async {
@@ -80,6 +149,12 @@ class _PosScreenState extends State<PosScreen> {
         equals: {'is_active': true},
         orderBy: 'name',
       );
+      final categories = await session.client
+          .from('categories')
+          .select()
+          .eq('kind', 'product')
+          .eq('is_active', true)
+          .order('name');
       if (!mounted) return;
       setState(() {
         _products
@@ -90,8 +165,11 @@ class _PosScreenState extends State<PosScreen> {
         _customers = customers;
         _stores = stores;
         _accounts = accounts;
-        _storeId = stores.isEmpty ? null : stores.first['id'] as String;
-        _accountId = accounts.isEmpty ? null : accounts.first['id'] as String;
+        _categories = [
+          for (final row in categories) Map<String, dynamic>.from(row),
+        ];
+        _storeId = _preferredId(stores, const ['shop', 'main store']);
+        _accountId = _preferredId(accounts, const ['cash drawer', 'cash']);
         _loading = false;
       });
       _setPaidToTotal();
@@ -197,6 +275,18 @@ class _PosScreenState extends State<PosScreen> {
     final paid = _method == 'credit'
         ? 0
         : (tendered > _total ? _total : tendered);
+    if (_cart.keys.any((id) => asNum(_products[id]?['price']) <= 0)) {
+      final zeroPrice = await confirmAction(
+        context,
+        title: uiText(context, 'Price is 0'),
+        message: uiText(
+          context,
+          'A product in this sale has a price of 0. Continue?',
+        ),
+        confirmLabel: uiText(context, 'Continue'),
+      );
+      if (!zeroPrice || !mounted) return;
+    }
     final confirmed = await confirmAction(
       context,
       title: uiText(context, 'Complete sale'),
@@ -408,9 +498,11 @@ class _PosScreenState extends State<PosScreen> {
     final products = _products.values
         .where(
           (product) =>
-              _query.isEmpty ||
-              asText(product['name']).toLowerCase().contains(_query) ||
-              asText(product['sku']).toLowerCase().contains(_query),
+              (_categoryId == null ||
+                  product['category_id']?.toString() == _categoryId) &&
+              (_query.isEmpty ||
+                  asText(product['name']).toLowerCase().contains(_query) ||
+                  asText(product['sku']).toLowerCase().contains(_query)),
         )
         .toList();
     return ModuleScaffold(
@@ -475,6 +567,30 @@ class _PosScreenState extends State<PosScreen> {
               setState(() => _query = value.trim().toLowerCase()),
         ),
       ),
+      if (_categories.isNotEmpty)
+        SizedBox(
+          height: 42,
+          child: ListView(
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 12),
+            children: [
+              ChoiceChip(
+                label: Text(uiText(context, 'All')),
+                selected: _categoryId == null,
+                onSelected: (_) => setState(() => _categoryId = null),
+              ),
+              for (final category in _categories) ...[
+                const SizedBox(width: 8),
+                ChoiceChip(
+                  label: Text(asText(category['name'])),
+                  selected: _categoryId == category['id']?.toString(),
+                  onSelected: (_) =>
+                      setState(() => _categoryId = category['id']?.toString()),
+                ),
+              ],
+            ],
+          ),
+        ),
       Expanded(
         child: products.isEmpty
             ? EmptyView(
@@ -490,7 +606,7 @@ class _PosScreenState extends State<PosScreen> {
                   // Product cards grow with the reader's text scale; a fixed
                   // 150 dp cell overflows at 1.3x and above.
                   mainAxisExtent:
-                      150 *
+                      260 *
                       (MediaQuery.textScalerOf(context).scale(10) / 10).clamp(
                         1.0,
                         1.6,
@@ -502,21 +618,42 @@ class _PosScreenState extends State<PosScreen> {
                 itemBuilder: (context, index) {
                   final product = products[index];
                   final qty = _cart[product['id']] ?? 0;
+                  final image = asText(product['image_url']);
                   return Card(
                     clipBehavior: Clip.antiAlias,
                     child: InkWell(
                       onTap: () => _add(product),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Expanded(
+                            child: image.isEmpty
+                                ? Container(
+                                    color: Theme.of(
+                                      context,
+                                    ).colorScheme.primaryContainer,
+                                    child: const Center(
+                                      child: Icon(
+                                        Icons.bakery_dining,
+                                        size: 34,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  )
+                                : Image.network(
+                                    image,
+                                    width: double.infinity,
+                                    fit: BoxFit.cover,
+                                  ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 6, 10, 4),
+                            child: Row(
                               children: [
                                 Expanded(
                                   child: Text(
                                     asText(product['name']),
-                                    maxLines: 2,
+                                    maxLines: 1,
                                     overflow: TextOverflow.ellipsis,
                                     style: Theme.of(
                                       context,
@@ -526,23 +663,33 @@ class _PosScreenState extends State<PosScreen> {
                                 if (qty > 0) Badge(label: Text('$qty')),
                               ],
                             ),
-                            const Spacer(),
-                            Text(
-                              asText(product['sku']),
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              formatMoney(product['price']),
-                              style: Theme.of(context).textTheme.titleMedium
-                                  ?.copyWith(
-                                    color: Theme.of(
-                                      context,
-                                    ).colorScheme.primary,
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(10, 0, 10, 8),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    formatMoney(product['price']),
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium
+                                        ?.copyWith(
+                                          color: Theme.of(
+                                            context,
+                                          ).colorScheme.primary,
+                                          fontWeight: FontWeight.w700,
+                                        ),
                                   ),
+                                ),
+                                Text(
+                                  asText(product['sku']),
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ],
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   );
