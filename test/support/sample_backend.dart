@@ -14,6 +14,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 /// a form stays open when the database rejects a save.
 SupabaseClient sampleSupabaseClient({
   http.Response Function(http.Request request)? onWrite,
+  List<Map<String, dynamic>> Function(String path)? rowsFor,
 }) {
   return SupabaseClient(
     'https://sample.invalid',
@@ -49,7 +50,10 @@ SupabaseClient sampleSupabaseClient({
       if (request.method != 'GET') {
         return _json('[]', request);
       }
-      final rows = _sampleRows();
+      final rows = <Map<String, dynamic>>[
+        ..._sampleRows(),
+        ...(rowsFor?.call(path) ?? const <Map<String, dynamic>>[]),
+      ];
       if (accept.contains('pgrst.object')) {
         return _json(jsonEncode(rows.first), request);
       }

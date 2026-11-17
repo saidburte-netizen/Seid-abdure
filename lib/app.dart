@@ -109,6 +109,7 @@ class _BakeryRouterState extends State<_BakeryRouter>
     '/production': 'production.manage',
     '/inventory': 'inventory.view',
     '/products': 'products.manage',
+    '/products/new': 'products.manage',
     '/stock': 'inventory.view',
     '/cash': 'cash.view',
     '/people': 'hr.view',
@@ -224,6 +225,11 @@ class _BakeryRouterState extends State<_BakeryRouter>
         GoRoute(
           path: '/inventory',
           builder: (context, state) => const InventoryScreen(),
+        ),
+        GoRoute(
+          path: '/products/new',
+          builder: (context, state) =>
+              const ProductsScreen(openFormOnLoad: true),
         ),
         GoRoute(
           path: '/products',

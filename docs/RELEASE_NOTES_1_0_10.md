@@ -19,11 +19,36 @@
   and Cashflow cards, localization, and admin Diagnostics are covered by widget
   and contract tests.
 - UI screenshots for the `ui-screenshots` CI artefact were generated at
-  360x800 in light English, including Home/Dashboard, Cash, Products, New sale,
-  Stock, Rentals invoices, Rentals payment form, HR employee form and Settings.
+  360x800 in light English from the running widgets. Required files are
+  `home-grid`, `products-list`, `add-product-form`, `new-sale`, `stock`,
+  `dashboard-stock-card`, `rentals-invoices`, `receive-payment-form`,
+  `hr-employee-form`, and `cash-account-form`. CI fails if any is missing.
+- Human-flow widget tests tap the home Products tile, save a product with only
+  a name and price, find it in New sale, create a property/tenant/lease,
+  generate an invoice, pay part and then the rest, and read item names and
+  amounts on Stock.
 - All gates passed locally in the required order: format, format check,
-  `flutter analyze` (no issues), `flutter test` (301 tests), placeholder check,
+  `flutter analyze` (no issues), `flutter test` (311 tests), placeholder check,
   schema check, SQL contract with real RLS, and drift test.
+
+## Owner-result fixes in this revision
+
+- The portal menu now has explicit **Products** and **Stock** entries, and the
+  home grid tiles push the real `/products` and `/stock` routes.
+- The POS empty state now says **No products yet** and offers **Add product**,
+  which opens the product form directly through `/products/new`.
+- Rentals keeps all six tabs. **Generate invoices** is a visible labelled action
+  in the Rent invoices header, and **Receive payment** appears on every invoice
+  row. Overpayment asks for confirmation instead of being silently rejected.
+- Sales still exposes all seven tabs, including Payments and Returns.
+
+## Build identity
+
+Settings > About shows version, build number, commit short SHA and branch. The
+Android workflow injects `APP_VERSION`, `APP_BUILD_NUMBER`, `BUILD_SHA` and
+`BUILD_BRANCH` with `--dart-define` into every build. The same values are
+printed in the workflow summary and the generated release notes, so the APK you
+install can be matched to the branch commit.
 
 ## Database changes
 

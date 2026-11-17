@@ -220,11 +220,12 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           _ModuleCard(
                             label: _moduleLabel(strings, module.$1),
                             icon: module.$2,
-                            onTap: () => context.push(
-                              module.$1 == 'pos'
-                                  ? '/pos'
-                                  : '/module/${module.$1}',
-                            ),
+                            onTap: () => context.go(switch (module.$1) {
+                              'pos' => '/pos',
+                              'products' => '/products',
+                              'stock' => '/stock',
+                              _ => '/module/${module.$1}',
+                            }),
                           ),
                     ],
                   );
