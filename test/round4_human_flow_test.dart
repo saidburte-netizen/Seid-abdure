@@ -347,7 +347,17 @@ void main() {
 
       for (final amount in ['400', '600']) {
         final pay = find.text('Receive payment').first;
-        await tester.ensureVisible(pay);
+        await tester.scrollUntilVisible(
+          pay,
+          200,
+          scrollable: find
+              .descendant(
+                of: find.byKey(const ValueKey('rent-invoices-list')),
+                matching: find.byType(Scrollable),
+              )
+              .first,
+        );
+        await tester.pumpAndSettle();
         await tester.tap(pay);
         await tester.pumpAndSettle();
         await tester.enterText(_dialogTextField('Amount'), amount);

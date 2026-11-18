@@ -1057,6 +1057,7 @@ final Map<String, TableSpec> tableSpecs = {
         'branch_id',
         'Branch',
         type: FieldType.lookup,
+        required: true,
         lookupTable: 'branches',
         lookupLabel: 'name',
         lookupBranchScoped: false,
@@ -3626,7 +3627,11 @@ final Map<String, TableSpec> tableSpecs = {
     ],
     description: 'Live table `stock_transfers`.',
     fields: [
-      FieldSpec('transfer_no', 'Transfer no', required: true),
+      FieldSpec(
+        'transfer_no',
+        'Transfer no',
+        hint: 'Leave blank to auto-generate',
+      ),
       FieldSpec(
         'from_store_id',
         'From store',

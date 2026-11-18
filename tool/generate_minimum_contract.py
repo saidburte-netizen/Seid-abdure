@@ -214,7 +214,7 @@ SCREEN_ACTION: dict[str, tuple[str, str]] = {
 # A manager is a normal staff role. These forms are intentionally admin/HR only
 # in the live RLS policy catalogue; a 42501 is the correct result for them.
 MANAGER_DENIED = {
-    "employees", "employee_advances", "employee_documents", "hr_notes",
+    "employee_advances", "employee_documents", "hr_notes",
     "leave_types", "payroll_runs", "tax_brackets",
 }
 

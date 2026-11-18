@@ -138,7 +138,7 @@ begin
   select count(*) into bad from min_save_results
    where role_code = 'manager' and sqlstate is not null
      and (
-       form not in ('Employee advance', 'Employee document', 'Employee', 'Hr note', 'Leave type', 'Payroll run', 'Tax bracket')
+       form not in ('Employee advance', 'Employee document', 'Hr note', 'Leave type', 'Payroll run', 'Tax bracket')
        or sqlstate <> '42501'
      );
   if bad > 0 then

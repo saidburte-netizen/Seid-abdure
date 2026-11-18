@@ -476,6 +476,178 @@ class RentalsScreen extends StatelessWidget {
   }
 }
 
+class _RentSummaryData {
+  const _RentSummaryData({
+    required this.nextInvoice,
+    required this.lastPayment,
+    required this.overdue,
+  });
+
+  final Map<String, dynamic>? nextInvoice;
+  final Map<String, dynamic>? lastPayment;
+  final num overdue;
+}
+
+class _RentSummary extends StatefulWidget {
+  const _RentSummary({required this.session});
+
+  final AuthController session;
+
+  @override
+  State<_RentSummary> createState() => _RentSummaryState();
+}
+
+class _RentSummaryState extends State<_RentSummary> {
+  late Future<_RentSummaryData> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+    DataRevision.notifier.addListener(_reload);
+  }
+
+  @override
+  void dispose() {
+    DataRevision.notifier.removeListener(_reload);
+    super.dispose();
+  }
+
+  void _reload() {
+    if (!mounted) return;
+    setState(() {
+      _future = _load();
+    });
+  }
+
+  Future<_RentSummaryData> _load() async {
+    final invoices = await widget.session.client
+        .from('rent_invoices')
+        .select()
+        .order('due_date');
+    final payments = await widget.session.client
+        .from('rent_payments')
+        .select()
+        .order('payment_date', ascending: false)
+        .limit(1);
+    final today = DateTime.now();
+    final todayDate = DateTime(today.year, today.month, today.day);
+    final open = <Map<String, dynamic>>[];
+    var overdue = 0.0;
+    for (final raw in invoices) {
+      final invoice = Map<String, dynamic>.from(raw as Map);
+      final balance = asNum(invoice['amount']) - asNum(invoice['paid_amount']);
+      if (balance <= 0.001) continue;
+      open.add(invoice);
+      final due = DateTime.tryParse(asText(invoice['due_date']));
+      if (due != null && due.isBefore(todayDate)) overdue += balance;
+    }
+    open.sort((a, b) => asText(a['due_date']).compareTo(asText(b['due_date'])));
+    return _RentSummaryData(
+      nextInvoice: open.isEmpty ? null : open.first,
+      lastPayment: payments.isEmpty
+          ? null
+          : Map<String, dynamic>.from(payments.first as Map),
+      overdue: overdue,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => FutureBuilder<_RentSummaryData>(
+    future: _future,
+    builder: (context, snapshot) {
+      if (snapshot.connectionState != ConnectionState.done) {
+        return const SizedBox(
+          height: 64,
+          child: Center(child: CircularProgressIndicator()),
+        );
+      }
+      if (snapshot.hasError) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+          child: Text(friendlyMessage(snapshot.error!)),
+        );
+      }
+      final data = snapshot.data!;
+      final next = data.nextInvoice;
+      final last = data.lastPayment;
+      return Card(
+        margin: const EdgeInsets.fromLTRB(12, 8, 12, 0),
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Wrap(
+            spacing: 16,
+            runSpacing: 10,
+            children: [
+              _RentSummaryItem(
+                icon: Icons.event_repeat_outlined,
+                label: uiText(context, 'Next rent due'),
+                value: next == null
+                    ? uiText(context, 'No rent due')
+                    : '${formatDate(next['due_date'])} · '
+                          '${formatMoney(asNum(next['amount']) - asNum(next['paid_amount']))}',
+              ),
+              _RentSummaryItem(
+                icon: Icons.payments_outlined,
+                label: uiText(context, 'Last payment'),
+                value: last == null
+                    ? uiText(context, 'No payments yet.')
+                    : '${formatDate(last['payment_date'])} · '
+                          '${formatMoney(last['amount'])}',
+              ),
+              _RentSummaryItem(
+                icon: Icons.warning_amber_outlined,
+                label: uiText(context, 'Overdue rent'),
+                value: formatMoney(data.overdue),
+              ),
+            ],
+          ),
+        ),
+      );
+    },
+  );
+}
+
+class _RentSummaryItem extends StatelessWidget {
+  const _RentSummaryItem({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Icon(icon, size: 18),
+      const SizedBox(width: 6),
+      Flexible(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              label,
+              style: Theme.of(context).textTheme.labelSmall,
+              softWrap: true,
+            ),
+            Text(
+              value,
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(fontWeight: FontWeight.w700),
+              softWrap: true,
+            ),
+          ],
+        ),
+      ),
+    ],
+  );
+}
+
 class _InvoiceData {
   const _InvoiceData({required this.invoices, required this.tenants});
 
@@ -597,8 +769,10 @@ class _InvoicesTabState extends State<_InvoicesTab> {
             await _future;
           },
           child: ListView(
+            key: const ValueKey('rent-invoices-list'),
             padding: const EdgeInsets.only(bottom: 32),
             children: [
+              _RentSummary(session: widget.session),
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
                 child: Wrap(

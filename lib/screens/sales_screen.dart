@@ -264,6 +264,21 @@ class _SalesScreenState extends State<SalesScreen> {
         length: 7,
         child: Column(
           children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  onPressed: session.can('pos.use')
+                      ? () => Navigator.of(context).push(
+                          MaterialPageRoute(builder: (_) => const PosScreen()),
+                        )
+                      : null,
+                  icon: const Icon(Icons.add),
+                  label: Text(uiText(context, 'Record sale')),
+                ),
+              ),
+            ),
             const AppTabBar(
               isScrollable: true,
               tabAlignment: TabAlignment.start,
