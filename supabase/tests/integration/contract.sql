@@ -450,8 +450,18 @@ select pg_temp.assert_true(
   'low stock alert is generated once'
 );
 select pg_temp.assert_true(
-  (select count(*) = 1 from public.notifications where type = 'rent_due' and data->>'key' like 'rent_due:%'),
-  'rent due alert is generated once'
+  (
+    select count(*) = 1
+    from public.notifications
+    where type = 'rent_due'
+      and data->>'invoice_id' = (
+        select id::text
+        from public.rent_invoices
+        where lease_id = 'dddddddd-dddd-dddd-dddd-dddddddddddd'
+          and period_start = date_trunc('month', current_date)::date
+      )
+  ),
+  'rent due alert is generated once for the generated invoice'
 );
 
 select pg_temp.assert_true(

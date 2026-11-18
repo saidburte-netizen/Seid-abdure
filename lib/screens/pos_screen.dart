@@ -36,6 +36,7 @@ class _PosScreenState extends State<PosScreen> {
   String? _storeId;
   String? _accountId;
   String _method = 'cash';
+  DateTime _saleDate = DateTime.now();
   String _query = '';
   bool _loading = true;
   bool _submitting = false;
@@ -230,8 +231,19 @@ class _PosScreenState extends State<PosScreen> {
       _notes.clear();
       _customerId = null;
       _method = 'cash';
+      _saleDate = DateTime.now();
     });
     _setPaidToTotal();
+  }
+
+  Future<void> _pickSaleDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: _saleDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null && mounted) setState(() => _saleDate = picked);
   }
 
   Future<String> _nextReceipt() async {
@@ -318,7 +330,7 @@ class _PosScreenState extends State<PosScreen> {
               'store_id': _storeId,
               'customer_id': _customerId,
               'cashier_id': session.userId,
-              'sale_date': dateOnly(DateTime.now()),
+              'sale_date': dateOnly(_saleDate),
               'subtotal': subtotal,
               'discount_amount': discount,
               'tax_amount': tax,
@@ -767,6 +779,17 @@ class _PosScreenState extends State<PosScreen> {
             ),
         ],
         onChanged: (value) => setState(() => _storeId = value),
+      ),
+      const SizedBox(height: 8),
+      SizedBox(
+        width: double.infinity,
+        child: OutlinedButton.icon(
+          onPressed: _pickSaleDate,
+          icon: const Icon(Icons.calendar_month_outlined),
+          label: Text(
+            '${uiText(context, 'Sale date')}: ${formatDate(_saleDate)}',
+          ),
+        ),
       ),
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(

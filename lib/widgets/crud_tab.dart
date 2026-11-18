@@ -682,9 +682,34 @@ class _CrudTabState extends State<CrudTab> {
     for (final field in widget.spec.fields) {
       if (field.generated) continue;
       final key = field.key;
+      if (widget.spec.table == 'employees' && key == 'employee_no') {
+        // The live database has a next_number() default, but a missing or
+        // revoked default must never stop HR from adding an employee.
+        defaults[key] = 'EMP-${DateTime.now().microsecondsSinceEpoch}';
+        continue;
+      }
       if (field.type == FieldType.lookup) {
+        final options = snapshot.lookups[key] ?? const <LookupOption>[];
         if (key == 'branch_id' || key.endsWith('_branch_id')) {
           defaults[key] = session.selectedBranchId;
+        } else if (key == 'from_account_id' || key == 'to_account_id') {
+          if (options.isNotEmpty) {
+            defaults[key] =
+                options[key == 'to_account_id' && options.length > 1 ? 1 : 0]
+                    .id;
+          }
+        } else if (key == 'from_store_id' || key == 'to_store_id') {
+          if (options.isNotEmpty) {
+            final preferred = pick(key, const ['shop', 'main store'])?.id;
+            defaults[key] = key == 'to_store_id' && options.length > 1
+                ? options
+                      .firstWhere(
+                        (option) => option.id != preferred,
+                        orElse: () => options.first,
+                      )
+                      .id
+                : preferred;
+          }
         } else if (key.contains('cash_account')) {
           defaults[key] = pick(key, const ['cash drawer', 'cash'])?.id;
         } else if (key.contains('store')) {
@@ -693,9 +718,24 @@ class _CrudTabState extends State<CrudTab> {
           defaults[key] = pick(key, const ['pcs', 'piece'])?.id;
         }
       } else if (field.type == FieldType.date) {
-        if (key == 'date_of_birth' || key == 'termination_date') continue;
-        defaults[key] = DateTime.now();
+        if (!field.required) continue;
+        final now = DateTime.now();
+        if (key == 'period_month') {
+          defaults[key] = DateTime(now.year, now.month, 1);
+        } else if (key == 'end_date' &&
+            (widget.spec.table == 'leases' ||
+                widget.spec.table == 'leave_requests')) {
+          // Leases require end_date > start_date; leave requires >=.
+          defaults[key] = DateTime(
+            now.year,
+            now.month,
+            now.day,
+          ).add(const Duration(days: 30));
+        } else {
+          defaults[key] = now;
+        }
       } else if (field.type == FieldType.datetime) {
+        if (!field.required) continue;
         defaults[key] = DateTime.now();
       } else if (field.type == FieldType.select) {
         final options = field.options.keys.toList();
@@ -731,19 +771,33 @@ class _CrudTabState extends State<CrudTab> {
       } else if ((field.type == FieldType.number ||
               field.type == FieldType.integer) &&
           field.required) {
-        const manualAmountTables = {
+        const positiveAmountTables = {
+          'bills',
           'cash_transactions',
           'cash_transfers',
+          'employee_advances',
           'payable_payments',
+          'payables',
           'receivable_payments',
+          'receivables',
           'rent_payments',
-          'bills',
-          'leases',
+          'write_offs',
         };
-        if (key == 'amount' && manualAmountTables.contains(widget.spec.table)) {
+        if (key == 'amount' &&
+            positiveAmountTables.contains(widget.spec.table)) {
+          defaults[key] = 1;
           continue;
         }
-        if (key == 'rent_amount' && widget.spec.table == 'leases') continue;
+        if (key == 'rent_amount' && widget.spec.table == 'leases') {
+          defaults[key] = 1;
+          continue;
+        }
+        if (key == 'quantity' && widget.spec.table == 'stock_transfers') {
+          defaults[key] = 1;
+          continue;
+        }
+        // Respect an explicit schema default such as cake_orders.quantity = 1.
+        if (field.defaultValue != null) continue;
         defaults[key] = 0;
       }
     }
@@ -1351,7 +1405,7 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
         case FieldType.select:
           payload[field.key] = text;
         case FieldType.datetime:
-          payload[field.key] = asDateTime(text);
+          payload[field.key] = asDateTime(text)?.toIso8601String();
         case FieldType.boolean:
           break;
       }
