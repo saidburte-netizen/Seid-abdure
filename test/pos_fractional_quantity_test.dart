@@ -80,10 +80,8 @@ void main() {
       routes: [
         GoRoute(
           path: '/pos',
-          builder: (context, state) => SessionScope(
-            controller: controller,
-            child: const PosScreen(),
-          ),
+          builder: (context, state) =>
+              SessionScope(controller: controller, child: const PosScreen()),
         ),
       ],
     );
