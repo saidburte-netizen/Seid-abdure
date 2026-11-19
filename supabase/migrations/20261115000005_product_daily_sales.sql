@@ -20,4 +20,5 @@ group by
   p.id,
   p.name,
   (s.sale_date at time zone 'Africa/Addis_Ababa')::date,
+  date_trunc('month', s.sale_date at time zone 'Africa/Addis_Ababa'),
   s.branch_id;

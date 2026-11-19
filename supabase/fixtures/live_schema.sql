@@ -2074,7 +2074,7 @@ create or replace view public."v_product_sales" as
    FROM ((sale_items si
      JOIN sales s ON (((s.id = si.sale_id) AND (s.status = 'completed'::text))))
      JOIN products p ON ((p.id = si.product_id)))
-  GROUP BY p.id, p.name, (((s.sale_date AT TIME ZONE 'Africa/Addis_Ababa'::text))::date), s.branch_id;
+  GROUP BY p.id, p.name, (((s.sale_date AT TIME ZONE 'Africa/Addis_Ababa'::text))::date), (date_trunc('month'::text, (s.sale_date AT TIME ZONE 'Africa/Addis_Ababa'::text))), s.branch_id;
 create or replace view public."v_receivable_aging" as
  SELECT c.id AS customer_id,
     c.full_name,
