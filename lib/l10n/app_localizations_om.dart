@@ -134,6 +134,24 @@ class AppLocalizationsOm extends AppLocalizations {
   String get notificationsModule => 'Beeksisa';
 
   @override
+  String get home => 'Mana';
+
+  @override
+  String get more => 'Dabalataa';
+
+  @override
+  String get quickActions => 'Gochoota saffisaa';
+
+  @override
+  String get allModules => 'Moduulii hunda';
+
+  @override
+  String get searchPages => 'Fuulota barbaadi';
+
+  @override
+  String get noModulesMatch => 'Fuulli barbaaduu keetiin walsu hin jiru.';
+
+  @override
   String get workspace => 'Iddoo hojii';
 
   @override

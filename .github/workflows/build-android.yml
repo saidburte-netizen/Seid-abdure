@@ -467,11 +467,28 @@ jobs:
       - name: Run the database integration contract and real RLS
         shell: bash
         run: |
-          set -euo pipefail
+          set -uo pipefail
           export PGPASSWORD=postgres
+          log="$RUNNER_TEMP/contract.log"
+          set +e
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 \
-            -f supabase/tests/integration/contract.sql
+            -f supabase/tests/integration/contract.sql 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            {
+              echo "### Database contract failure"
+              echo
+              echo '```'
+              tail -n 40 "$log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            tail -n 20 "$log" | while IFS= read -r line; do
+              echo "::error::$line"
+            done
+            exit "$status"
+          fi
 
       # The minimum-field seed creates two extra auth users, so it must run
       # after the profile-count assertions in contract.sql. The generated

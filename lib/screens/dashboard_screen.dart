@@ -142,6 +142,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
     ('settings', Icons.settings_outlined, null),
   ];
 
+  /// The six tools a busy shop reaches for every day. Everything else stays
+  /// one tap away through "All modules" and the searchable page list.
+  static const List<String> _primaryOrder = [
+    'products',
+    'stock',
+    'pos',
+    'cash',
+    'rentals',
+    'reports',
+  ];
+
   String _moduleLabel(AppLocalizations strings, String name) => switch (name) {
     'pos' => strings.newSale,
     'sales' => strings.salesModule,
@@ -178,6 +189,11 @@ class _DashboardScreenState extends State<DashboardScreen> {
       isRoot: true,
       actions: [
         IconButton(
+          tooltip: strings.searchPages,
+          onPressed: () => showModuleLauncher(context, session),
+          icon: const Icon(Icons.search),
+        ),
+        IconButton(
           tooltip: strings.runAlerts,
           onPressed: _alerts,
           icon: const Icon(Icons.notifications_active_outlined),
@@ -186,6 +202,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: RefreshIndicator(
         onRefresh: _refresh,
         child: ListView(
+          key: const Key('dashboard-scroll'),
           padding: const EdgeInsets.only(bottom: 32),
           children: [
             _WelcomeLine(session: session, branch: branch),
@@ -194,9 +211,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
               onRetry: _refresh,
               builder: (context, data) => _KpiGrid(data: data),
             ),
+            _QuickActions(session: session),
             SectionBar(
               title: strings.workspace,
               subtitle: strings.workspaceSubtitle,
+              trailing: TextButton(
+                key: const Key('open-all-modules'),
+                onPressed: () => showModuleLauncher(context, session),
+                style: TextButton.styleFrom(
+                  foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                ),
+                child: Text(strings.allModules),
+              ),
             ),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
@@ -207,6 +233,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       : constraints.maxWidth >= 620
                       ? 3
                       : 2;
+                  final primary = [
+                    for (final id in _primaryOrder)
+                      _modules.firstWhere((module) => module.$1 == id),
+                  ];
                   return GridView.count(
                     shrinkWrap: true,
                     physics: const NeverScrollableScrollPhysics(),
@@ -215,9 +245,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     mainAxisSpacing: 12,
                     childAspectRatio: columns >= 3 ? 1.55 : 1.25,
                     children: [
-                      for (final module in _modules)
+                      for (final module in primary)
                         if (module.$3 == null || session.can(module.$3!))
                           _ModuleCard(
+                            key: Key('module-card-${module.$1}'),
                             label: _moduleLabel(strings, module.$1),
                             icon: module.$2,
                             onTap: () => context.go(switch (module.$1) {
@@ -240,6 +271,111 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// The task-first strip that mirrors NexaTracker's quick-add emphasis.
+///
+/// Only permitted actions are shown, so a cashier never sees an HR shortcut
+/// and an owner never has to hunt through the module grid to start a sale.
+class _QuickActions extends StatelessWidget {
+  const _QuickActions({required this.session});
+
+  final AuthController session;
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final scheme = Theme.of(context).colorScheme;
+    final actions =
+        <(String, IconData, String, String?, Key)>[
+          (
+            strings.newSale,
+            Icons.point_of_sale,
+            '/pos',
+            'pos.use',
+            const Key('quick-new-sale'),
+          ),
+          (
+            uiText(context, 'Add product'),
+            Icons.add_box_outlined,
+            '/products/new',
+            'products.manage',
+            const Key('quick-add-product'),
+          ),
+          (
+            uiText(context, 'Receive payment'),
+            Icons.payments_outlined,
+            '/credit',
+            'credit.manage',
+            const Key('quick-receive-payment'),
+          ),
+          (
+            strings.reportsModule,
+            Icons.bar_chart_outlined,
+            '/reports',
+            'reports.view',
+            const Key('quick-reports'),
+          ),
+        ].where((action) {
+          final permission = action.$4;
+          return permission == null || session.can(permission);
+        }).toList();
+    if (actions.isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+          child: Text(
+            strings.quickActions,
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800),
+          ),
+        ),
+        SizedBox(
+          height: 104,
+          child: ListView.separated(
+            key: const Key('quick-actions'),
+            scrollDirection: Axis.horizontal,
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            itemCount: actions.length,
+            separatorBuilder: (_, _) => const SizedBox(width: 10),
+            itemBuilder: (context, index) {
+              final action = actions[index];
+              return SizedBox(
+                width: 142,
+                child: Card(
+                  margin: EdgeInsets.zero,
+                  child: InkWell(
+                    key: action.$5,
+                    borderRadius: BorderRadius.circular(14),
+                    onTap: () => context.push(action.$3),
+                    child: Padding(
+                      padding: const EdgeInsets.all(12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Icon(action.$2, color: scheme.primary, size: 24),
+                          Text(
+                            action.$1,
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      ],
     );
   }
 }
@@ -284,27 +420,29 @@ class _KpiGrid extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       child: LayoutBuilder(
         builder: (context, constraints) {
+          // Two compact columns on a phone keep all six numbers visible
+          // without turning the dashboard into a long vertical list.
           final columns = constraints.maxWidth >= 1000
               ? 3
-              : constraints.maxWidth >= 620
+              : constraints.maxWidth >= 300
               ? 2
               : 1;
-          return GridView.count(
+          return GridView.builder(
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
-            crossAxisCount: columns,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-            childAspectRatio: columns == 1 ? 3.2 : 2.4,
-            children: [
-              for (var index = 0; index < cards.length; index++)
-                _DashboardKpiCard(
-                  label: cards[index].$1,
-                  value: cards[index].$2,
-                  icon: cards[index].$3,
-                  highlighted: index < 3,
-                ),
-            ],
+            itemCount: cards.length,
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: columns,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              mainAxisExtent: 88,
+            ),
+            itemBuilder: (context, index) => _DashboardKpiCard(
+              label: cards[index].$1,
+              value: cards[index].$2,
+              icon: cards[index].$3,
+              highlighted: index < 3,
+            ),
           );
         },
       ),
@@ -594,6 +732,7 @@ class _ModuleCard extends StatelessWidget {
     required this.label,
     required this.icon,
     required this.onTap,
+    super.key,
   });
 
   final String label;

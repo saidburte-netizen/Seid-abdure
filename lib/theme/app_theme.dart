@@ -65,26 +65,34 @@ class AppTheme {
       scaffoldBackgroundColor: BrandColors.cream,
       canvasColor: BrandColors.cream,
       appBarTheme: const AppBarTheme(
-        backgroundColor: BrandColors.deepGreen,
-        foregroundColor: BrandColors.ivory,
+        backgroundColor: BrandColors.ivory,
+        foregroundColor: BrandColors.deepGreen,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
-          color: BrandColors.ivory,
+          color: BrandColors.deepGreen,
           fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
-        iconTheme: IconThemeData(color: BrandColors.ivory),
-        actionsIconTheme: IconThemeData(color: BrandColors.ivory),
+        iconTheme: IconThemeData(color: BrandColors.deepGreen),
+        actionsIconTheme: IconThemeData(color: BrandColors.deepGreen),
+        shape: Border(
+          bottom: BorderSide(color: BrandColors.lightGold, width: 1),
+        ),
       ),
-      cardTheme: const CardThemeData(
+      cardTheme: CardThemeData(
         color: BrandColors.ivory,
         surfaceTintColor: Colors.transparent,
-        elevation: 1,
+        elevation: 1.5,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(14)),
-          side: BorderSide(color: BrandColors.lightGold, width: 1),
+          borderRadius: const BorderRadius.all(Radius.circular(16)),
+          side: BorderSide(
+            color: BrandColors.lightGold.withValues(alpha: 0.5),
+            width: 1,
+          ),
         ),
       ),
       dividerTheme: const DividerThemeData(
@@ -231,6 +239,30 @@ class AppTheme {
         ),
         dataTextStyle: TextStyle(color: BrandColors.ink),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: BrandColors.ivory,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: BrandColors.forestGreen.withValues(alpha: 0.16),
+        elevation: 3,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? BrandColors.deepGreen
+                : BrandColors.chocolate,
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? BrandColors.forestGreen
+                : BrandColors.chocolate,
+          ),
+        ),
+      ),
       listTileTheme: const ListTileThemeData(
         iconColor: BrandColors.forestGreen,
       ),
@@ -272,15 +304,20 @@ class AppTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: BrandColors.darkSurfaceHigh,
         foregroundColor: BrandColors.cream,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: false,
         titleTextStyle: TextStyle(
           color: BrandColors.cream,
           fontSize: 20,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.w700,
         ),
         iconTheme: IconThemeData(color: BrandColors.lightGold),
         actionsIconTheme: IconThemeData(color: BrandColors.lightGold),
+        shape: Border(
+          bottom: BorderSide(color: BrandColors.forestGreen, width: 1),
+        ),
       ),
       cardTheme: const CardThemeData(
         color: BrandColors.darkCard,
@@ -288,7 +325,7 @@ class AppTheme {
         elevation: 1,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.all(Radius.circular(14)),
+          borderRadius: BorderRadius.all(Radius.circular(16)),
           side: BorderSide(color: BrandColors.forestGreen, width: 1),
         ),
       ),
@@ -435,6 +472,30 @@ class AppTheme {
           fontWeight: FontWeight.w700,
         ),
         dataTextStyle: TextStyle(color: BrandColors.cream),
+      ),
+      navigationBarTheme: NavigationBarThemeData(
+        backgroundColor: BrandColors.darkSurfaceHigh,
+        surfaceTintColor: Colors.transparent,
+        indicatorColor: BrandColors.forestGreen,
+        elevation: 3,
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => TextStyle(
+            color: states.contains(WidgetState.selected)
+                ? BrandColors.lightGold
+                : BrandColors.cream,
+            fontSize: 12,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? BrandColors.lightGold
+                : BrandColors.cream,
+          ),
+        ),
       ),
       listTileTheme: const ListTileThemeData(iconColor: BrandColors.lightGold),
     );

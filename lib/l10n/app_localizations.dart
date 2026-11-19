@@ -340,6 +340,42 @@ abstract class AppLocalizations {
   /// **'Notifications'**
   String get notificationsModule;
 
+  /// No description provided for @home.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get home;
+
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
+
+  /// No description provided for @quickActions.
+  ///
+  /// In en, this message translates to:
+  /// **'Quick actions'**
+  String get quickActions;
+
+  /// No description provided for @allModules.
+  ///
+  /// In en, this message translates to:
+  /// **'All modules'**
+  String get allModules;
+
+  /// No description provided for @searchPages.
+  ///
+  /// In en, this message translates to:
+  /// **'Search pages'**
+  String get searchPages;
+
+  /// No description provided for @noModulesMatch.
+  ///
+  /// In en, this message translates to:
+  /// **'No pages match your search.'**
+  String get noModulesMatch;
+
   /// No description provided for @workspace.
   ///
   /// In en, this message translates to:
