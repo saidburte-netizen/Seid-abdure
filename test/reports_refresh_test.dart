@@ -44,6 +44,22 @@ SupabaseClient _changingKpiClient(num Function() todaySales) {
           accept.contains('pgrst.object') ? jsonEncode(row) : jsonEncode([row]),
         );
       }
+      if (path.contains('v_product_sales')) {
+        return json(
+          jsonEncode([
+            {
+              'product_id': 'product-bread',
+              'product_name': 'Bread',
+              'sale_day': '2026-11-19',
+              'quantity_sold': 0.25,
+              'revenue': 10,
+              'branch_id': 'test-branch',
+              'sale_month': '2026-11-01',
+              'last_sold_at': '2026-11-19T08:30:00Z',
+            },
+          ]),
+        );
+      }
       return json('[]');
     }),
   );
@@ -138,6 +154,9 @@ void main() {
     );
     await tester.pump(const Duration(milliseconds: 500));
     expect(find.textContaining('111.00'), findsWidgets);
+    expect(find.text('Bread'), findsOneWidget);
+    expect(find.text('0.25'), findsOneWidget);
+    expect(find.text('2026-11-01'), findsOneWidget);
 
     todaySales = 222.0;
     DataRevision.bump();

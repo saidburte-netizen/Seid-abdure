@@ -8,6 +8,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../widgets/payment_dialog.dart';
 import '../l10n/ui_text.dart';
 
 class CreditScreen extends StatelessWidget {
@@ -32,49 +33,57 @@ class CreditScreen extends StatelessWidget {
         throw Exception('Create a cash account before recording a payment.');
       }
       if (!context.mounted) return;
-      final result = await showDialog<Map<String, dynamic>>(
+      final saved = await showDialog<bool>(
         context: context,
-        builder: (context) => _CreditPaymentDialog(
+        barrierDismissible: false,
+        builder: (context) => PaymentDialog(
           title: type == 'receivable'
               ? 'Receive customer payment'
               : 'Pay supplier',
           accounts: accounts,
-          suggested: type == 'receivable'
-              ? asNum(row['balance'])
-              : asNum(row['balance']),
+          maximum: asNum(row['balance']),
+          methods: const [
+            'cash',
+            'bank',
+            'telebirr',
+            'cbe_birr',
+            'mobile_money',
+          ],
+          onSave: (result) async {
+            if (type == 'receivable') {
+              await SaveFlow.write(
+                module: 'Credit & debit control',
+                target: 'receivable_payments',
+                action: () =>
+                    session.client.from('receivable_payments').insert({
+                      'receivable_id': row['id'],
+                      'cash_account_id': result['account'],
+                      'amount': result['amount'],
+                      'payment_date': dateOnly(DateTime.now()),
+                      'method': result['method'],
+                      'reference': result['reference'],
+                      'received_by': session.userId,
+                    }),
+              );
+            } else {
+              await SaveFlow.write(
+                module: 'Credit & debit control',
+                target: 'payable_payments',
+                action: () => session.client.from('payable_payments').insert({
+                  'payable_id': row['id'],
+                  'cash_account_id': result['account'],
+                  'amount': result['amount'],
+                  'payment_date': dateOnly(DateTime.now()),
+                  'method': result['method'],
+                  'reference': result['reference'],
+                  'paid_by': session.userId,
+                }),
+              );
+            }
+          },
         ),
       );
-      if (result == null) return;
-      if (type == 'receivable') {
-        await SaveFlow.write(
-          module: 'Credit & debit control',
-          target: 'receivable_payments',
-          action: () => session.client.from('receivable_payments').insert({
-            'receivable_id': row['id'],
-            'cash_account_id': result['account'],
-            'amount': result['amount'],
-            'payment_date': dateOnly(DateTime.now()),
-            'method': result['method'],
-            'reference': result['reference'],
-            'received_by': session.userId,
-          }),
-        );
-      } else {
-        await SaveFlow.write(
-          module: 'Credit & debit control',
-          target: 'payable_payments',
-          action: () => session.client.from('payable_payments').insert({
-            'payable_id': row['id'],
-            'cash_account_id': result['account'],
-            'amount': result['amount'],
-            'payment_date': dateOnly(DateTime.now()),
-            'method': result['method'],
-            'reference': result['reference'],
-            'paid_by': session.userId,
-          }),
-        );
-      }
-      if (context.mounted) {
+      if (saved == true && context.mounted) {
         showSnack(context, 'Payment recorded');
       }
     } catch (error) {
@@ -249,101 +258,4 @@ class CreditScreen extends StatelessWidget {
       ),
     );
   }
-}
-
-class _CreditPaymentDialog extends StatefulWidget {
-  const _CreditPaymentDialog({
-    required this.title,
-    required this.accounts,
-    required this.suggested,
-  });
-
-  final String title;
-  final List<Map<String, dynamic>> accounts;
-  final num suggested;
-
-  @override
-  State<_CreditPaymentDialog> createState() => _CreditPaymentDialogState();
-}
-
-class _CreditPaymentDialogState extends State<_CreditPaymentDialog> {
-  late final _amount = TextEditingController(
-    text: widget.suggested.toStringAsFixed(2),
-  );
-  final _reference = TextEditingController();
-  late String _account = widget.accounts.first['id'] as String;
-  String _method = 'cash';
-
-  @override
-  void dispose() {
-    _amount.dispose();
-    _reference.dispose();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.title),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        DropdownButtonFormField<String>(
-          initialValue: _account,
-          decoration: InputDecoration(
-            labelText: uiText(context, 'Cash account'),
-          ),
-          items: [
-            for (final account in widget.accounts)
-              DropdownMenuItem(
-                value: account['id'] as String,
-                child: Text(asText(account['name'])),
-              ),
-          ],
-          onChanged: (value) => setState(() => _account = value ?? _account),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _amount,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: uiText(context, 'Amount')),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _method,
-          decoration: InputDecoration(labelText: uiText(context, 'Method')),
-          items: const [
-            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-            DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-            DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
-            DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-            DropdownMenuItem(
-              value: 'mobile_money',
-              child: Text('Mobile money'),
-            ),
-          ],
-          onChanged: (value) => setState(() => _method = value ?? 'cash'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _reference,
-          decoration: InputDecoration(labelText: uiText(context, 'Reference')),
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: () => Navigator.of(context).pop(),
-        child: const LText('Cancel'),
-      ),
-      FilledButton(
-        onPressed: () => Navigator.of(context).pop({
-          'account': _account,
-          'amount': asNum(_amount.text),
-          'method': _method,
-          'reference': _reference.text.trim(),
-        }),
-        child: const Text('Record payment'),
-      ),
-    ],
-  );
 }

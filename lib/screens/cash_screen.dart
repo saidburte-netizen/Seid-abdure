@@ -8,6 +8,7 @@ import '../data/schema.dart';
 import '../widgets/common.dart';
 import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
+import '../widgets/payment_dialog.dart';
 import '../l10n/ui_text.dart';
 
 class CashScreen extends StatelessWidget {
@@ -75,10 +76,10 @@ class CashScreen extends StatelessWidget {
       final saved = await showDialog<bool>(
         context: context,
         barrierDismissible: false,
-        builder: (context) => _PaymentDialog(
+        builder: (context) => PaymentDialog(
           title: uiText(context, 'Pay payable'),
           accounts: accounts,
-          suggested: asNum(payable['balance']),
+          maximum: asNum(payable['balance']),
           onSave: (result) => SaveFlow.write(
             module: 'Cash & expenses',
             target: 'payable_payments',
@@ -308,134 +309,6 @@ class _CreatePayableDialogState extends State<_CreatePayableDialog> {
       FilledButton(
         onPressed: _saving ? null : _save,
         child: Text(uiText(context, _saving ? 'Saving…' : 'Create payable')),
-      ),
-    ],
-  );
-}
-
-class _PaymentDialog extends StatefulWidget {
-  const _PaymentDialog({
-    required this.title,
-    required this.accounts,
-    required this.suggested,
-    required this.onSave,
-  });
-
-  final String title;
-  final List<Map<String, dynamic>> accounts;
-  final num suggested;
-  final Future<void> Function(Map<String, dynamic> result) onSave;
-
-  @override
-  State<_PaymentDialog> createState() => _PaymentDialogState();
-}
-
-class _PaymentDialogState extends State<_PaymentDialog> {
-  late final _amount = TextEditingController(
-    text: widget.suggested.toStringAsFixed(2),
-  );
-  final _reference = TextEditingController();
-  late String _account = widget.accounts.first['id'] as String;
-  String _method = 'cash';
-  bool _saving = false;
-  Object? _error;
-
-  @override
-  void dispose() {
-    _amount.dispose();
-    _reference.dispose();
-    super.dispose();
-  }
-
-  Future<void> _save() async {
-    setState(() {
-      _saving = true;
-      _error = null;
-    });
-    try {
-      await widget.onSave({
-        'account': _account,
-        'amount': asNum(_amount.text),
-        'method': _method,
-        'reference': _reference.text.trim(),
-      });
-      if (mounted) Navigator.of(context).pop(true);
-    } catch (error) {
-      if (mounted) setState(() => _error = error);
-    } finally {
-      if (mounted) setState(() => _saving = false);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) => AlertDialog(
-    title: Text(widget.title),
-    content: Column(
-      mainAxisSize: MainAxisSize.min,
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        if (_error != null) ...[
-          FriendlyErrorBox(error: _error!),
-          const SizedBox(height: 12),
-        ],
-        DropdownButtonFormField<String>(
-          initialValue: _account,
-          decoration: InputDecoration(
-            labelText: uiText(context, 'Cash account'),
-          ),
-          items: [
-            for (final account in widget.accounts)
-              DropdownMenuItem(
-                value: account['id'] as String,
-                child: Text(asText(account['name'])),
-              ),
-          ],
-          onChanged: _saving
-              ? null
-              : (value) => setState(() => _account = value ?? _account),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _amount,
-          enabled: !_saving,
-          keyboardType: TextInputType.number,
-          decoration: InputDecoration(labelText: uiText(context, 'Amount')),
-        ),
-        const SizedBox(height: 8),
-        DropdownButtonFormField<String>(
-          initialValue: _method,
-          decoration: InputDecoration(labelText: uiText(context, 'Method')),
-          items: const [
-            DropdownMenuItem(value: 'cash', child: Text('Cash')),
-            DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-            DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
-            DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-            DropdownMenuItem(
-              value: 'mobile_money',
-              child: Text('Mobile money'),
-            ),
-            DropdownMenuItem(value: 'card', child: Text('Card')),
-          ],
-          onChanged: _saving
-              ? null
-              : (value) => setState(() => _method = value ?? 'cash'),
-        ),
-        const SizedBox(height: 8),
-        TextField(
-          controller: _reference,
-          enabled: !_saving,
-          decoration: InputDecoration(labelText: uiText(context, 'Reference')),
-        ),
-      ],
-    ),
-    actions: [
-      TextButton(
-        onPressed: _saving ? null : () => Navigator.of(context).pop(false),
-        child: const LText('Cancel'),
-      ),
-      FilledButton(
-        onPressed: _saving ? null : _save,
-        child: Text(uiText(context, _saving ? 'Saving…' : 'Record payment')),
       ),
     ],
   );

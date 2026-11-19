@@ -22,7 +22,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
   static const _reports = {
     'v_dashboard_kpis': 'Executive KPI summary',
     'v_daily_sales': 'Daily sales',
-    'v_product_sales': 'Product sales',
+    'v_product_sales': 'Product sales by day',
     'v_expense_summary': 'Expense summary',
     'v_cash_account_balances': 'Cash account balances',
     'v_low_stock': 'Low stock',
@@ -42,7 +42,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ('rent', 'Rent report', Icons.apartment_outlined),
   ];
 
-  String _selected = 'full';
+  String _selected = 'v_product_sales';
   late DateTime _from = DateTime(DateTime.now().year, DateTime.now().month, 1);
   late DateTime _to = DateTime.now();
   int _refreshSeed = 0;

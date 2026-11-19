@@ -329,6 +329,27 @@ select pg_temp.assert_true(
   (select amount = 50 and balance = 50 and status = 'open' from public.receivables where sale_id = '14141414-1414-1414-1414-141414141414'),
   'credit sale creates receivable'
 );
+select pg_temp.assert_true(
+  (select today_sales = 150 from public.v_dashboard_kpis),
+  'dashboard includes completed sales from today'
+);
+select pg_temp.assert_true(
+  (select sales_count = 2 and total_sales = 150
+   from public.v_daily_sales
+   where branch_id = '11111111-1111-1111-1111-111111111111'
+     and sale_day = current_date),
+  'daily sales report includes today completed sales'
+);
+select pg_temp.assert_true(
+  (select quantity_sold = 3 and revenue = 150
+      and sale_day = current_date
+      and sale_month = date_trunc('month', current_date)::date
+      and last_sold_at is not null
+   from public.v_product_sales
+   where branch_id = '11111111-1111-1111-1111-111111111111'
+     and product_id = '66666666-6666-6666-6666-666666666666'),
+  'product sales report totals same-day quantities with date, month and time'
+);
 select pg_temp.assert_raises(
   $$insert into public.sale_payments (sale_id, method, amount, received_by)
     values ('14141414-1414-1414-1414-141414141414', 'credit', 10, '00000000-0000-0000-0000-000000000003')$$,

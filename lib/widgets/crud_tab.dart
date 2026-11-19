@@ -1375,42 +1375,40 @@ class _CrudFormDialogState extends State<_CrudFormDialog> {
       _saving = true;
       _error = null;
     });
-    final payload = <String, dynamic>{};
-    for (final field in widget.spec.fields) {
-      if (field.type == FieldType.boolean) {
-        payload[field.key] = _values[field.key] == true;
-        continue;
-      }
-      final text = _controllers[field.key]?.text.trim() ?? '';
-      if (text.isEmpty) {
-        // A new record omits optional blanks. An edit sends null so clearing a
-        // field actually clears it. Never send an empty string.
-        if (widget.row == null && !field.required) continue;
-        payload[field.key] = null;
-        continue;
-      }
-      switch (field.type) {
-        case FieldType.number:
-          payload[field.key] = num.tryParse(text);
-        case FieldType.integer:
-          payload[field.key] = int.tryParse(text);
-        case FieldType.lookup:
-          payload[field.key] = text;
-        case FieldType.date:
-        case FieldType.time:
-        case FieldType.text:
-        case FieldType.multiline:
-        case FieldType.json:
-          payload[field.key] = text;
-        case FieldType.select:
-          payload[field.key] = text;
-        case FieldType.datetime:
-          payload[field.key] = asDateTime(text)?.toIso8601String();
-        case FieldType.boolean:
-          break;
-      }
-    }
     try {
+      final payload = <String, dynamic>{};
+      for (final field in widget.spec.fields) {
+        if (field.type == FieldType.boolean) {
+          payload[field.key] = _values[field.key] == true;
+          continue;
+        }
+        final text = _controllers[field.key]?.text.trim() ?? '';
+        if (text.isEmpty) {
+          if (widget.row == null && !field.required) continue;
+          payload[field.key] = null;
+          continue;
+        }
+        switch (field.type) {
+          case FieldType.number:
+            payload[field.key] = num.tryParse(text);
+          case FieldType.integer:
+            payload[field.key] = int.tryParse(text);
+          case FieldType.lookup:
+            payload[field.key] = text;
+          case FieldType.date:
+          case FieldType.time:
+          case FieldType.text:
+          case FieldType.multiline:
+          case FieldType.json:
+            payload[field.key] = text;
+          case FieldType.select:
+            payload[field.key] = text;
+          case FieldType.datetime:
+            payload[field.key] = asDateTime(text)?.toIso8601String();
+          case FieldType.boolean:
+            break;
+        }
+      }
       await widget.onSubmit(payload, diagnosticId);
       _dirty = false;
       unawaited(PendingSaveStore.instance.clear());

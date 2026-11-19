@@ -26,6 +26,7 @@ class _PosScreenState extends State<PosScreen> {
   final _paid = TextEditingController();
   final _notes = TextEditingController();
   final _cart = <String, num>{};
+  final _quantityControllers = <String, TextEditingController>{};
   final _products = <String, Map<String, dynamic>>{};
   List<Map<String, dynamic>> _customers = const [];
   List<Map<String, dynamic>> _stores = const [];
@@ -106,6 +107,9 @@ class _PosScreenState extends State<PosScreen> {
     _discount.dispose();
     _paid.dispose();
     _notes.dispose();
+    for (final controller in _quantityControllers.values) {
+      controller.dispose();
+    }
     super.dispose();
   }
 
@@ -208,7 +212,12 @@ class _PosScreenState extends State<PosScreen> {
 
   void _add(Map<String, dynamic> product) {
     final id = product['id'] as String;
-    setState(() => _cart[id] = (_cart[id] ?? 0) + 1);
+    final quantity = (_cart[id] ?? 0) + 1;
+    setState(() {
+      _cart[id] = quantity;
+      _quantityControllers.putIfAbsent(id, () => TextEditingController()).text =
+          quantity.toString();
+    });
     _setPaidToTotal();
   }
 
@@ -217,16 +226,29 @@ class _PosScreenState extends State<PosScreen> {
     setState(() {
       if (next <= 0) {
         _cart.remove(id);
+        _quantityControllers.remove(id)?.dispose();
       } else {
         _cart[id] = next;
+        _quantityControllers[id]?.text = next.toString();
       }
     });
+    _setPaidToTotal();
+  }
+
+  void _setQuantity(String id, String text) {
+    final quantity = num.tryParse(text);
+    if (quantity == null || !quantity.isFinite || quantity <= 0) return;
+    setState(() => _cart[id] = quantity);
     _setPaidToTotal();
   }
 
   void _clear() {
     setState(() {
       _cart.clear();
+      for (final controller in _quantityControllers.values) {
+        controller.dispose();
+      }
+      _quantityControllers.clear();
       _discount.text = '0';
       _notes.clear();
       _customerId = null;
@@ -266,6 +288,14 @@ class _PosScreenState extends State<PosScreen> {
   Future<void> _complete() async {
     if (_cart.isEmpty) {
       showSnack(context, 'Add at least one product to the sale');
+      return;
+    }
+    if (_cart.keys.any((id) {
+      final text = _quantityControllers[id]?.text ?? '';
+      final quantity = num.tryParse(text);
+      return quantity == null || !quantity.isFinite || quantity <= 0;
+    })) {
+      showSnack(context, 'Enter a quantity greater than zero.', error: true);
       return;
     }
     if (_storeId == null) {
@@ -319,6 +349,16 @@ class _PosScreenState extends State<PosScreen> {
       final discount = totals.discount;
       final tax = totals.tax;
       final total = totals.total;
+      final saleTime = DateTime.now();
+      final saleTimestamp = DateTime(
+        _saleDate.year,
+        _saleDate.month,
+        _saleDate.day,
+        saleTime.hour,
+        saleTime.minute,
+        saleTime.second,
+        saleTime.millisecond,
+      ).toUtc();
       final sale = await SaveFlow.write(
         module: 'Point of sale',
         target: 'sales',
@@ -330,7 +370,7 @@ class _PosScreenState extends State<PosScreen> {
               'store_id': _storeId,
               'customer_id': _customerId,
               'cashier_id': session.userId,
-              'sale_date': dateOnly(_saleDate),
+              'sale_date': saleTimestamp.toIso8601String(),
               'subtotal': subtotal,
               'discount_amount': discount,
               'tax_amount': tax,
@@ -744,7 +784,22 @@ class _PosScreenState extends State<PosScreen> {
                   onPressed: () => _change(entry.key, -1),
                   icon: const Icon(Icons.remove_circle_outline),
                 ),
-                Text('${entry.value}'),
+                SizedBox(
+                  width: 72,
+                  child: TextField(
+                    key: ValueKey('sale-quantity-${entry.key}'),
+                    controller: _quantityControllers[entry.key],
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    textAlign: TextAlign.center,
+                    decoration: InputDecoration(
+                      labelText: uiText(context, 'Quantity'),
+                      isDense: true,
+                    ),
+                    onChanged: (value) => _setQuantity(entry.key, value),
+                  ),
+                ),
                 IconButton(
                   tooltip: uiText(context, 'Increase quantity'),
                   onPressed: () => _change(entry.key, 1),
