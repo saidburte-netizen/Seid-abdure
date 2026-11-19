@@ -73,7 +73,25 @@ jobs:
             test/l10n_catalog_test.dart \
             test/oromo_localizations_test.dart
       - name: Run full Flutter test suite
-        run: flutter test
+        shell: bash
+        run: |
+          set -uo pipefail
+          set +e
+          flutter test --reporter expanded 2>&1 | tee test.log
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            grep -n -B2 -A14 -E "\[E\]|Expected:|Actual:|Which:" test.log | head -200
+          fi
+          exit "$status"
+      - name: Upload Flutter test log
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: test-log
+          path: test.log
+          if-no-files-found: warn
+          retention-days: 7
       - name: Verify required UI screenshots
         run: |
           set -euo pipefail

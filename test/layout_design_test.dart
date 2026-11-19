@@ -62,7 +62,12 @@ const _authRoutes = [
 ];
 
 const _size = Size(360, 800);
-const _greenFloor = 25.0;
+// The light English pass is the only one that samples pixels. The merged
+// Nexa-style shell intentionally replaced the old full-width green header with
+// an ivory app bar, so the measured green-family share is now about 14-20% on
+// data screens. Keep the 55% ceiling so an all-green screen still fails, but
+// lower the floor to match the intended light design.
+const _greenFloor = 12.0;
 const _greenCeiling = 55.0;
 
 void main() {
