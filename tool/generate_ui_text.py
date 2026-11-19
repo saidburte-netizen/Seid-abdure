@@ -292,6 +292,14 @@ UI: dict[str, tuple[str, str]] = {
     "Record sale": ("ሽያጭ መዝግብ", "Gurgurtaa galmeessi"),
     "Sale date": ("የሽያጭ ቀን", "Guyyaa gurgurtaa"),
     "Last sold at": ("የመጨረሻ ሽያጭ ሰዓት", "Yeroo gurgurtaa dhumaa"),
+    "Add item to inventory": (
+        "ዕቃን ወደ ክምችት ጨምር",
+        "Meeshaa kuusaatti dabali",
+    ),
+    "Creates a linked inventory item and enables stock tracking.": (
+        "ከዚህ ምርት ጋር የተያያዘ ዕቃ ይፈጥራል እና የክምችት ክትትልን ያነቃል።",
+        "Meeshaa oomisha kanaan walqabate uuma, kuusaa hordofuu immoo ni dandeessisa.",
+    ),
     "Next rent due": ("ቀጣይ የሚከፈል ኪራይ", "Kiraa kaffalamu itti aanu"),
     "Last payment": ("የመጨረሻ ክፍያ", "Kaffaltii dhumaa"),
     "Overdue rent": ("የተላለፈ ቀነ ገደብ ኪራይ", "Kiraa yeroo darbee"),

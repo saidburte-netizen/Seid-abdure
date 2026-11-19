@@ -151,6 +151,12 @@ void main() {
             };
             return _json(product!, request);
           }
+          if (request.method == 'PATCH' &&
+              path.endsWith('/products') &&
+              product != null) {
+            product = {...product!, ..._body(request)};
+            return _json(product!, request);
+          }
           if (request.method == 'POST' && path.endsWith('/items')) {
             return _json({
               'id': 'human-item-id',
@@ -191,6 +197,22 @@ void main() {
       print(
         'HUMAN_FLOW | saved product name=${product?['name']} price=${product?['price']}',
       );
+
+      final productCard = find
+          .ancestor(
+            of: find.text('Owner Test Cake'),
+            matching: find.byType(Card),
+          )
+          .first;
+      await tester.tap(
+        find.descendant(of: productCard, matching: find.byTooltip('Edit')),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text('Edit product'), findsOneWidget);
+      await tester.enterText(_formField('Price'), '300');
+      await _saveDialog(tester);
+      expect(product?['price'], 300);
+      await _clearSnackBars(tester);
 
       await tester.tap(find.byIcon(Icons.menu));
       await tester.pumpAndSettle();

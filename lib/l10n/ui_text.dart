@@ -208,6 +208,9 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Record sale": "ሽያጭ መዝግብ",
     "Sale date": "የሽያጭ ቀን",
     "Last sold at": "የመጨረሻ ሽያጭ ሰዓት",
+    "Add item to inventory": "ዕቃን ወደ ክምችት ጨምር",
+    "Creates a linked inventory item and enables stock tracking.":
+        "ከዚህ ምርት ጋር የተያያዘ ዕቃ ይፈጥራል እና የክምችት ክትትልን ያነቃል።",
     "Next rent due": "ቀጣይ የሚከፈል ኪራይ",
     "Last payment": "የመጨረሻ ክፍያ",
     "Overdue rent": "የተላለፈ ቀነ ገደብ ኪራይ",
@@ -469,6 +472,9 @@ const Map<String, Map<String, String>> _uiTranslations = {
     "Record sale": "Gurgurtaa galmeessi",
     "Sale date": "Guyyaa gurgurtaa",
     "Last sold at": "Yeroo gurgurtaa dhumaa",
+    "Add item to inventory": "Meeshaa kuusaatti dabali",
+    "Creates a linked inventory item and enables stock tracking.":
+        "Meeshaa oomisha kanaan walqabate uuma, kuusaa hordofuu immoo ni dandeessisa.",
     "Next rent due": "Kiraa kaffalamu itti aanu",
     "Last payment": "Kaffaltii dhumaa",
     "Overdue rent": "Kiraa yeroo darbee",
@@ -1353,6 +1359,8 @@ const List<String> uiTextKeys = [
   "Record sale",
   "Sale date",
   "Last sold at",
+  "Add item to inventory",
+  "Creates a linked inventory item and enables stock tracking.",
   "Next rent due",
   "Last payment",
   "Overdue rent",

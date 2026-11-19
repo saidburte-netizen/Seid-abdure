@@ -71,13 +71,41 @@ void main() {
     await tester.tap(find.byTooltip('Add product'));
     await tester.pumpAndSettle();
     expect(find.text('Add product'), findsWidgets);
-    expect(find.text('Track stock'), findsOneWidget);
+    expect(find.text('Add item to inventory'), findsOneWidget);
     expect(find.text('Opening stock (optional)'), findsOneWidget);
     expect(find.text('Add photo (optional)'), findsOneWidget);
 
     await tester.tap(find.text('Save'));
     await tester.pump();
     expect(find.text('Name is required'), findsOneWidget);
+    controller.dispose();
+  });
+
+  testWidgets('existing products expose a direct edit action', (tester) async {
+    tester.view.physicalSize = const Size(430, 900);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
+    final controller = await _admin(tester);
+    await _pump(tester, controller, '/products');
+
+    final product = find.text('Chocolate cake').first;
+    final card = find.ancestor(of: product, matching: find.byType(Card)).first;
+    await tester.tap(
+      find.descendant(of: card, matching: find.byTooltip('Edit')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Edit product'), findsOneWidget);
+    final name = find
+        .descendant(
+          of: find.byType(AlertDialog),
+          matching: find.byType(TextFormField),
+        )
+        .first;
+    expect(
+      tester.widget<TextFormField>(name).controller!.text,
+      'Chocolate cake',
+    );
     controller.dispose();
   });
 

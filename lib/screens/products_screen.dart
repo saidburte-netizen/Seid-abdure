@@ -713,6 +713,11 @@ class _ProductsScreenState extends State<ProductsScreen> {
                         context,
                         'No products match these filters.',
                       ),
+                      action: FilledButton.icon(
+                        onPressed: add,
+                        icon: const Icon(Icons.add),
+                        label: Text(uiText(context, 'Add product')),
+                      ),
                     ),
                   )
                 else
@@ -820,17 +825,18 @@ class _ProductCard extends StatelessWidget {
                       style: Theme.of(context).textTheme.titleSmall,
                     ),
                   ),
+                  IconButton(
+                    tooltip: uiText(context, 'Edit'),
+                    onPressed: onEdit,
+                    icon: const Icon(Icons.edit_outlined),
+                    visualDensity: VisualDensity.compact,
+                  ),
                   PopupMenuButton<String>(
                     onSelected: (value) {
-                      if (value == 'edit') onEdit();
                       if (value == 'toggle') onToggle();
                       if (value == 'duplicate') onDuplicate();
                     },
                     itemBuilder: (context) => [
-                      PopupMenuItem(
-                        value: 'edit',
-                        child: Text(uiText(context, 'Edit')),
-                      ),
                       PopupMenuItem(
                         value: 'duplicate',
                         child: Text(uiText(context, 'Duplicate')),
@@ -1197,6 +1203,33 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
                   onChanged: (value) => setState(() => _unitId = value),
                 ),
                 const SizedBox(height: 10),
+                SwitchListTile(
+                  contentPadding: EdgeInsets.zero,
+                  title: Text(uiText(context, 'Add item to inventory')),
+                  subtitle: Text(
+                    uiText(
+                      context,
+                      'Creates a linked inventory item and enables stock tracking.',
+                    ),
+                  ),
+                  value: _trackStock,
+                  onChanged: _saving
+                      ? null
+                      : (value) => setState(() => _trackStock = value),
+                ),
+                if (_trackStock && !editing) ...[
+                  const SizedBox(height: 8),
+                  TextFormField(
+                    controller: _opening,
+                    keyboardType: const TextInputType.numberWithOptions(
+                      decimal: true,
+                    ),
+                    decoration: InputDecoration(
+                      labelText: uiText(context, 'Opening stock (optional)'),
+                    ),
+                  ),
+                ],
+                const SizedBox(height: 10),
                 TextFormField(
                   controller: _description,
                   minLines: 1,
@@ -1221,22 +1254,6 @@ class _ProductFormDialogState extends State<_ProductFormDialog> {
                     child: Text(uiText(context, 'Choose')),
                   ),
                 ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(uiText(context, 'Track stock')),
-                  value: _trackStock,
-                  onChanged: (value) => setState(() => _trackStock = value),
-                ),
-                if (_trackStock && !editing)
-                  TextFormField(
-                    controller: _opening,
-                    keyboardType: const TextInputType.numberWithOptions(
-                      decimal: true,
-                    ),
-                    decoration: InputDecoration(
-                      labelText: uiText(context, 'Opening stock (optional)'),
-                    ),
-                  ),
                 SwitchListTile(
                   contentPadding: EdgeInsets.zero,
                   title: Text(uiText(context, 'Active')),
