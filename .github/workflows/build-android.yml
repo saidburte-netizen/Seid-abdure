@@ -3,6 +3,7 @@ name: Android build
 on:
   workflow_dispatch:
   push:
+    branches: [fix/integration-order-smoke]
     tags: ["v*"]
 
 concurrency:
@@ -59,7 +60,30 @@ jobs:
           grep -q 'android.permission.INTERNET' android/app/src/main/AndroidManifest.xml
           grep -q 'android.permission.ACCESS_NETWORK_STATE' android/app/src/main/AndroidManifest.xml
       - run: flutter analyze
-      - run: flutter test
+      - name: Run the Flutter test suite
+        shell: bash
+        run: |
+          set -uo pipefail
+          log="$RUNNER_TEMP/flutter-test.log"
+          set +e
+          flutter test --reporter expanded 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            names=$(grep '\[E\]' "$log" | sed -E 's/^[0-9:]+ \+[0-9]+( -[0-9]+)?: //' | paste -sd ' | ' -)
+            if [ -z "$names" ]; then
+              names=$(tail -n 3 "$log" | tr '\n' ' ')
+            fi
+            echo "::error::Flutter tests failed: $names"
+            {
+              echo '### Flutter test failures'
+              echo
+              echo '```'
+              grep -A 8 '\[E\]' "$log" | head -n 200
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$status"
+          fi
 
       - name: Configure release signing
         env:
@@ -463,6 +487,41 @@ jobs:
             -v ON_ERROR_STOP=1 \
             -f supabase/tests/integration/seed.sql
 
+      - name: Run the database integration contract and real RLS
+        shell: bash
+        run: |
+          set -uo pipefail
+          export PGPASSWORD=postgres
+          log="$RUNNER_TEMP/contract.log"
+          contract="$RUNNER_TEMP/contract.sql"
+          # Verbose errors include the SQLSTATE and the failing statement.
+          { echo '\set VERBOSITY verbose'; cat supabase/tests/integration/contract.sql; } > "$contract"
+          set +e
+          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
+            -v ON_ERROR_STOP=1 \
+            -f "$contract" 2>&1 | tee "$log"
+          status=${PIPESTATUS[0]}
+          set -e
+          if [ "$status" -ne 0 ]; then
+            detail=$(grep -m1 -E 'ERROR:|ASSERTION FAILED|FATAL:|psql:.*error' "$log" || true)
+            if [ -z "$detail" ]; then
+              detail=$(tail -n 5 "$log" | tr '\n' ' | ')
+            fi
+            echo "::error::Database contract failed: $detail"
+            {
+              echo "### Database contract failure"
+              echo
+              echo '```'
+              tail -n 80 "$log"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit "$status"
+          fi
+
+      # The minimum-field seed creates two extra auth users, so it must run
+      # after the profile-count assertions in contract.sql. The generated
+      # contract below needs the seed, and this order matches the local
+      # tool/run_contract_local.sh runner.
       - name: Seed the minimum-field payload contract fixtures
         shell: bash
         run: |
@@ -471,15 +530,6 @@ jobs:
           psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
             -v ON_ERROR_STOP=1 \
             -f supabase/tests/integration/minimum_fields_seed.sql
-
-      - name: Run the database integration contract and real RLS
-        shell: bash
-        run: |
-          set -euo pipefail
-          export PGPASSWORD=postgres
-          psql "postgresql://postgres:postgres@127.0.0.1:54322/postgres" \
-            -v ON_ERROR_STOP=1 \
-            -f supabase/tests/integration/contract.sql
 
       - name: Run the generated minimum-field payload contract
         shell: bash

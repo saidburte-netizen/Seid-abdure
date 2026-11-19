@@ -132,6 +132,24 @@ class AppLocalizationsEn extends AppLocalizations {
   String get notificationsModule => 'Notifications';
 
   @override
+  String get home => 'Home';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get quickActions => 'Quick actions';
+
+  @override
+  String get allModules => 'All modules';
+
+  @override
+  String get searchPages => 'Search pages';
+
+  @override
+  String get noModulesMatch => 'No pages match your search.';
+
+  @override
   String get workspace => 'Workspace';
 
   @override

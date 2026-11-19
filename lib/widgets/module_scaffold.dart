@@ -6,6 +6,7 @@ import '../brand/brand.dart';
 import '../data/formatting.dart';
 import '../data/schema.dart';
 import '../l10n/app_localizations.dart';
+import 'app_bottom_nav.dart';
 import 'app_scaffold.dart';
 import 'app_ui.dart';
 import 'common.dart';
@@ -56,6 +57,15 @@ class ModuleScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final session = SessionScope.of(context);
+    // Some widget tests and embedded previews render a module without a
+    // GoRouter above it. In that case there is no hub location to highlight,
+    // so the shared bottom bar is simply omitted instead of throwing.
+    final router = GoRouter.maybeOf(context);
+    final location = router?.state.uri.path;
+    final showBottomNav =
+        location != null &&
+        !session.isCustomer &&
+        appHubRoutes.contains(location);
     final Widget? strip = kpiItems != null
         ? KpiStrip(items: kpiItems!)
         : (kpiKinds.isEmpty ? null : DashboardKpiStrip(kinds: kpiKinds));
@@ -82,6 +92,12 @@ class ModuleScaffold extends StatelessWidget {
       kpiStrip: strip,
       body: body,
       floatingActionButton: floatingActionButton,
+      bottomNavigationBar: showBottomNav
+          ? AppBottomNav(
+              currentPath: location,
+              onMore: () => showModuleLauncher(context, session),
+            )
+          : null,
     );
   }
 }
@@ -95,44 +111,7 @@ class _PortalDrawer extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final strings = AppLocalizations.of(context);
-    final items = <(String, String, IconData, String?)>[
-      ('/', 'Dashboard', Icons.dashboard_outlined, null),
-      ('/pos', 'New sale', Icons.point_of_sale_outlined, 'pos.use'),
-      ('/sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.view'),
-      (
-        '/production',
-        'Production',
-        Icons.bakery_dining_outlined,
-        'production.manage',
-      ),
-      ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.view'),
-      ('/products', 'Products', Icons.sell_outlined, 'products.manage'),
-      ('/stock', 'Stock', Icons.warehouse_outlined, 'inventory.view'),
-      (
-        '/cash',
-        'Cash & expenses',
-        Icons.account_balance_wallet_outlined,
-        'cash.view',
-      ),
-      ('/people', 'People & HR', Icons.groups_outlined, 'hr.view'),
-      ('/payroll', 'Payroll', Icons.payments_outlined, 'payroll.manage'),
-      ('/rentals', 'Rentals', Icons.apartment_outlined, 'rentals.manage'),
-      (
-        '/credit',
-        'Credit control',
-        Icons.account_balance_outlined,
-        'credit.manage',
-      ),
-      (
-        '/approvals',
-        'Approvals',
-        Icons.fact_check_outlined,
-        'expenses.approve',
-      ),
-      ('/reports', 'Reports', Icons.bar_chart_outlined, 'reports.view'),
-      ('/notifications', 'Notifications', Icons.notifications_outlined, null),
-      ('/settings', 'Settings', Icons.settings_outlined, null),
-    ];
+    final items = _portalItems();
     return Drawer(
       child: ListView(
         padding: EdgeInsets.zero,
@@ -206,6 +185,198 @@ class _PortalDrawer extends StatelessWidget {
             },
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Every top-level destination, in the order it appears in the menu.
+List<(String, String, IconData, String?)> _portalItems() => [
+  ('/', 'Dashboard', Icons.dashboard_outlined, null),
+  ('/pos', 'New sale', Icons.point_of_sale_outlined, 'pos.use'),
+  ('/sales', 'Sales & returns', Icons.receipt_long_outlined, 'sales.view'),
+  (
+    '/production',
+    'Production',
+    Icons.bakery_dining_outlined,
+    'production.manage',
+  ),
+  ('/inventory', 'Inventory', Icons.inventory_2_outlined, 'inventory.view'),
+  ('/products', 'Products', Icons.sell_outlined, 'products.manage'),
+  ('/stock', 'Stock', Icons.warehouse_outlined, 'inventory.view'),
+  (
+    '/cash',
+    'Cash & expenses',
+    Icons.account_balance_wallet_outlined,
+    'cash.view',
+  ),
+  ('/people', 'People & HR', Icons.groups_outlined, 'hr.view'),
+  ('/payroll', 'Payroll', Icons.payments_outlined, 'payroll.manage'),
+  ('/rentals', 'Rentals', Icons.apartment_outlined, 'rentals.manage'),
+  (
+    '/credit',
+    'Credit control',
+    Icons.account_balance_outlined,
+    'credit.manage',
+  ),
+  ('/approvals', 'Approvals', Icons.fact_check_outlined, 'expenses.approve'),
+  ('/reports', 'Reports', Icons.bar_chart_outlined, 'reports.view'),
+  ('/notifications', 'Notifications', Icons.notifications_outlined, null),
+  ('/settings', 'Settings', Icons.settings_outlined, null),
+];
+
+/// Opens the searchable module list used by the dashboard and the "More" tab.
+///
+/// This mirrors NexaTracker's page search: the user types a few letters and
+/// jumps straight to any area they are allowed to use, without walking back to
+/// the dashboard first.
+Future<void> showModuleLauncher(
+  BuildContext context,
+  AuthController session,
+) async {
+  final items = [
+    for (final item in _portalItems())
+      if (item.$4 == null || session.can(item.$4!)) item,
+  ];
+  final currentPath = GoRouterState.of(context).uri.path;
+  final selected = await showModalBottomSheet<String>(
+    context: context,
+    isScrollControlled: true,
+    showDragHandle: true,
+    useSafeArea: true,
+    builder: (sheetContext) =>
+        _ModuleLauncherSheet(items: items, currentPath: currentPath),
+  );
+  if (selected == null || !context.mounted || selected == currentPath) return;
+  if (selected == '/') {
+    context.go('/');
+  } else {
+    context.push(selected);
+  }
+}
+
+class _ModuleLauncherSheet extends StatefulWidget {
+  const _ModuleLauncherSheet({required this.items, required this.currentPath});
+
+  final List<(String, String, IconData, String?)> items;
+  final String currentPath;
+
+  @override
+  State<_ModuleLauncherSheet> createState() => _ModuleLauncherSheetState();
+}
+
+class _ModuleLauncherSheetState extends State<_ModuleLauncherSheet> {
+  final _search = TextEditingController();
+  String _query = '';
+
+  @override
+  void dispose() {
+    _search.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context);
+    final query = _query.trim().toLowerCase();
+    final visible = [
+      for (final item in widget.items)
+        if (query.isEmpty ||
+            item.$2.toLowerCase().contains(query) ||
+            _portalLabel(strings, item.$1).toLowerCase().contains(query))
+          item,
+    ];
+    return Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(context).bottom),
+      child: SizedBox(
+        height: MediaQuery.sizeOf(context).height * 0.72,
+        child: Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 4, 20, 8),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      strings.allModules,
+                      style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    tooltip: strings.close,
+                    onPressed: () => Navigator.of(context).pop(),
+                    icon: const Icon(Icons.close),
+                  ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+              child: TextField(
+                key: const Key('module-search'),
+                controller: _search,
+                autofocus: true,
+                textInputAction: TextInputAction.search,
+                decoration: InputDecoration(
+                  hintText: strings.searchPages,
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _query.isEmpty
+                      ? null
+                      : IconButton(
+                          tooltip: uiText(context, 'Clear search'),
+                          onPressed: () {
+                            _search.clear();
+                            setState(() => _query = '');
+                          },
+                          icon: const Icon(Icons.clear),
+                        ),
+                ),
+                onChanged: (value) => setState(() => _query = value),
+              ),
+            ),
+            Expanded(
+              child: visible.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Text(
+                          strings.noModulesMatch,
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    )
+                  : ListView(
+                      padding: const EdgeInsets.only(bottom: 24),
+                      children: [
+                        for (final item in visible)
+                          ListTile(
+                            key: Key(
+                              'module-${item.$1.replaceAll('/', '').isEmpty ? 'dashboard' : item.$1.replaceAll('/', '')}',
+                            ),
+                            leading: CircleAvatar(
+                              backgroundColor: Theme.of(
+                                context,
+                              ).colorScheme.primaryContainer,
+                              child: Icon(
+                                item.$3,
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.onPrimaryContainer,
+                              ),
+                            ),
+                            title: Text(_portalLabel(strings, item.$1)),
+                            trailing: item.$1 == widget.currentPath
+                                ? const Icon(Icons.check_circle)
+                                : const Icon(Icons.chevron_right),
+                            onTap: () => Navigator.of(context).pop(item.$1),
+                          ),
+                      ],
+                    ),
+            ),
+          ],
+        ),
       ),
     );
   }

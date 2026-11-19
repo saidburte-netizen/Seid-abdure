@@ -579,32 +579,41 @@ class _ProductsScreenState extends State<ProductsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final compact = MediaQuery.sizeOf(context).width < 620;
+    Future<void> add() async {
+      final data = await _future;
+      if (data != null) await _openForm(data, null);
+    }
+
     return ModuleScaffold(
       title: uiText(context, 'Products'),
       actions: [
-        Flexible(
-          child: FittedBox(
-            fit: BoxFit.scaleDown,
-            child: Padding(
-              padding: const EdgeInsets.only(right: 4),
-              child: FilledButton.icon(
-                style: FilledButton.styleFrom(
-                  backgroundColor: const Color(0xFFC8A24A),
-                  foregroundColor: const Color(0xFF231A05),
+        if (!compact)
+          Flexible(
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              child: Padding(
+                padding: const EdgeInsets.only(right: 4),
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFC8A24A),
+                    foregroundColor: const Color(0xFF231A05),
+                  ),
+                  onPressed: _future == null ? null : add,
+                  icon: const Icon(Icons.add),
+                  label: Text(uiText(context, 'Add product')),
                 ),
-                onPressed: _future == null
-                    ? null
-                    : () async {
-                        final data = await _future;
-                        if (data != null) await _openForm(data, null);
-                      },
-                icon: const Icon(Icons.add),
-                label: Text(uiText(context, 'Add product')),
               ),
             ),
           ),
-        ),
       ],
+      floatingActionButton: compact
+          ? FloatingActionButton(
+              tooltip: uiText(context, 'Add product'),
+              onPressed: _future == null ? null : add,
+              child: const Icon(Icons.add),
+            )
+          : null,
       body: FutureBuilder<_ProductsData>(
         future: _future,
         builder: (context, snapshot) {

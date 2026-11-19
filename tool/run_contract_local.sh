@@ -84,6 +84,8 @@ done
 echo "Seeding roles, permissions and settings ..."
 psql_local "-q -f '$ROOT/supabase/tests/integration/seed.sql'"
 
+# Keep this order identical to build-android.yml: contract.sql asserts exact
+# profile counts, and minimum_fields_seed.sql adds two auth users.
 echo "Running contract assertions ..."
 psql_local "-q -f '$ROOT/supabase/tests/integration/contract.sql'"
 

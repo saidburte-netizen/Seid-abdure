@@ -59,26 +59,45 @@ void main() {
 
     // Home grid must visibly include Products and Stock tiles.
     await _pump(tester, controller, '/');
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -700));
+    final dashboard = find
+        .descendant(
+          of: find.byKey(const Key('dashboard-scroll')),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.byKey(const Key('module-card-stock')),
+      260,
+      scrollable: dashboard,
+    );
     await tester.pumpAndSettle();
-    expect(find.text('Products'), findsOneWidget);
-    expect(find.text('Stock'), findsOneWidget);
+    expect(find.byKey(const Key('module-card-products')), findsOneWidget);
+    expect(find.byKey(const Key('module-card-stock')), findsOneWidget);
     await _capture(tester, out, 'home-grid');
 
     // Dashboard Stock on hand card.
     await _pump(tester, controller, '/');
-    await tester.drag(find.byType(Scrollable).last, const Offset(0, -340));
+    await tester.scrollUntilVisible(
+      find.text('Stock on hand'),
+      260,
+      scrollable: find
+          .descendant(
+            of: find.byKey(const Key('dashboard-scroll')),
+            matching: find.byType(Scrollable),
+          )
+          .first,
+    );
     await tester.pumpAndSettle();
     expect(find.text('Stock on hand'), findsOneWidget);
     await _capture(tester, out, 'dashboard-stock-card');
 
-    // Products list with the gold Add product button.
+    // Products list with the Nexa-style mobile add button.
     await _pump(tester, controller, '/products');
-    expect(find.text('Add product'), findsOneWidget);
+    expect(find.byType(FloatingActionButton), findsOneWidget);
     await _capture(tester, out, 'products-list');
 
     // Add product form.
-    await tester.tap(find.text('Add product'));
+    await tester.tap(find.byType(FloatingActionButton));
     await tester.pumpAndSettle();
     expect(find.text('Add product'), findsWidgets);
     expect(find.byType(AlertDialog), findsOneWidget);

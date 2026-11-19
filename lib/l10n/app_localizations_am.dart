@@ -132,6 +132,24 @@ class AppLocalizationsAm extends AppLocalizations {
   String get notificationsModule => 'ማሳወቂያዎች';
 
   @override
+  String get home => 'መነሻ';
+
+  @override
+  String get more => 'ተጨማሪ';
+
+  @override
+  String get quickActions => 'ፈጣን እርምጃዎች';
+
+  @override
+  String get allModules => 'ሁሉም ሞጁሎች';
+
+  @override
+  String get searchPages => 'ገጾችን ፈልግ';
+
+  @override
+  String get noModulesMatch => 'ከፍለጋዎ ጋር የሚዛመድ ገጽ የለም።';
+
+  @override
   String get workspace => 'የስራ ቦታ';
 
   @override

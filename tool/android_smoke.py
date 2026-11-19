@@ -176,6 +176,35 @@ def find_edit_text_above(root: ET.Element, anchor: ET.Element) -> ET.Element | N
     return min(candidates, key=lambda item: item[0])[1]
 
 
+def dismiss_system_dialog(root: ET.Element) -> bool:
+    """Dismiss a launcher ANR dialog that can cover the app on cold boot.
+
+    The emulator sometimes shows ``Pixel Launcher isn't responding`` before
+    the app becomes visible. Tapping ``Wait`` keeps the launcher alive and
+    lets the smoke run continue; leaving the dialog up hides every app widget
+    from the accessibility tree and makes the login wait time out.
+    """
+    node = find_text(root, "Wait")
+    if node is None:
+        return False
+    print("SMOKE: dismissing a system ANR dialog with 'Wait'")
+    tap(node)
+    return True
+
+
+def launch_app() -> None:
+    adb("shell", "am", "force-stop", PACKAGE, check=False)
+    adb(
+        "shell",
+        "am",
+        "start",
+        "-W",
+        "-n",
+        f"{PACKAGE}/{ACTIVITY}",
+        check=False,
+    )
+
+
 def wait_for(predicate, description: str, timeout: int = 75) -> ET.Element:
     deadline = time.time() + timeout
     last_root: ET.Element | None = None
@@ -184,6 +213,9 @@ def wait_for(predicate, description: str, timeout: int = 75) -> ET.Element:
         node = predicate(last_root)
         if node is not None:
             return node
+        if dismiss_system_dialog(last_root):
+            time.sleep(2)
+            continue
         time.sleep(1)
     summary = (
         hierarchy_summary(last_root)
@@ -191,6 +223,34 @@ def wait_for(predicate, description: str, timeout: int = 75) -> ET.Element:
         else "no hierarchy was readable"
     )
     raise RuntimeError(f"Timed out waiting for {description}. {summary}")
+
+
+def wait_for_login(timeout: int = 150) -> ET.Element:
+    """Wait for the login screen, recovering from a cold-boot launcher ANR."""
+    deadline = time.time() + timeout
+    last_root: ET.Element | None = None
+    relaunches = 0
+    while time.time() < deadline:
+        last_root = dump_xml()
+        node = first_node(
+            *[find_text(last_root, text) for text in LOGIN_MARKERS]
+        )
+        if node is not None:
+            return node
+        if dismiss_system_dialog(last_root):
+            time.sleep(2)
+            if relaunches < 3:
+                print("SMOKE: relaunching the app after dismissing the dialog")
+                launch_app()
+                relaunches += 1
+            continue
+        time.sleep(1)
+    summary = (
+        hierarchy_summary(last_root)
+        if last_root is not None
+        else "no hierarchy was readable"
+    )
+    raise RuntimeError(f"Timed out waiting for login screen. {summary}")
 
 
 def screenshot(name: str) -> None:
@@ -432,17 +492,11 @@ def run(apk: str, helper_apk: str | None = None) -> None:
     enable_accessibility(helper_apk)
     adb("install", "-r", apk)
     adb("shell", "pm", "clear", PACKAGE)
-    adb("shell", "am", "start", "-W", "-n", f"{PACKAGE}/{ACTIVITY}")
+    launch_app()
     time.sleep(3)
     # Evidence before any assertion, so a timeout still leaves a screenshot.
     screenshot("00-launched.png")
-    root = wait_for(
-        lambda current: first_node(
-            *[find_text(current, text) for text in LOGIN_MARKERS]
-        ),
-        "login screen",
-        timeout=120,
-    )
+    root = wait_for_login(timeout=150)
     screenshot("01-login-en.png")
     assert_no_raw_errors(root)
 
