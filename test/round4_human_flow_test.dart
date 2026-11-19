@@ -204,6 +204,8 @@ void main() {
             matching: find.byType(Card),
           )
           .first;
+      await tester.ensureVisible(productCard);
+      await tester.pumpAndSettle();
       await tester.tap(
         find.descendant(of: productCard, matching: find.byTooltip('Edit')),
       );

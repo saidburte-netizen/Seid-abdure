@@ -12,7 +12,7 @@ import 'package:brade_and_cake_house/auth/auth_controller.dart';
 
 import 'support/fake_backend.dart';
 
-SupabaseClient _reportsClient() {
+SupabaseClient _reportsClient({void Function(Uri)? onSalesRequest}) {
   return SupabaseClient(
     'https://offline.invalid',
     'test-anon-key',
@@ -152,6 +152,7 @@ SupabaseClient _reportsClient() {
         ]);
       }
       if (path.endsWith('/sales')) {
+        onSalesRequest?.call(request.url);
         return json([
           {
             'id': 'sale-1',
@@ -225,7 +226,8 @@ void main() {
     tester,
   ) async {
     SharedPreferences.setMockInitialValues({});
-    final client = _reportsClient();
+    final salesQueries = <Uri>[];
+    final client = _reportsClient(onSalesRequest: salesQueries.add);
     final controller = AuthController(client);
     await tester.pumpWidget(const SizedBox.shrink());
     await tester.pump(const Duration(milliseconds: 50));
@@ -275,6 +277,21 @@ void main() {
     expect(find.text('Record sale'), findsOneWidget);
     expect(find.text('RCP-001'), findsWidgets);
     expect(find.text('Total sales'), findsWidgets);
+
+    // Timestamped same-day sales must stay inside the selected business day.
+    final saleFilters = salesQueries.expand(
+      (uri) => uri.queryParametersAll['sale_date'] ?? const <String>[],
+    );
+    expect(
+      saleFilters.any((filter) => filter.startsWith('lt.')),
+      isTrue,
+      reason: 'Sales report must use an exclusive end of the selected day',
+    );
+    expect(
+      saleFilters.any((filter) => filter.startsWith('lte.')),
+      isFalse,
+      reason: 'An inclusive date-only end hides sales stamped later that day',
+    );
 
     await tester.tap(find.widgetWithText(ChoiceChip, 'Rent report'));
     await tester.pumpAndSettle();
