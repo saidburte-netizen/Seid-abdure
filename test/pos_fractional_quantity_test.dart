@@ -103,7 +103,11 @@ void main() {
     await tester.pump();
 
     expect(tester.widget<TextField>(quantity).controller!.text, '0.25');
-    expect(find.textContaining('ETB 2.50'), findsOneWidget);
+    expect(
+      find.textContaining('ETB 2.50'),
+      findsNWidgets(2),
+      reason: '0.25 × ETB 10.00 is shown as both subtotal and total',
+    );
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());

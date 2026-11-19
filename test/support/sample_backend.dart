@@ -23,8 +23,9 @@ SupabaseClient sampleSupabaseClient({
     httpClient: MockClient((request) async {
       final path = request.url.path;
       final accept = request.headers['accept'] ?? '';
-      if (request.method == 'POST') {
-        return onWrite?.call(request) ?? _json('[]', request);
+      if (request.method != 'GET') {
+        final writeResponse = onWrite?.call(request);
+        if (writeResponse != null) return writeResponse;
       }
       if (path.endsWith('/rpc/fn_generate_alerts')) {
         return _json('null', request);
