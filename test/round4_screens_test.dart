@@ -62,13 +62,13 @@ void main() {
     final controller = await _admin(tester);
     await _pump(tester, controller, '/products');
 
-    expect(find.text('Add product'), findsOneWidget);
+    expect(find.byTooltip('Add product'), findsOneWidget);
     expect(find.text('Search products'), findsOneWidget);
     expect(find.text('All categories'), findsOneWidget);
     expect(find.text('Active'), findsOneWidget);
     expect(find.text('Inactive'), findsOneWidget);
 
-    await tester.tap(find.text('Add product'));
+    await tester.tap(find.byTooltip('Add product'));
     await tester.pumpAndSettle();
     expect(find.text('Add product'), findsWidgets);
     expect(find.text('Track stock'), findsOneWidget);
@@ -90,12 +90,12 @@ void main() {
     final controller = await _admin(tester);
     await _pump(tester, controller, '/stock');
 
-    expect(find.text('Add item'), findsOneWidget);
+    expect(find.byTooltip('Add item'), findsOneWidget);
     expect(find.text('All'), findsWidgets);
     expect(find.text('Low stock'), findsWidgets);
     expect(find.byIcon(Icons.more_vert), findsWidgets);
 
-    await tester.tap(find.text('Add item'));
+    await tester.tap(find.byTooltip('Add item'));
     await tester.pumpAndSettle();
     expect(find.text('Item type'), findsOneWidget);
     expect(find.text('Minimum stock'), findsOneWidget);
