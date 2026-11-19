@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -74,11 +75,23 @@ void main() {
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
+    final router = GoRouter(
+      initialLocation: '/pos',
+      routes: [
+        GoRoute(
+          path: '/pos',
+          builder: (context, state) => SessionScope(
+            controller: controller,
+            child: const PosScreen(),
+          ),
+        ),
+      ],
+    );
     await tester.pumpWidget(
-      MaterialApp(
+      MaterialApp.router(
         localizationsDelegates: AppLocalizations.localizationsDelegates,
         supportedLocales: AppLocalizations.supportedLocales,
-        home: SessionScope(controller: controller, child: const PosScreen()),
+        routerConfig: router,
       ),
     );
     await tester.pump(const Duration(milliseconds: 500));
@@ -96,6 +109,7 @@ void main() {
     expect(tester.takeException(), isNull);
 
     await tester.pumpWidget(const SizedBox.shrink());
+    router.dispose();
     controller.dispose();
   });
 }

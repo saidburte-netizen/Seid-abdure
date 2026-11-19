@@ -829,7 +829,6 @@ class _ProductCard extends StatelessWidget {
                     tooltip: uiText(context, 'Edit'),
                     onPressed: onEdit,
                     icon: const Icon(Icons.edit_outlined),
-                    visualDensity: VisualDensity.compact,
                   ),
                   PopupMenuButton<String>(
                     onSelected: (value) {

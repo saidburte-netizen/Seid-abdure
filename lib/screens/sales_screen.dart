@@ -494,7 +494,9 @@ class _ReturnDialogState extends State<_ReturnDialog> {
                           width: 90,
                           child: TextField(
                             controller: _quantities[item['id']],
-                            keyboardType: TextInputType.number,
+                            keyboardType: const TextInputType.numberWithOptions(
+                              decimal: true,
+                            ),
                             decoration: InputDecoration(
                               labelText: uiText(context, 'Return qty'),
                             ),

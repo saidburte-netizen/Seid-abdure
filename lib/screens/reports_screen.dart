@@ -11,6 +11,14 @@ import '../widgets/crud_tab.dart';
 import '../widgets/module_scaffold.dart';
 import '../l10n/ui_text.dart';
 
+/// Dashboard views group sales by Africa/Addis_Ababa (UTC+3). Use the same
+/// business-day boundaries here so timestamped same-day sales are not missed.
+DateTime _businessDayStartUtc(DateTime day) =>
+    DateTime.utc(day.year, day.month, day.day, -3);
+
+DateTime _businessDayEndUtc(DateTime day) =>
+    _businessDayStartUtc(day.add(const Duration(days: 1)));
+
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
@@ -586,8 +594,8 @@ class _SalesReportViewState extends State<_SalesReportView> {
     final sales = await widget.session.client
         .from('sales')
         .select()
-        .gte('sale_date', dateOnly(widget.from))
-        .lte('sale_date', dateOnly(widget.to))
+        .gte('sale_date', _businessDayStartUtc(widget.from).toIso8601String())
+        .lt('sale_date', _businessDayEndUtc(widget.to).toIso8601String())
         .order('sale_date', ascending: false)
         .limit(500);
     var total = 0.0;
