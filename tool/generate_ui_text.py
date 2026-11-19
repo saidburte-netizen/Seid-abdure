@@ -291,6 +291,7 @@ UI: dict[str, tuple[str, str]] = {
     "To": ("እስከ", "Hanga"),
     "Record sale": ("ሽያጭ መዝግብ", "Gurgurtaa galmeessi"),
     "Sale date": ("የሽያጭ ቀን", "Guyyaa gurgurtaa"),
+    "Last sold at": ("የመጨረሻ ሽያጭ ሰዓት", "Yeroo gurgurtaa dhumaa"),
     "Next rent due": ("ቀጣይ የሚከፈል ኪራይ", "Kiraa kaffalamu itti aanu"),
     "Last payment": ("የመጨረሻ ክፍያ", "Kaffaltii dhumaa"),
     "Overdue rent": ("የተላለፈ ቀነ ገደብ ኪራይ", "Kiraa yeroo darbee"),

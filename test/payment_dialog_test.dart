@@ -41,7 +41,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '0.25');
-    await tester.tap(find.text('Record payment'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Record payment'));
     await tester.pump();
 
     expect(submitted?['amount'], 0.25);
@@ -85,7 +85,7 @@ void main() {
     await tester.tap(find.text('Open'));
     await tester.pumpAndSettle();
     await tester.enterText(find.byType(TextField).first, '3.01');
-    await tester.tap(find.text('Record payment'));
+    await tester.tap(find.widgetWithText(FilledButton, 'Record payment'));
     await tester.pump();
 
     expect(saveCalled, isFalse);

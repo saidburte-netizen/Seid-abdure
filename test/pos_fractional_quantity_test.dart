@@ -8,6 +8,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'package:brade_and_cake_house/auth/auth_controller.dart';
+import 'package:brade_and_cake_house/l10n/app_localizations.dart';
 import 'package:brade_and_cake_house/screens/pos_screen.dart';
 
 http.Response _json(http.Request request, Object value) => http.Response(
@@ -75,6 +76,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SessionScope(controller: controller, child: const PosScreen()),
       ),
     );

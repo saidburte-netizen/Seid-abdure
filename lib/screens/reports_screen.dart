@@ -42,7 +42,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
     ('rent', 'Rent report', Icons.apartment_outlined),
   ];
 
-  String _selected = 'v_product_sales';
+  String _selected = 'full';
   late DateTime _from = DateTime(DateTime.now().year, DateTime.now().month, 1);
   late DateTime _to = DateTime.now();
   int _refreshSeed = 0;
@@ -295,7 +295,7 @@ class _FullReportViewState extends State<_FullReportView> {
     }
     final results = await Future.wait([
       _rows('v_daily_sales', order: 'day'),
-      _rows('v_product_sales'),
+      _rows('v_product_sales', order: 'sale_day'),
       _rows('v_stock_overview', order: 'is_low'),
       _rows('v_cashflow_daily', order: 'day'),
       _rows('v_rent_status'),
@@ -354,13 +354,13 @@ class _FullReportViewState extends State<_FullReportView> {
             },
           ),
           _ReportTable(
-            title: 'Daily sales',
-            rows: data.dailySales,
+            title: 'Product sales',
+            rows: data.productSales,
             maxRows: 10,
           ),
           _ReportTable(
-            title: 'Product sales',
-            rows: data.productSales,
+            title: 'Daily sales',
+            rows: data.dailySales,
             maxRows: 10,
           ),
           _ReportTable(title: 'Stock on hand', rows: data.stock, maxRows: 10),
