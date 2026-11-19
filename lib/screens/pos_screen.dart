@@ -236,8 +236,13 @@ class _PosScreenState extends State<PosScreen> {
   }
 
   void _setQuantity(String id, String text) {
-    final quantity = num.tryParse(text);
-    if (quantity == null || !quantity.isFinite || quantity <= 0) return;
+    num? parsed = num.tryParse(text);
+    if (parsed == null && text.endsWith('.')) {
+      parsed = num.tryParse('${text}0');
+    }
+    if (parsed == null || !parsed.isFinite || parsed <= 0) return;
+    final quantity = parsed;
+    if (_cart[id] == quantity) return;
     setState(() => _cart[id] = quantity);
     _setPaidToTotal();
   }
@@ -287,7 +292,10 @@ class _PosScreenState extends State<PosScreen> {
 
   Future<void> _complete() async {
     if (_cart.isEmpty) {
-      showSnack(context, 'Add at least one product to the sale');
+      showSnack(
+        context,
+        uiText(context, 'Add at least one product to the sale'),
+      );
       return;
     }
     if (_cart.keys.any((id) {
@@ -295,24 +303,39 @@ class _PosScreenState extends State<PosScreen> {
       final quantity = num.tryParse(text);
       return quantity == null || !quantity.isFinite || quantity <= 0;
     })) {
-      showSnack(context, 'Enter a quantity greater than zero.', error: true);
+      showSnack(
+        context,
+        uiText(context, 'Enter a quantity greater than zero.'),
+        error: true,
+      );
       return;
     }
     if (_storeId == null) {
-      showSnack(context, 'Create a store before selling');
+      showSnack(context, uiText(context, 'Create a store before selling'));
       return;
     }
     if (_method != 'credit' && _accountId == null) {
-      showSnack(context, 'Create a cash account before selling');
+      showSnack(
+        context,
+        uiText(context, 'Create a cash account before selling'),
+      );
       return;
     }
     if (_method == 'credit' && _customerId == null) {
-      showSnack(context, 'Choose a customer for a credit sale.', error: true);
+      showSnack(
+        context,
+        uiText(context, 'Choose a customer for a credit sale.'),
+        error: true,
+      );
       return;
     }
     final tendered = asNum(_paid.text);
     if (_method != 'credit' && tendered + 0.001 < _total) {
-      showSnack(context, 'Payment does not cover the total.', error: true);
+      showSnack(
+        context,
+        uiText(context, 'Payment does not cover the total.'),
+        error: true,
+      );
       return;
     }
     final paid = _method == 'credit'
@@ -333,7 +356,7 @@ class _PosScreenState extends State<PosScreen> {
     final confirmed = await confirmAction(
       context,
       title: uiText(context, 'Complete sale'),
-      message: 'Charge ${formatMoney(_total)} and issue a receipt?',
+      message: '${uiText(context, 'Total')}: ${formatMoney(_total)}',
       confirmLabel: 'Complete',
     );
     if (!confirmed || !mounted) return;
@@ -468,14 +491,28 @@ class _PosScreenState extends State<PosScreen> {
       branchName: branch?.branchName ?? 'Jimma branch',
       subtitle: formatDate(sale['sale_date']),
       details: [
-        ('Customer', _customerName()),
-        ('Cashier', session.fullName ?? session.userEmail ?? ''),
+        (uiText(context, 'Customer'), _customerName()),
+        (
+          uiText(context, 'Cashier'),
+          session.fullName ?? session.userEmail ?? '',
+        ),
         (
           uiText(context, 'Payment method'),
-          uiText(context, prettyLabel(_method)),
+          _method == 'bank'
+              ? uiText(context, 'Bank transfer')
+              : _method == 'mobile_money'
+              ? uiText(context, 'Mobile money')
+              : _method == 'telebirr'
+              ? 'Telebirr'
+              : _method == 'cbe_birr'
+              ? 'CBE Birr'
+              : uiText(context, prettyLabel(_method)),
         ),
-        ('Paid', formatMoney(paid)),
-        ('Balance', formatMoney(asNum(sale['total_amount']) - paid)),
+        (uiText(context, 'Paid'), formatMoney(paid)),
+        (
+          uiText(context, 'Balance'),
+          formatMoney(asNum(sale['total_amount']) - paid),
+        ),
       ],
       columns: const [
         PdfColumn('Item', 'product_name'),
@@ -496,10 +533,13 @@ class _PosScreenState extends State<PosScreen> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _row('Receipt', asText(sale['receipt_no'])),
-            _row('Total', formatMoney(sale['total_amount'])),
-            _row('Paid', formatMoney(paid)),
-            _row('Balance', formatMoney(asNum(sale['total_amount']) - paid)),
+            _row(uiText(context, 'Receipt'), asText(sale['receipt_no'])),
+            _row(uiText(context, 'Total'), formatMoney(sale['total_amount'])),
+            _row(uiText(context, 'Paid'), formatMoney(paid)),
+            _row(
+              uiText(context, 'Balance'),
+              formatMoney(asNum(sale['total_amount']) - paid),
+            ),
           ],
         ),
         actions: [
@@ -527,7 +567,7 @@ class _PosScreenState extends State<PosScreen> {
         return asText(customer['full_name']);
       }
     }
-    return 'Walk-in customer';
+    return uiText(context, 'Walk-in customer');
   }
 
   Widget _row(String label, String value) => Padding(
@@ -589,10 +629,14 @@ class _PosScreenState extends State<PosScreen> {
                         length: 2,
                         child: Column(
                           children: [
-                            const AppTabBar(
+                            AppTabBar(
                               tabs: [
-                                Tab(text: 'Products'),
-                                Tab(text: 'Cart'),
+                                Tab(text: uiText(context, 'Products')),
+                                Tab(
+                                  text:
+                                      '${uiText(context, 'Cart')}'
+                                      '${_cart.isEmpty ? '' : ' (${_cart.length})'}',
+                                ),
                               ],
                             ),
                             Expanded(
@@ -758,7 +802,10 @@ class _PosScreenState extends State<PosScreen> {
   Widget _cartPanel(AuthController session) => ListView(
     padding: const EdgeInsets.all(16),
     children: [
-      Text('Current sale', style: Theme.of(context).textTheme.titleLarge),
+      Text(
+        uiText(context, 'Current sale'),
+        style: Theme.of(context).textTheme.titleLarge,
+      ),
       const SizedBox(height: 8),
       if (_cart.isEmpty)
         Padding(
@@ -788,7 +835,10 @@ class _PosScreenState extends State<PosScreen> {
                   width: 72,
                   child: TextField(
                     key: ValueKey('sale-quantity-${entry.key}'),
-                    controller: _quantityControllers[entry.key],
+                    controller: _quantityControllers.putIfAbsent(
+                      entry.key,
+                      () => TextEditingController(text: '${entry.value}'),
+                    ),
                     keyboardType: const TextInputType.numberWithOptions(
                       decimal: true,
                     ),
@@ -810,10 +860,14 @@ class _PosScreenState extends State<PosScreen> {
           ),
       const Divider(),
       DropdownButtonFormField<String?>(
+        key: ValueKey('customer-$_customerId'),
         initialValue: _customerId,
         decoration: InputDecoration(labelText: uiText(context, 'Customer')),
         items: [
-          const DropdownMenuItem<String?>(value: null, child: Text('Walk-in')),
+          DropdownMenuItem<String?>(
+            value: null,
+            child: Text(uiText(context, 'Walk-in')),
+          ),
           for (final customer in _customers)
             DropdownMenuItem<String?>(
               value: customer['id'] as String,
@@ -824,6 +878,7 @@ class _PosScreenState extends State<PosScreen> {
       ),
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
+        key: ValueKey('store-$_storeId'),
         initialValue: _storeId,
         decoration: InputDecoration(labelText: uiText(context, 'Store')),
         items: [
@@ -848,24 +903,35 @@ class _PosScreenState extends State<PosScreen> {
       ),
       const SizedBox(height: 8),
       DropdownButtonFormField<String>(
+        key: ValueKey('method-$_method'),
         initialValue: _method,
         decoration: InputDecoration(
           labelText: uiText(context, 'Payment method'),
         ),
-        items: const [
-          DropdownMenuItem(value: 'cash', child: Text('Cash')),
-          DropdownMenuItem(value: 'bank', child: Text('Bank transfer')),
-          DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
-          DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
-          DropdownMenuItem(value: 'mobile_money', child: Text('Mobile money')),
-          DropdownMenuItem(value: 'card', child: Text('Card')),
-          DropdownMenuItem(value: 'credit', child: Text('Credit')),
+        items: [
+          DropdownMenuItem(value: 'cash', child: Text(uiText(context, 'Cash'))),
+          DropdownMenuItem(
+            value: 'bank',
+            child: Text(uiText(context, 'Bank transfer')),
+          ),
+          const DropdownMenuItem(value: 'telebirr', child: Text('Telebirr')),
+          const DropdownMenuItem(value: 'cbe_birr', child: Text('CBE Birr')),
+          DropdownMenuItem(
+            value: 'mobile_money',
+            child: Text(uiText(context, 'Mobile money')),
+          ),
+          DropdownMenuItem(value: 'card', child: Text(uiText(context, 'Card'))),
+          DropdownMenuItem(
+            value: 'credit',
+            child: Text(uiText(context, 'Credit')),
+          ),
         ],
         onChanged: (value) => setState(() => _method = value ?? 'cash'),
       ),
       if (_method != 'credit') ...[
         const SizedBox(height: 8),
         DropdownButtonFormField<String>(
+          key: ValueKey('account-$_accountId'),
           initialValue: _accountId,
           decoration: InputDecoration(
             labelText: uiText(context, 'Cash account'),
@@ -902,11 +968,11 @@ class _PosScreenState extends State<PosScreen> {
         maxLines: 2,
       ),
       const SizedBox(height: 12),
-      _totalRow('Subtotal', _subtotal),
-      _totalRow('Discount', -_discountValue),
-      _totalRow('Tax', _tax),
+      _totalRow(uiText(context, 'Subtotal'), _subtotal),
+      _totalRow(uiText(context, 'Discount'), -_discountValue),
+      _totalRow(uiText(context, 'Tax'), _tax),
       const Divider(),
-      _totalRow('Total', _total, bold: true),
+      _totalRow(uiText(context, 'Total'), _total, bold: true),
       const SizedBox(height: 12),
       FilledButton.icon(
         onPressed: _submitting ? null : _complete,
@@ -917,7 +983,11 @@ class _PosScreenState extends State<PosScreen> {
                 child: CircularProgressIndicator(strokeWidth: 2),
               )
             : const Icon(Icons.check_circle_outline),
-        label: Text(_submitting ? 'Completing…' : 'Complete sale'),
+        label: Text(
+          _submitting
+              ? uiText(context, 'Completing…')
+              : uiText(context, 'Complete sale'),
+        ),
       ),
     ],
   );
