@@ -88,8 +88,9 @@ void main() {
     final controller = await _admin(tester);
     await _pump(tester, controller, '/products');
 
-    final product = find.text('Chocolate cake').first;
-    final card = find.ancestor(of: product, matching: find.byType(Card)).first;
+    final card = find
+        .ancestor(of: find.text('Chocolate cake'), matching: find.byType(Card))
+        .first;
     await tester.tap(
       find.descendant(of: card, matching: find.byTooltip('Edit')),
     );
